@@ -1,0 +1,23 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dalga Süperpozisyonu</title><link rel="stylesheet" href="../../lab.css?v=4"></head><body><div class="lab-shell">
+<header class="lab-top"><a class="lab-back" href="../../">←</a><div class="lab-heading"><h1>Dalga süperpozisyonu</h1><span>dalgalar · girişim · beat</span></div></header>
+<section class="lab-live"><aside class="lab-controls">
+<div class="control"><label><span>A₁</span><strong id="a1v"></strong></label><input id="a1" type="range" min=".1" max="1.4" step=".05" value="1"></div>
+<div class="control"><label><span>f₁</span><strong id="f1v"></strong></label><input id="f1" type="range" min=".5" max="6" step=".05" value="2"></div>
+<div class="control"><label><span>A₂</span><strong id="a2v"></strong></label><input id="a2" type="range" min=".1" max="1.4" step=".05" value="1"></div>
+<div class="control"><label><span>f₂</span><strong id="f2v"></strong></label><input id="f2" type="range" min=".5" max="6" step=".05" value="2.4"></div>
+<div class="control"><label><span>faz φ</span><strong id="phiv"></strong></label><input id="phi" type="range" min="0" max="6.283" step=".05" value="0"></div>
+<div class="lab-button-row"><button class="lab-btn primary" id="pause">Duraklat</button><button class="lab-btn" id="match">f₂=f₁</button><button class="lab-btn" id="beat">Beat örneği</button></div>
+<div class="metric-grid"><div class="metric"><span>Δf</span><strong id="df"></strong></div><div class="metric"><span>beat periyodu</span><strong id="tb"></strong></div><div class="metric"><span>max genlik</span><strong id="amax"></strong></div><div class="metric"><span>faz farkı</span><strong id="phase"></strong></div></div>
+</aside><div class="viz-stack">
+<div class="viz-card"><div class="viz-card-head"><strong>Explore · iki dalgayı üst üste bindir</strong><span>mor + turuncu = siyah</span></div><canvas id="wave" width="900" height="430"></canvas></div>
+<div class="two-col"><div class="viz-card"><div class="viz-card-head"><strong>Observe</strong><span>örüntü</span></div><div class="prompt-stack"><p>f₁=f₂ yapıp φ'yi π'ye getir. Neden toplam neredeyse sıfırlanıyor?</p><p>f₁ ve f₂'yi birbirine yakın ama eşit olmayan değerlere getir. Zarfın periyodunu gözle.</p></div></div>
+<div class="viz-card"><div class="viz-card-head"><strong>Predict</strong><span>önce tahmin et</span></div><details class="prediction"><summary>f₂-f₁ iki katına çıkarsa beat periyodu?</summary><p>Beat frekansı |f₂-f₁| olduğu için periyot yarıya iner.</p></details></div></div>
+</div></section>
+<section class="explainer-grid"><article class="note-card"><h3>Test</h3><p>Δf=0.5 Hz ayarla. Zarfın yaklaşık 2 saniyede tekrar ettiğini grafikten doğrula.</p></article><article class="note-card"><h3>Break the model</h3><p>Süperpozisyon ilkesi lineer sistemler içindir. Büyük genlikli nonlineer ortamlarda iki çözümün toplamı yeni bir çözüm olmak zorunda değildir.</p></article><article class="note-card"><h3>Varsayım</h3><p>Aynı doğrultuda ilerleyen, aynı dalga hızını paylaşan ideal sinüzoidal dalgalar kullanılıyor.</p></article></section>
+<section class="derivation-workbook"><h2>Beat bağıntısını türet</h2><div class="derivation-steps">
+<div class="derive-step"><h3>İki dalgayı yaz</h3><div class="formula" data-tex="y_1=A\sin(2\pi f_1t),\qquad y_2=A\sin(2\pi f_2t)"></div></div>
+<div class="derive-step"><h3>Lineerlik nedeniyle topla</h3><p>Dalga denklemi lineerse y₁ ve y₂ çözüm olduğunda toplamları da çözümdür.</p><div class="formula" data-tex="y=y_1+y_2"></div></div>
+<div class="derive-step"><h3>Trigonometrik toplam özdeşliğini uygula</h3><div class="formula" data-tex="\sin a+\sin b=2\sin\frac{a+b}{2}\cos\frac{a-b}{2}"></div></div>
+<div class="derive-step"><h3>Ortalama ve fark frekansını ayır</h3><div class="formula" data-tex="y=2A\sin\!\big(2\pi\tfrac{f_1+f_2}{2}t\big)\cos\!\big(2\pi\tfrac{f_1-f_2}{2}t\big)"></div></div>
+<div class="derive-step"><h3>Zarfın tekrar hızını oku</h3><p>Mutlak genlik |cos| her yarım kosinüs periyodunda aynı deseni verir.</p><div class="formula" data-tex="f_{beat}=|f_1-f_2|,\qquad T_{beat}=\frac1{|f_1-f_2|}"></div></div>
+</div></section></div><script src="./sim.js?v=1"></script><script src="../../katex-loader.js?v=4"></script></body></html>
