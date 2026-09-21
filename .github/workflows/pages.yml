@@ -33,6 +33,7 @@ jobs:
           node --check simulations/predator-prey/sim.js
           node --check simulations/heat-equation/sim.js
           node --check simulations/orbital-mechanics/sim.js
+          node --check simulations/fluid-lab/sim.js
           node --check simulations/sir-model/sim.js
           node --check katex-loader.js
           python3 - <<'PY'
@@ -51,7 +52,7 @@ jobs:
           test -f home.css
           test -f play.css
           test -f lab.css
-          for p in             games/afterimage             games/tidal-cartographer             games/switchyard             games/archive-diver             games/quiet-hours             games/pulse-weaver             games/outpost-9             simulations/damped-oscillator             simulations/radioactive-decay             simulations/double-pendulum             simulations/predator-prey             simulations/heat-equation             simulations/orbital-mechanics             simulations/sir-model
+          for p in             games/afterimage             games/tidal-cartographer             games/switchyard             games/archive-diver             games/quiet-hours             games/pulse-weaver             games/outpost-9             simulations/damped-oscillator             simulations/radioactive-decay             simulations/double-pendulum             simulations/predator-prey             simulations/heat-equation             simulations/orbital-mechanics             simulations/fluid-lab             simulations/sir-model
           do
             test -f "$p/index.html"
           done
