@@ -48,3 +48,8 @@ input[type=range]{width:100%;accent-color:#171717}
 .derive-step p{margin:6px 0;color:#555}
 .derive-step .formula{margin:9px 0 4px;background:#f8f8f4}
 .derive-check{background:#e9eee8;border-radius:14px;padding:12px 14px;margin-top:10px;color:#485248;font-size:.88rem}
+
+.lab-controls select{width:100%;border:1px solid #dddcd4;background:#f7f7f3;border-radius:10px;padding:8px;color:#222;font:inherit}
+.prompt-stack{display:grid;gap:9px}.prompt-stack p{margin:0;padding:10px 11px;background:#f7f7f3;border-radius:12px;color:#555;font-size:.84rem}
+.prediction{border-top:1px solid #e3e2dc;padding:9px 2px}.prediction:first-of-type{border-top:0}.prediction summary{cursor:pointer;font-weight:700;font-size:.86rem}.prediction p{color:#626262;font-size:.83rem;margin:8px 0 0}
+.fluid-main canvas{cursor:crosshair;touch-action:none;background:#09101a}
