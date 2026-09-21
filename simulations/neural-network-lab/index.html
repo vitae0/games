@@ -1,0 +1,19 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sinir Ağı Laboratuvarı</title><link rel="stylesheet" href="../../lab.css?v=4"></head><body><div class="lab-shell">
+<header class="lab-top"><a class="lab-back" href="../../">←</a><div class="lab-heading"><h1>Sinir ağı laboratuvarı</h1><span>backpropagation · XOR · gradient descent</span></div></header>
+<section class="lab-live"><aside class="lab-controls">
+<div class="control"><label><span>Öğrenme oranı η</span><strong id="lrv"></strong></label><input id="lr" type="range" min=".02" max="1.2" step=".02" value=".35"></div>
+<div class="lab-button-row"><button class="lab-btn primary" id="step">1 epoch</button><button class="lab-btn" id="auto">Otomatik</button><button class="lab-btn" id="reset">Ağı sıfırla</button></div>
+<div class="metric-grid"><div class="metric"><span>loss</span><strong id="loss"></strong></div><div class="metric"><span>epoch</span><strong id="epoch"></strong></div><div class="metric"><span>seçili çıkış</span><strong id="out"></strong></div><div class="metric"><span>|gradient|</span><strong id="grad"></strong></div></div>
+<p style="font-size:.8rem;color:#777">Alttaki dört XOR örneğinden birine tıkla. Ağdaki düğümlerde aktivasyonları, bağlantılarda ağırlık işaretini ve kalınlığını gör.</p>
+</aside><div class="viz-stack"><div class="viz-card"><div class="viz-card-head"><strong>Explore · ağın içini gör</strong><span>mavi + ağırlık · kırmızı − ağırlık</span></div><canvas id="net" width="900" height="500"></canvas></div>
+<div class="two-col"><div class="viz-card"><div class="viz-card-head"><strong>Observe</strong></div><div class="prompt-stack"><p>İlk epochlarda ağırlıklar rastgele. Otomatik eğitimi açıp gizli nöronların XOR için nasıl farklı bölgeleri ayırdığını izle.</p><p>Öğrenme oranını çok yükselt. Loss daha hızlı mı düşüyor, yoksa salınıp bozuluyor mu?</p></div></div><div class="viz-card"><div class="viz-card-head"><strong>Predict</strong></div><details class="prediction"><summary>Neden tek lineer nöron XOR'u çözemez?</summary><p>XOR sınıfları düz bir doğruyla ayrılamaz. Gizli katman, girdiyi lineer olmayan bir temsile dönüştürür.</p></details></div></div></div></div></section>
+<section class="derivation-workbook"><h2>Backpropagation'ı zincir kuralından türet</h2><div class="derivation-steps">
+<div class="derive-step"><h3>Bir nöronun ileri geçişi</h3><div class="formula" data-tex="z=\sum_i w_ix_i+b,\qquad a=\sigma(z)"></div></div>
+<div class="derive-step"><h3>Sigmoid türevi</h3><div class="formula" data-tex="\sigma'(z)=\sigma(z)(1-\sigma(z))"></div></div>
+<div class="derive-step"><h3>Binary cross-entropy</h3><div class="formula" data-tex="L=-[y\ln\hat y+(1-y)\ln(1-\hat y)]"></div></div>
+<div class="derive-step"><h3>Sigmoid + BCE için çıkış hatası</h3><p>Zincir kuralındaki terimler sadeleşir.</p><div class="formula" data-tex="\frac{\partial L}{\partial z_{out}}=\hat y-y"></div></div>
+<div class="derive-step"><h3>Çıkış ağırlığının gradient'i</h3><div class="formula" data-tex="\frac{\partial L}{\partial w_j^{(2)}}=(\hat y-y)a_j^{(1)}"></div></div>
+<div class="derive-step"><h3>Hatayı gizli katmana geri taşı</h3><div class="formula" data-tex="\delta_j^{(1)}=w_j^{(2)}(\hat y-y)\,a_j^{(1)}(1-a_j^{(1)})"></div></div>
+<div class="derive-step"><h3>Giriş-gizli ağırlık gradient'i</h3><div class="formula" data-tex="\frac{\partial L}{\partial w_{ji}^{(1)}}=\delta_j^{(1)}x_i"></div></div>
+<div class="derive-step"><h3>Gradient descent güncellemesi</h3><div class="formula" data-tex="w\leftarrow w-\eta\frac{\partial L}{\partial w}"></div></div>
+</div></section></div><script src="./sim.js?v=1"></script><script src="../../katex-loader.js?v=4"></script></body></html>
