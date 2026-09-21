@@ -1,39 +1,63 @@
 const C=document.getElementById('game'),ctx=C.getContext('2d'),E=id=>document.getElementById(id),CX=480,CY=320;
 const levels=[
- {rings:3,gap:.80,speed:.32,target:.82,targetSpeed:.18,goal:6},
- {rings:3,gap:.64,speed:.46,target:.70,targetSpeed:.27,goal:7},
- {rings:4,gap:.59,speed:.55,target:.64,targetSpeed:.34,goal:8},
- {rings:4,gap:.50,speed:.67,target:.58,targetSpeed:.43,goal:9},
- {rings:5,gap:.46,speed:.78,target:.52,targetSpeed:.52,goal:10}
+ {rings:4,gap:.86,baseSpeed:.22,pulseSpeed:112,steer:2.8,goal:5},
+ {rings:4,gap:.72,baseSpeed:.31,pulseSpeed:125,steer:2.65,goal:6},
+ {rings:5,gap:.68,baseSpeed:.38,pulseSpeed:133,steer:2.5,goal:7},
+ {rings:5,gap:.57,baseSpeed:.46,pulseSpeed:141,steer:2.35,goal:8},
+ {rings:6,gap:.51,baseSpeed:.55,pulseSpeed:150,steer:2.2,goal:9}
 ];
-let li=0,s,last=performance.now(),keys={L:false,R:false};
+let li=0,s,last=performance.now(),keys={L:false,R:false},pointerTarget=-Math.PI/2;
 function L(){return levels[li]}
-function reset(){s={angle:-Math.PI/2,pulse:null,hit:0,miss:0,combo:0,score:0,time:0,ended:false,phases:Array.from({length:L().rings},(_,i)=>i*1.41),targetPhase:1.1,focus:0,focusTime:0};E('next').disabled=true;E('focusBtn').disabled=true;E('status').textContent='Darbe bütün halka boşluklarından ve dıştaki yeşil sektörün içinden geçmeli.';ui()}
-function ui(){E('level').textContent=(li+1)+'/'+levels.length;E('hit').textContent=s.hit+'/'+L().goal;E('miss').textContent=s.miss;E('combo').textContent=s.combo;E('score').textContent=s.score;E('focus').textContent=s.focus;E('focusBtn').disabled=s.focus<=0||s.ended}
-function speedFactor(){return s.focusTime>0?.32:1}
-function gapAngle(i){const dir=i%2?1:-1;return s.phases[i]+dir*s.time*L().speed*(1+i*.13)}
-function targetAngle(){return s.targetPhase-s.time*L().targetSpeed}
-function adiff(a,b){return Math.atan2(Math.sin(a-b),Math.cos(a-b))}
-function fire(){if(s.ended||s.pulse)return;s.pulse={r:24,next:0,angle:s.angle}}
-function miss(reason){s.miss++;s.combo=0;s.pulse=null;E('status').textContent=reason+' Combo sıfırlandı.';if(s.miss>=4){s.ended=true;E('status').textContent='Dört darbe kayboldu. Deseni yeniden oku.'}ui()}
-function success(){s.hit++;s.combo++;const gain=120+s.combo*45;s.score+=gain;s.pulse=null;if(s.combo%3===0){s.focus=Math.min(2,s.focus+1);E('status').textContent='Temiz zincir · +'+gain+' · Focus kazandın.'}else E('status').textContent='Temiz geçiş · +'+gain+' · combo ×'+s.combo;if(s.hit>=L().goal){s.ended=true;s.score+=500+s.combo*60;E('status').textContent='Bölüm tamamlandı · skor '+s.score;E('next').disabled=li===levels.length-1}ui()}
-function useFocus(){if(s.focus>0&&!s.ended&&s.focusTime<=0){s.focus--;s.focusTime=2.4;E('status').textContent='Focus: halkalar 2.4 saniye yavaşladı.';ui()}}
+function wrap(a){return Math.atan2(Math.sin(a),Math.cos(a))}
+function diff(a,b){return wrap(a-b)}
+function gateAngle(i){const dir=i%2?1:-1;return s.phases[i]+dir*s.time*L().baseSpeed*(1+i*.17)}
+function outerR(){return 92+(L().rings-1)*55}
+function makeRun(){
+ const n=s.attempt++;s.pulse={r:28,a:wrap(-Math.PI/2+.18*Math.sin(n*1.71)),alive:true,trail:[],nextRing:0};
+ s.phases=Array.from({length:L().rings},(_,i)=>wrap(.9*i+1.3*Math.sin(n*.81+i*1.17)));
+ s.shards=[];
+ for(let i=0;i<L().rings-1;i++){const r=119+i*55,a=wrap(.7+i*1.43+Math.sin(n*.73+i)*1.15);s.shards.push({r,a,taken:false})}
+ pointerTarget=s.pulse.a
+}
+function reset(){s={time:0,hit:0,miss:0,combo:0,score:0,ended:false,won:false,attempt:0,respawn:0,phases:[],shards:[],pulse:null};E('next').disabled=true;E('status').textContent='Pulse sürekli dışarı akar. İmleç yalnız hedef açıyı belirler; pulse anında dönemez. Birkaç halka sonrasını planla.';makeRun();ui()}
+function ui(){E('level').textContent=(li+1)+'/'+levels.length;E('hit').textContent=s.hit+'/'+L().goal;E('miss').textContent=s.miss;E('combo').textContent=s.combo;E('score').textContent=s.score}
+function fail(i){
+ s.miss++;s.combo=0;s.score=Math.max(0,s.score-70);s.pulse.alive=false;s.respawn=.55;E('status').textContent=(i>=0?(i+1)+'. halkada sıkıştın. ':'Yörünge çöktü. ')+'Yeni pulse geliyor; bir sonraki kapının nereye döneceğini oku.';
+ if(s.miss>=4){s.ended=true;s.won=false;E('status').textContent='Dört pulse kaybedildi. Bölümü yeniden ör.'}ui()
+}
+function success(){
+ s.hit++;s.combo++;const gain=300+s.combo*80;s.score+=gain;s.pulse.alive=false;s.respawn=.48;E('status').textContent='Temiz örgü · +'+gain+' · zincir ×'+s.combo;
+ if(s.hit>=L().goal){s.ended=true;s.won=true;s.score+=700+s.combo*100;E('status').textContent='Bölüm tamamlandı · skor '+s.score;E('next').disabled=li===levels.length-1}ui()
+}
+function steerPulse(dt){
+ if(!s.pulse||!s.pulse.alive)return;const p=s.pulse;
+ if(keys.L)pointerTarget=wrap(pointerTarget-2.6*dt);if(keys.R)pointerTarget=wrap(pointerTarget+2.6*dt);
+ const d=diff(pointerTarget,p.a),turn=clamp(d,-L().steer*dt,L().steer*dt);p.a=wrap(p.a+turn);p.r+=L().pulseSpeed*dt;
+ p.trail.push([p.r,p.a]);if(p.trail.length>95)p.trail.shift();
+ for(const sh of s.shards){if(!sh.taken&&Math.abs(p.r-sh.r)<9&&Math.abs(diff(p.a,sh.a))<.16){sh.taken=true;s.score+=90;E('status').textContent='Shard +90. Opsiyonel rota işe yaradı.';ui()}}
+ while(p.nextRing<L().rings&&p.r>=92+p.nextRing*55){const i=p.nextRing;if(Math.abs(diff(p.a,gateAngle(i)))>L().gap/2){fail(i);return}p.nextRing++}
+ if(p.r>outerR()+48)success()
+}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
 function step(dt){
- if(s.ended)return;const sf=speedFactor();if(keys.L)s.angle-=1.95*dt;if(keys.R)s.angle+=1.95*dt;s.time+=dt*sf;if(s.focusTime>0)s.focusTime=Math.max(0,s.focusTime-dt);
- if(s.pulse){s.pulse.r+=285*dt;while(s.pulse.next<L().rings&&s.pulse.r>=95+s.pulse.next*61){const i=s.pulse.next;if(Math.abs(adiff(s.pulse.angle,gapAngle(i)))>L().gap/2){miss('Darbe '+(i+1)+'. halkaya çarptı.');break}s.pulse.next++}
- const outer=95+(L().rings-1)*61;if(s.pulse&&s.pulse.r>outer+58){if(Math.abs(adiff(s.pulse.angle,targetAngle()))>L().target/2)miss('Halkaları geçtin ama dış hedef sektörünü kaçırdın.');else success()}}
+ if(s.ended)return;s.time+=dt;
+ if(s.respawn>0){s.respawn-=dt;if(s.respawn<=0&&!s.ended)makeRun();return}
+ steerPulse(dt)
 }
 function draw(){
- ctx.fillStyle='#10121a';ctx.fillRect(0,0,C.width,C.height);
- const ta=targetAngle(),or=95+(L().rings-1)*61+45;ctx.strokeStyle='rgba(91,207,145,.32)';ctx.lineWidth=26;ctx.beginPath();ctx.arc(CX,CY,or,ta-L().target/2,ta+L().target/2);ctx.stroke();ctx.strokeStyle='#64d19a';ctx.lineWidth=7;ctx.beginPath();ctx.arc(CX,CY,or,ta-L().target/2,ta+L().target/2);ctx.stroke();
- for(let i=0;i<L().rings;i++){const r=95+i*61,g=gapAngle(i);ctx.strokeStyle=['#7b6de3','#d66e92','#e2a84b','#58b5a2','#79a9e5'][i];ctx.lineWidth=17;ctx.beginPath();ctx.arc(CX,CY,r,g+L().gap/2,g+Math.PI*2-L().gap/2);ctx.stroke();ctx.strokeStyle='rgba(255,255,255,.13)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(CX,CY,r,0,Math.PI*2);ctx.stroke()}
- ctx.save();ctx.translate(CX,CY);ctx.rotate(s.angle);ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(31,0);ctx.lineTo(7,-8);ctx.lineTo(7,8);ctx.closePath();ctx.fill();ctx.restore();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(CX,CY,18,0,Math.PI*2);ctx.fill();
- if(s.pulse){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(CX+Math.cos(s.pulse.angle)*s.pulse.r,CY+Math.sin(s.pulse.angle)*s.pulse.r,8,0,Math.PI*2);ctx.fill()}
- if(s.focusTime>0){ctx.fillStyle='rgba(100,209,154,.11)';ctx.fillRect(0,0,C.width,C.height);ctx.fillStyle='#8be4b4';ctx.font='800 14px system-ui';ctx.textAlign='center';ctx.fillText('FOCUS · '+s.focusTime.toFixed(1)+' s',C.width/2,28)}
- ctx.fillStyle='rgba(255,255,255,.58)';ctx.font='700 14px system-ui';ctx.textAlign='left';ctx.fillText('hedef '+Math.round(L().target*180/Math.PI)+'° · halka boşluğu '+Math.round(L().gap*180/Math.PI)+'°',18,26)
+ ctx.fillStyle='#0f1118';ctx.fillRect(0,0,C.width,C.height);
+ const grid=ctx.createRadialGradient(CX,CY,15,CX,CY,320);grid.addColorStop(0,'rgba(120,105,220,.14)');grid.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=grid;ctx.fillRect(0,0,C.width,C.height);
+ for(let i=0;i<L().rings;i++){const r=92+i*55,g=gateAngle(i),gap=L().gap;ctx.strokeStyle=['#7664db','#d36e94','#e0a84d','#57b49f','#73a8e2','#bc79dd'][i];ctx.lineWidth=14;ctx.beginPath();ctx.arc(CX,CY,r,g+gap/2,g+Math.PI*2-gap/2);ctx.stroke();ctx.strokeStyle='rgba(255,255,255,.10)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(CX,CY,r,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(CX,CY,r,g-gap/2,g+gap/2);ctx.stroke()}
+ for(const sh of s.shards){if(sh.taken)continue;const x=CX+Math.cos(sh.a)*sh.r,y=CY+Math.sin(sh.a)*sh.r;ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillStyle='#fff1a8';ctx.fillRect(-7,-7,14,14);ctx.restore()}
+ if(s.pulse){const p=s.pulse;if(p.trail.length>1){ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=5;ctx.beginPath();p.trail.forEach((q,i)=>{const x=CX+Math.cos(q[1])*q[0],y=CY+Math.sin(q[1])*q[0];i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}if(p.alive){const x=CX+Math.cos(p.a)*p.r,y=CY+Math.sin(p.a)*p.r;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#95e7ff';ctx.lineWidth=5;ctx.stroke()}}
+ const aimR=58,ax=CX+Math.cos(pointerTarget)*aimR,ay=CY+Math.sin(pointerTarget)*aimR;ctx.strokeStyle='rgba(255,255,255,.36)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(ax,ay);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(CX,CY,16,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='rgba(255,255,255,.58)';ctx.font='700 14px system-ui';ctx.textAlign='left';ctx.fillText('dönüş limiti '+L().steer.toFixed(2)+' rad/s · pulse '+L().pulseSpeed+' px/s',18,26);
+ if(s.ended&&!s.won){ctx.fillStyle='rgba(15,17,24,.72)';ctx.fillRect(0,0,C.width,C.height);ctx.fillStyle='#fff';ctx.font='800 38px system-ui';ctx.textAlign='center';ctx.fillText('Örgü koptu',C.width/2,C.height/2)}
 }
-function loop(now){const dt=Math.min(.04,(now-last)/1000);last=now;step(dt);draw();requestAnimationFrame(loop)}
-addEventListener('keydown',e=>{if(e.key==='a'||e.key==='A'||e.key==='ArrowLeft')keys.L=true;if(e.key==='d'||e.key==='D'||e.key==='ArrowRight')keys.R=true;if(e.key===' '){e.preventDefault();fire()}if(e.key==='Shift')useFocus()});
+C.addEventListener('pointermove',e=>{const r=C.getBoundingClientRect(),x=(e.clientX-r.left)*C.width/r.width,y=(e.clientY-r.top)*C.height/r.height;pointerTarget=Math.atan2(y-CY,x-CX)});
+C.addEventListener('pointerdown',e=>{const r=C.getBoundingClientRect(),x=(e.clientX-r.left)*C.width/r.width,y=(e.clientY-r.top)*C.height/r.height;pointerTarget=Math.atan2(y-CY,x-CX)});
+addEventListener('keydown',e=>{if(e.key==='a'||e.key==='A'||e.key==='ArrowLeft')keys.L=true;if(e.key==='d'||e.key==='D'||e.key==='ArrowRight')keys.R=true});
 addEventListener('keyup',e=>{if(e.key==='a'||e.key==='A'||e.key==='ArrowLeft')keys.L=false;if(e.key==='d'||e.key==='D'||e.key==='ArrowRight')keys.R=false});
-C.onclick=fire;document.querySelectorAll('[data-act]').forEach(b=>{if(b.dataset.act==='F')b.onclick=fire;else{const k=b.dataset.act;b.onpointerdown=()=>keys[k]=true;b.onpointerup=()=>keys[k]=false;b.onpointerleave=()=>keys[k]=false}});
-E('focusBtn').onclick=useFocus;E('restart').onclick=reset;E('next').onclick=()=>{if(s.ended&&s.hit>=L().goal&&li<levels.length-1){li++;reset()}};reset();requestAnimationFrame(loop);
+document.querySelectorAll('[data-act]').forEach(b=>{const k=b.dataset.act;b.onpointerdown=()=>keys[k]=true;b.onpointerup=()=>keys[k]=false;b.onpointerleave=()=>keys[k]=false});
+E('restart').onclick=reset;E('next').onclick=()=>{if(s.won&&li<levels.length-1){li++;reset()}};
+function loop(now){const dt=Math.min(.04,(now-last)/1000);last=now;step(dt);draw();requestAnimationFrame(loop)}reset();requestAnimationFrame(loop);
