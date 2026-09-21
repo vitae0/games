@@ -42,6 +42,8 @@ jobs:
           node --check simulations/seismic-waves/sim.js
           node --check simulations/climate-energy-balance/sim.js
           node --check simulations/neural-network-lab/sim.js
+          node --check simulations/exoplanet-detection/sim.js
+          node --check simulations/pid-pendulum/sim.js
           node --check simulations/sir-model/sim.js
           node --check katex-loader.js
           python3 - <<'PY'
@@ -60,7 +62,7 @@ jobs:
           test -f home.css
           test -f play.css
           test -f lab.css
-          for p in             games/afterimage             games/tidal-cartographer             games/switchyard             games/archive-diver             games/quiet-hours             games/pulse-weaver             games/outpost-9             simulations/damped-oscillator             simulations/radioactive-decay             simulations/double-pendulum             simulations/predator-prey             simulations/heat-equation             simulations/orbital-mechanics             simulations/fluid-lab             simulations/wave-superposition             simulations/electric-field             simulations/reaction-kinetics             simulations/membrane-diffusion             simulations/gradient-descent             simulations/seismic-waves             simulations/climate-energy-balance             simulations/neural-network-lab             simulations/sir-model
+          for p in             games/afterimage             games/tidal-cartographer             games/switchyard             games/archive-diver             games/quiet-hours             games/pulse-weaver             games/outpost-9             simulations/damped-oscillator             simulations/radioactive-decay             simulations/double-pendulum             simulations/predator-prey             simulations/heat-equation             simulations/orbital-mechanics             simulations/fluid-lab             simulations/wave-superposition             simulations/electric-field             simulations/reaction-kinetics             simulations/membrane-diffusion             simulations/gradient-descent             simulations/seismic-waves             simulations/climate-energy-balance             simulations/neural-network-lab             simulations/exoplanet-detection             simulations/pid-pendulum             simulations/sir-model
           do
             test -f "$p/index.html"
           done
