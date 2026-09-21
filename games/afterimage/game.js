@@ -3,7 +3,7 @@ const E=id=>document.getElementById(id),status=E('status'),next=E('next');
 const TILE=80,COLS=12,ROWS=8,LOOP=9;
 const levels=[
  {name:'İlk yankı',start:[2,6],exit:[8,6],walls:[[4,3],[5,3],[6,3]],gems:[[2,2],[6,2],[9,4]]},
- {name:'Dar geçit',start:[1,4],exit:[8,4],walls:[[4,1],[4,2],[4,3],[4,5],[4,6],[7,2],[7,3],[7,4],[7,5]],gems:[[3,1],[5,6],[6,2]]},
+ {name:'Dar geçit',start:[1,4],exit:[6,4],walls:[[4,1],[4,2],[4,3],[4,5],[4,6],[7,2],[7,3],[7,4],[7,5]],gems:[[3,1],[5,6],[6,2]]},
  {name:'Çapraz zaman',start:[6,6],exit:[6,1],walls:[[3,3],[4,3],[7,3],[8,3],[3,4],[8,4]],gems:[[2,5],[9,5],[6,2]]}
 ];
 let li=0,state,particles=[];
