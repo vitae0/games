@@ -5,21 +5,24 @@ const levels=[
  {name:'İlk yankı',start:[2,6],exit:[8,6],walls:[[4,3],[5,3],[6,3]],gems:[[2,2],[6,2],[9,4]]},
  {name:'Dar geçit',start:[1,4],exit:[6,4],walls:[[4,1],[4,2],[4,3],[4,5],[4,6],[7,2],[7,3],[7,4],[7,5]],gems:[[3,1],[5,6],[6,2]]},
  {name:'Çapraz zaman',start:[6,6],exit:[6,1],walls:[[3,3],[4,3],[7,3],[8,3],[3,4],[8,4]],gems:[[2,5],[9,5],[6,2]]},
- {name:'Ayna koridoru',start:[2,6],exit:[9,6],walls:[[4,1],[4,2],[4,4],[4,5],[7,2],[7,3],[7,5],[7,6]],gems:[[2,2],[5,3],[8,3]]},
- {name:'Saat odası',start:[6,6],exit:[10,1],walls:[[2,2],[3,2],[4,2],[7,2],[8,2],[9,2],[2,5],[3,5],[8,5],[9,5]],gems:[[1,3],[6,3],[10,6]]},
- {name:'Son yankı',start:[2,4],exit:[9,4],walls:[[3,1],[3,2],[3,5],[3,6],[6,2],[6,3],[6,4],[8,1],[8,2],[8,5],[8,6]],gems:[[2,1],[5,6],[7,1],[8,3]]}
+ {name:'Ayna koridoru',start:[2,6],exit:[8,3],walls:[[5,0],[5,1],[5,2],[5,3],[5,4],[5,5],[5,7]],gems:[[7,6],[8,3]],gates:[{plate:[1,6],gate:[5,6]}]},
+ {name:'Saat odası',start:[6,6],exit:[6,1],walls:[[0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[7,3],[8,3],[9,3],[10,3],[11,3]],gems:[[3,1],[9,1]],gates:[{plate:[6,7],gate:[6,3]}]},
+ {name:'Son yankı',start:[5,6],exit:[10,2],walls:[[0,4],[1,4],[2,4],[3,4],[4,4],[6,4],[7,4],[8,4],[9,4],[10,4],[11,4],[8,0],[8,1],[8,3]],gems:[[9,2],[10,2]],gates:[{plate:[4,6],gate:[5,4]},{plate:[6,2],gate:[8,2]}]}
 ];
 let li=0,state,particles=[];
 const dirs={U:[0,-1],D:[0,1],L:[-1,0],R:[1,0],W:[0,0]};
 function key(p){return p[0]+','+p[1]}
-function wallAt(x,y){return x<0||y<0||x>=COLS||y>=ROWS||levels[li].walls.some(w=>w[0]===x&&w[1]===y)}
-function moved(pos,a){const d=dirs[a],nx=pos[0]+d[0],ny=pos[1]+d[1];return wallAt(nx,ny)?[...pos]:[nx,ny]}
-function replay(loop,step){let p=[...levels[li].start];for(let i=0;i<=step&&i<loop.length;i++)p=moved(p,loop[i]);return p}
-function init(){const L=levels[li];state={p:[...L.start],loops:[],cur:[],gems:new Set(L.gems.map(key)),paradox:0,won:false};particles=[];message('Kristalleri topla, sonra yeşil kapıya ulaş. Echo çarpışmaları sadece seni o hamlede durdurur.');ui();draw()}
+function staticBlocked(x,y){return x<0||y<0||x>=COLS||y>=ROWS||levels[li].walls.some(w=>w[0]===x&&w[1]===y)}
+function movedStatic(pos,a){const d=dirs[a],nx=pos[0]+d[0],ny=pos[1]+d[1];return staticBlocked(nx,ny)?[...pos]:[nx,ny]}
+function replay(loop,step){let p=[...levels[li].start];for(let i=0;i<=step&&i<loop.length;i++)p=movedStatic(p,loop[i]);return p}
+function gateOpen(g,step){return state.loops.some(loop=>{const p=replay(loop,step);return p[0]===g.plate[0]&&p[1]===g.plate[1]})}
+function currentBlocked(x,y,step){if(staticBlocked(x,y))return true;const gates=levels[li].gates||[];const g=gates.find(q=>q.gate[0]===x&&q.gate[1]===y);return g?!gateOpen(g,step):false}
+function movedPlayer(pos,a,step){const d=dirs[a],nx=pos[0]+d[0],ny=pos[1]+d[1];return currentBlocked(nx,ny,step)?[...pos]:[nx,ny]}
+function init(){const L=levels[li];state={p:[...L.start],loops:[],cur:[],gems:new Set(L.gems.map(key)),paradox:0,won:false};particles=[];message(L.gates?.length?'Mavi plakaları geçmiş echo’larınla aynı anda basılı tutarak pembe zaman kapılarını aç.':'Kristalleri topla, sonra yeşil kapıya ulaş. Echo çarpışmaları sadece seni o hamlede durdurur.');ui();draw()}
 function message(t){status.textContent=t}
 function act(a){
  if(state.won)return;
- const before=[...state.p],candidate=moved(state.p,a),step=state.cur.length;
+ const before=[...state.p],step=state.cur.length,candidate=movedPlayer(state.p,a,step);
  const ghosts=state.loops.map(loop=>replay(loop,step));
  const collision=ghosts.some(g=>g[0]===candidate[0]&&g[1]===candidate[1]);
  state.cur.push(a);
@@ -56,6 +59,7 @@ function drawGrid(){
  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*TILE,0);ctx.lineTo(x*TILE,C.height);ctx.stroke()}
  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*TILE);ctx.lineTo(C.width,y*TILE);ctx.stroke()}
  for(const [x,y] of levels[li].walls)roundRect(x*TILE+8,y*TILE+8,TILE-16,TILE-16,18,'#302c34');
+ const gates=levels[li].gates||[],step=Math.max(0,state.cur.length-1);gates.forEach((g,i)=>{const open=gateOpen(g,step),p=g.plate,q=g.gate;ctx.fillStyle='#70cde0';ctx.beginPath();ctx.roundRect(p[0]*TILE+18,p[1]*TILE+18,TILE-36,TILE-36,10);ctx.fill();ctx.fillStyle='#245f6a';ctx.font='800 11px system-ui';ctx.textAlign='center';ctx.fillText(String(i+1),p[0]*TILE+40,p[1]*TILE+44);ctx.fillStyle=open?'rgba(211,94,178,.18)':'#d35eb2';ctx.beginPath();ctx.roundRect(q[0]*TILE+8,q[1]*TILE+8,TILE-16,TILE-16,15);ctx.fill();ctx.strokeStyle='#8d3377';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle=open?'#8d3377':'#fff';ctx.fillText(open?'açık':String(i+1),q[0]*TILE+40,q[1]*TILE+44)})
 }
 function draw(){
  drawGrid();
