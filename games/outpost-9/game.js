@@ -1,10 +1,10 @@
 const C=document.getElementById('game'),ctx=C.getContext('2d'),E=id=>document.getElementById(id);
 const scenarios=[
- {name:'Kutup gecesi',days:[[6,2,2],[7,1,3],[5,3,2],[8,2,3],[6,4,2],[7,3,4],[5,2,5],[8,4,4]],goal:22},
- {name:'İyon fırtınası',days:[[5,4,2],[6,5,2],[7,3,3],[5,6,2],[7,5,3],[6,4,4],[8,5,3],[7,6,4]],goal:20},
- {name:'Dar pencere',days:[[6,3,4],[7,4,5],[6,5,3],[8,3,5],[7,5,4],[8,4,5],[6,6,4],[8,5,5]],goal:24},
- {name:'Karanlık cephe',days:[[8,4,3],[7,6,4],[9,5,3],[8,6,5],[7,7,4],[9,5,5],[8,7,4],[9,6,5]],goal:20},
- {name:'Son yayın',days:[[8,6,4],[9,7,5],[8,7,5],[10,6,6],[9,8,5],[10,7,6],[9,8,6],[10,8,7]],goal:18}
+ {name:'Kutup gecesi',days:[[4,2,3],[5,2,3],[4,3,2],[5,3,3],[4,4,2],[5,3,4],[4,2,4],[5,4,3]],goal:14},
+ {name:'İyon fırtınası',days:[[4,3,3],[5,3,3],[4,4,3],[5,4,3],[5,3,4],[4,4,4],[5,4,4],[6,3,4]],goal:12},
+ {name:'Dar pencere',days:[[5,3,4],[5,4,4],[6,3,4],[5,4,5],[6,3,5],[5,4,5],[6,4,4],[5,4,5]],goal:10},
+ {name:'Karanlık cephe',days:[[5,4,4],[6,3,5],[5,5,4],[6,4,5],[5,5,5],[6,4,5],[6,5,4],[5,5,5]],goal:8},
+ {name:'Son yayın',days:[[6,4,4],[6,4,5],[5,5,5],[6,4,6],[6,5,5],[5,5,6],[6,4,6],[6,5,6]],goal:6}
 ];
 let li=0,s;function L(){return scenarios[li]}function forecast(){return L().days[s.day]}
 function reset(){s={day:0,hp:100,data:0,p:[4,3,3],ended:false,won:false};E('next').disabled=true;E('status').textContent='Tahmini oku. Gücü ısıtma, kalkan ve iletişim arasında paylaştır.';ui();draw()}
