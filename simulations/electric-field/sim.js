@@ -1,0 +1,13 @@
+const E=id=>document.getElementById(id),C=E('field'),ctx=C.getContext('2d'),qCtl=E('q'),equip=E('equip'),vec=E('vec');let charges=[],drag=-1,mouse=[450,270],sign=1;
+function resetDipole(){charges=[{x:330,y:270,q:2},{x:570,y:270,q:-2}];ui()}
+function ui(){E('qv').textContent=(+qCtl.value).toFixed(1);E('count').textContent=charges.length;E('sign').textContent=sign>0?'+':'−'}
+function fieldAt(x,y){let ex=0,ey=0,V=0;for(const c of charges){const dx=x-c.x,dy=y-c.y,r2=dx*dx+dy*dy+80,r=Math.sqrt(r2),f=c.q/(r2*r);ex+=f*dx;ey+=f*dy;V+=c.q/r}return[ex,ey,V]}
+function draw(){const W=C.width,H=C.height,step=10;if(equip.checked){for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){const V=fieldAt(x+step/2,y+step/2)[2],z=Math.tanh(V*45);ctx.fillStyle=z>=0?`rgba(229,92,76,${Math.abs(z)*.32+.03})`:`rgba(76,126,229,${Math.abs(z)*.32+.03})`;ctx.fillRect(x,y,step,step)}}else{ctx.fillStyle='#f7f7f2';ctx.fillRect(0,0,W,H)}
+ if(vec.checked){ctx.strokeStyle='rgba(35,38,45,.45)';ctx.lineWidth=1.2;for(let y=28;y<H;y+=42)for(let x=28;x<W;x+=42){const [ex,ey]=fieldAt(x,y),m=Math.hypot(ex,ey);if(m<1e-8)continue;const l=Math.min(18,3+500*m),ux=ex/m,uy=ey/m;ctx.beginPath();ctx.moveTo(x-ux*l*.35,y-uy*l*.35);ctx.lineTo(x+ux*l*.65,y+uy*l*.65);ctx.stroke()}}
+ for(const c of charges){ctx.fillStyle=c.q>0?'#e45e55':'#4d75da';ctx.beginPath();ctx.arc(c.x,c.y,18+Math.abs(c.q)*2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='800 18px system-ui';ctx.textAlign='center';ctx.fillText(c.q>0?'+':'−',c.x,c.y+6)}
+ const [ex,ey,V]=fieldAt(...mouse),m=Math.hypot(ex,ey);E('eval').textContent=(m*1e4).toFixed(2)+' arb';E('vval').textContent=(V*100).toFixed(2)+' arb';
+ ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.beginPath();ctx.arc(mouse[0],mouse[1],6,0,Math.PI*2);ctx.stroke()}
+function pos(e){const r=C.getBoundingClientRect();return[(e.clientX-r.left)*C.width/r.width,(e.clientY-r.top)*C.height/r.height]}
+C.addEventListener('pointerdown',e=>{mouse=pos(e);drag=charges.findIndex(c=>Math.hypot(c.x-mouse[0],c.y-mouse[1])<28);if(drag<0){charges.push({x:mouse[0],y:mouse[1],q:(e.shiftKey?-1:1)*+qCtl.value});ui()}else C.setPointerCapture(e.pointerId)});
+C.addEventListener('pointermove',e=>{mouse=pos(e);if(drag>=0){charges[drag].x=mouse[0];charges[drag].y=mouse[1]}draw()});C.addEventListener('pointerup',()=>drag=-1);C.addEventListener('contextmenu',e=>e.preventDefault());
+qCtl.oninput=ui;E('dipole').onclick=resetDipole;E('clear').onclick=()=>{charges=[];ui()};resetDipole();function loop(){draw();requestAnimationFrame(loop)}requestAnimationFrame(loop);
