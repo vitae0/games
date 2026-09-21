@@ -1,0 +1,24 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>İklim Enerji Dengesi</title><link rel="stylesheet" href="../../lab.css?v=4"></head><body><div class="lab-shell">
+<header class="lab-top"><a class="lab-back" href="../../">←</a><div class="lab-heading"><h1>İklim enerji dengesi</h1><span>0D iklim modeli · radyasyon · geri besleme</span></div></header>
+<section class="lab-live"><aside class="lab-controls">
+<div class="control"><label><span>Güneş sabiti S</span><strong id="sv"></strong></label><input id="solar" type="range" min="1100" max="1500" step="5" value="1361"></div>
+<div class="control"><label><span>Albedo α</span><strong id="av"></strong></label><input id="albedo" type="range" min=".1" max=".65" step=".01" value=".30"></div>
+<div class="control"><label><span>Etkin IR emissivity ε</span><strong id="ev"></strong></label><input id="eps" type="range" min=".45" max="1" step=".01" value=".61"></div>
+<div class="control"><label><span>Isı kapasitesi C</span><strong id="cv"></strong></label><input id="cap" type="range" min="2" max="30" step=".5" value="10"></div>
+<label class="control"><span><input id="ice" type="checkbox"> buz-albedo geri beslemesi</span></label>
+<div class="lab-button-row"><button class="lab-btn primary" id="pause">Duraklat</button><button class="lab-btn" id="reset">288 K'den başlat</button></div>
+<div class="metric-grid"><div class="metric"><span>T</span><strong id="temp"></strong></div><div class="metric"><span>absorbed SW</span><strong id="in"></strong></div><div class="metric"><span>outgoing LW</span><strong id="out"></strong></div><div class="metric"><span>net</span><strong id="net"></strong></div></div>
+</aside><div class="viz-stack">
+<div class="viz-card"><div class="viz-card-head"><strong>Explore · enerji dengesini boz</strong><span>ayar değişince sıcaklık yeni dengeye evrilir</span></div><canvas id="climate" width="900" height="390"></canvas></div>
+<div class="two-col"><div class="viz-card"><div class="viz-card-head"><strong>Observe</strong></div><div class="prompt-stack"><p>C'yi büyüt. Denge sıcaklığı değişiyor mu, yoksa yalnızca oraya ulaşma süresi mi?</p><p>Buz-albedo geri beslemesini açıp sıcaklığı 270 K civarına getir. Albedo artık neden sabit kalmıyor?</p></div></div><div class="viz-card"><div class="viz-card-head"><strong>Predict</strong></div><details class="prediction"><summary>ε azalırsa denge sıcaklığı?</summary><p>Bu oyuncak modelde aynı T'de uzaya giden uzun dalga enerji azalır; denge yeniden kurulana kadar T yükselir.</p></details></div></div></div>
+<div class="viz-card"><div class="viz-card-head"><strong>Enerji akıları</strong><span>W/m²</span></div><canvas id="flux" width="900" height="230"></canvas></div>
+</div></section>
+<section class="explainer-grid"><article class="note-card"><h3>Test</h3><p>Geri besleme kapalıyken hesaplanan dengeyi simülasyonun yaklaştığı değerle karşılaştır.</p></article><article class="note-card"><h3>Break the model</h3><p>Bu modelde Dünya tek sıcaklıklı bir noktadır. Enlem, mevsim, atmosfer katmanları, okyanus dolaşımı ve bulut dinamiği yoktur.</p></article><article class="note-card"><h3>ε ne değildir?</h3><p>ε burada “CO₂ slider” değildir. Tüm uzun dalga sera etkilerini tek etkin parametreye sıkıştıran kaba bir model katsayısıdır.</p></article></section>
+<section class="derivation-workbook"><h2>0D enerji denge modelini türet</h2><div class="derivation-steps">
+<div class="derive-step"><h3>Güneşten yakalanan güç</h3><p>Dünya yalnız πR² kesit alanıyla ışık yakalar.</p><div class="formula" data-tex="P_{in}=S\pi R^2(1-\alpha)"></div></div>
+<div class="derive-step"><h3>Küre yüzeyine ortalama</h3><p>Enerji 4πR² yüzeye dağıtılır.</p><div class="formula" data-tex="F_{in}=\frac{S(1-\alpha)}{4}"></div></div>
+<div class="derive-step"><h3>Uzun dalga çıkışı</h3><p>Stefan–Boltzmann yasasını etkin emissivity ile yazarız.</p><div class="formula" data-tex="F_{out}=\varepsilon\sigma T^4"></div></div>
+<div class="derive-step"><h3>Denge sıcaklığı</h3><div class="formula" data-tex="F_{in}=F_{out}\Rightarrow T_{eq}=\left[\frac{S(1-\alpha)}{4\varepsilon\sigma}\right]^{1/4}"></div></div>
+<div class="derive-step"><h3>Denge dışında zaman evrimi</h3><p>Net radyatif akı, birim alan başına ısı içeriğini değiştirir.</p><div class="formula" data-tex="C\frac{dT}{dt}=\frac{S(1-\alpha)}4-\varepsilon\sigma T^4"></div></div>
+<div class="derive-step"><h3>Buz-albedo geri beslemesi</h3><p>Geri besleme açıldığında α artık sabit değil; düşük T'de daha yüksek değere yumuşak geçiş yapar.</p><div class="formula" data-tex="\alpha(T)=\alpha_0+\Delta\alpha\,\frac{1-\tanh((T-T_c)/w)}2"></div></div>
+</div></section></div><script src="./sim.js?v=1"></script><script src="../../katex-loader.js?v=4"></script></body></html>
