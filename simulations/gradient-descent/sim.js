@@ -1,5 +1,5 @@
 const E=id=>document.getElementById(id),C=E('plot'),ctx=C.getContext('2d'),fn=E('fn'),eta=E('eta');let p={x:2.5,y:-1.8},trail=[],n=0,auto=false,last=performance.now();
-function F(x,y){return fn.value==='bowl'?.5*(4*x*x+y*y):(1-x)*(1-x)+100*(y-x*x)*(y-x*x)}
+function F(x,y){return fn.value==='bowl' ? .5*(4*x*x+y*y):(1-x)*(1-x)+100*(y-x*x)*(y-x*x)}
 function G(x,y){return fn.value==='bowl'?[4*x,y]:[-2*(1-x)-400*x*(y-x*x),200*(y-x*x)]}
 function range(){return fn.value==='bowl'?[-3,3,-3,3]:[-2,2,-1,3]}
 function reset(){p=fn.value==='bowl'?{x:2.5,y:-1.8}:{x:-1.5,y:2};trail=[[p.x,p.y]];n=0;ui()}
