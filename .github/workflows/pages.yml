@@ -22,19 +22,39 @@ jobs:
         run: |
           node --check games/afterimage/game.js
           node --check games/tidal-cartographer/game.js
+          node --check games/switchyard/game.js
+          node --check games/archive-diver/game.js
+          node --check games/quiet-hours/game.js
+          node --check games/pulse-weaver/game.js
+          node --check games/outpost-9/game.js
           node --check simulations/damped-oscillator/sim.js
           node --check simulations/radioactive-decay/sim.js
+          node --check simulations/double-pendulum/sim.js
+          node --check simulations/predator-prey/sim.js
+          node --check simulations/heat-equation/sim.js
+          node --check simulations/orbital-mechanics/sim.js
+          node --check simulations/sir-model/sim.js
           node --check katex-loader.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          text = Path("index.html").read_text(encoding="utf-8")
+          for script in re.findall(r"<script>(.*?)</script>", text, re.S):
+              with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:
+                  f.write(script)
+                  name = f.name
+              subprocess.run(["node", "--check", name], check=True)
+          PY
       - name: Check required pages
         run: |
           test -f index.html
           test -f home.css
           test -f play.css
           test -f lab.css
-          test -f games/afterimage/index.html
-          test -f games/tidal-cartographer/index.html
-          test -f simulations/damped-oscillator/index.html
-          test -f simulations/radioactive-decay/index.html
+          for p in             games/afterimage             games/tidal-cartographer             games/switchyard             games/archive-diver             games/quiet-hours             games/pulse-weaver             games/outpost-9             simulations/damped-oscillator             simulations/radioactive-decay             simulations/double-pendulum             simulations/predator-prey             simulations/heat-equation             simulations/orbital-mechanics             simulations/sir-model
+          do
+            test -f "$p/index.html"
+          done
       - uses: actions/configure-pages@v5
         with:
           enablement: true
