@@ -37,3 +37,14 @@ input[type=range]{width:100%;accent-color:#171717}
 .mini-table{width:100%;border-collapse:collapse;font-size:.88rem}.mini-table th,.mini-table td{padding:9px 8px;border-bottom:1px solid #e5e4dd;text-align:left}.mini-table th{color:#777;font-weight:600}
 @media(max-width:900px){.lab-live{grid-template-columns:1fr}.lab-controls{display:grid;grid-template-columns:repeat(2,1fr);gap:0 18px}.explainer-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.lab-shell{width:min(100% - 18px,620px);padding-top:8px}.lab-heading span{display:none}.lab-controls{grid-template-columns:1fr}.explainer-grid,.two-col{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}}
+
+.derivation-workbook{max-width:940px;margin:44px auto 0;padding-top:8px;border-top:1px solid #dad9d2}
+.derivation-workbook>h2{font-size:1.75rem;letter-spacing:-.04em;margin:26px 0 8px}
+.derivation-intro{color:#666;max-width:760px;margin:0 0 20px}
+.derivation-steps{display:grid;gap:12px;counter-reset:derive}
+.derive-step{counter-increment:derive;background:#fff;border:1px solid #dddcd4;border-radius:18px;padding:16px 18px}
+.derive-step::before{content:"Adım " counter(derive);display:inline-block;margin-bottom:7px;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#777}
+.derive-step h3{font-size:1rem;margin:0 0 6px}
+.derive-step p{margin:6px 0;color:#555}
+.derive-step .formula{margin:9px 0 4px;background:#f8f8f4}
+.derive-check{background:#e9eee8;border-radius:14px;padding:12px 14px;margin-top:10px;color:#485248;font-size:.88rem}
