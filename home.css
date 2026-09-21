@@ -39,3 +39,11 @@ a{color:inherit}
 .decay-preview svg{position:absolute;left:6%;top:10%;width:88%;height:68%}
 .atom-field{position:absolute;inset:0;background-image:radial-gradient(circle at 12% 28%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 19% 62%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 28% 42%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 38% 70%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 49% 33%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 58% 57%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 69% 26%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 80% 66%,#2d6c42 0 4px,transparent 5px),radial-gradient(circle at 88% 38%,#2d6c42 0 4px,transparent 5px);opacity:.55}
 @media(max-width:760px){.home-shell{width:min(100% - 24px,680px);padding-top:22px}.home-hero{padding:28px 0 36px}.home-grid{grid-template-columns:1fr;gap:16px}.home-footer{flex-direction:column;padding-bottom:20px}}
+.filterbar{display:flex;justify-content:center;gap:8px;margin-top:24px;flex-wrap:wrap}
+.filter{border:1px solid #d8d7d0;background:#fff;color:#5f5f5f;border-radius:999px;padding:8px 13px;font:inherit;font-size:.86rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.03)}
+.filter span{color:#9a9a9a;margin-left:4px}
+.filter.active{background:#171717;color:#fff;border-color:#171717}
+.filter.active span{color:#bdbdbd}
+.home-card[hidden]{display:none}
+.svg-preview{display:grid;place-items:center}
+.svg-preview svg{width:100%;height:100%;display:block}
