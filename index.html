@@ -1,38 +1,37 @@
 <!doctype html>
-<html lang="tr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Games + Simulations</title>
-<meta name="description" content="Her gün büyüyen tek oyunculu tarayıcı oyunları ve bilimsel simülasyonlar.">
-<link rel="stylesheet" href="./home.css?v=20260921-1">
-</head>
-<body class="home">
-<main class="home-shell">
-<header class="home-hero">
-<a class="home-mark" href="./" aria-label="Ana sayfa">g+s</a>
-<h1>games + simulations</h1>
-<p>Tarayıcıda çalışan küçük oyunlar ve etkileşimli bilimsel modeller.</p>
-</header>
-<section class="home-grid" aria-label="Koleksiyon">
-<a class="home-card" href="./games/afterimage/">
-<div class="home-preview afterimage-preview" aria-hidden="true"><span class="after-player"></span><span class="after-ghost g1"></span><span class="after-ghost g2"></span><span class="after-gem gem1"></span><span class="after-gem gem2"></span></div>
-<div class="home-card-copy"><div><span class="home-type">oyun · zaman-döngüsü bulmacası</span><h2>Afterimage</h2></div><span class="home-arrow">↗</span></div>
-</a>
-<a class="home-card" href="./games/tidal-cartographer/">
-<div class="home-preview tidal-preview" aria-hidden="true"><span class="tide-line l1"></span><span class="tide-line l2"></span><span class="tide-line l3"></span><span class="boat"></span><span class="buoy b1"></span><span class="buoy b2"></span><span class="buoy b3"></span></div>
-<div class="home-card-copy"><div><span class="home-type">oyun · navigasyon / strateji</span><h2>Tidal Cartographer</h2></div><span class="home-arrow">↗</span></div>
-</a>
-<a class="home-card" href="./simulations/damped-oscillator/">
-<div class="home-preview oscillator-preview" aria-hidden="true"><span class="spring"></span><span class="mass"></span><svg viewBox="0 0 400 160" preserveAspectRatio="none"><path d="M8 80 C35 15 58 145 85 80 S135 45 160 80 S210 62 235 80 S285 70 310 80 S360 76 392 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div>
-<div class="home-card-copy"><div><span class="home-type">simülasyon · klasik mekanik</span><h2>Sönümlü harmonik osilatör</h2></div><span class="home-arrow">↗</span></div>
-</a>
-<a class="home-card" href="./simulations/radioactive-decay/">
-<div class="home-preview decay-preview" aria-hidden="true"><div class="atom-field"></div><svg viewBox="0 0 400 160" preserveAspectRatio="none"><path d="M10 18 C90 30 130 58 175 82 C225 108 300 126 390 138" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div>
-<div class="home-card-copy"><div><span class="home-type">simülasyon · nükleer fizik / olasılık</span><h2>Radyoaktif bozunma</h2></div><span class="home-arrow">↗</span></div>
-</a>
-</section>
-<footer class="home-footer"><span>Her gün en az 2 oyun + 2 simülasyon.</span><a href="https://github.com/vitae0/games">GitHub ↗</a></footer>
-</main>
-</body>
-</html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Games + Simulations</title><meta name="description" content="Tek oyunculu tarayıcı oyunları ve etkileşimli bilimsel simülasyonlar."><link rel="stylesheet" href="./home.css?v=20260921-2"></head>
+<body class="home"><main class="home-shell"><header class="home-hero"><a class="home-mark" href="./" aria-label="Ana sayfa">g+s</a><h1>games + simulations</h1><p>Tarayıcıda çalışan küçük oyunlar ve etkileşimli bilimsel modeller.</p>
+<div class="filterbar" role="group" aria-label="İçerik filtresi"><button class="filter active" data-filter="all">Hepsi <span>14</span></button><button class="filter" data-filter="game">Oyunlar <span>7</span></button><button class="filter" data-filter="sim">Simülasyonlar <span>7</span></button></div></header>
+<section class="home-grid" id="collection" aria-label="Koleksiyon">
+
+<a class="home-card" data-kind="game" href="./games/afterimage/"><div class="home-preview afterimage-preview"><span class="after-player"></span><span class="after-ghost g1"></span><span class="after-ghost g2"></span><span class="after-gem gem1"></span><span class="after-gem gem2"></span></div><div class="home-card-copy"><div><span class="home-type">oyun · zaman-döngüsü bulmacası</span><h2>Afterimage</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="game" href="./games/tidal-cartographer/"><div class="home-preview tidal-preview"><span class="tide-line l1"></span><span class="tide-line l2"></span><span class="tide-line l3"></span><span class="boat"></span><span class="buoy b1"></span><span class="buoy b2"></span><span class="buoy b3"></span></div><div class="home-card-copy"><div><span class="home-type">oyun · navigasyon / pilotaj</span><h2>Tidal Cartographer</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="game" href="./games/switchyard/"><div class="home-preview svg-preview" style="background:#f3dfba"><svg viewBox="0 0 400 250"><g fill="none" stroke="#665e55" stroke-width="10" stroke-linecap="round"><path d="M30 125H150L245 55M150 125l95 70M245 55h125M245 195h125"/></g><g fill="#fff" stroke="#292929" stroke-width="5"><circle cx="150" cy="125" r="15"/><circle cx="245" cy="55" r="15"/><circle cx="245" cy="195" r="15"/></g><rect x="72" y="106" width="48" height="28" rx="8" fill="#ef5d5d"/></svg></div><div class="home-card-copy"><div><span class="home-type">oyun · lojistik / zamanlama</span><h2>Switchyard</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="game" href="./games/archive-diver/"><div class="home-preview svg-preview" style="background:#24262d"><svg viewBox="0 0 400 250"><g stroke="#4a4d56" stroke-width="2"><path d="M0 50H400M0 100H400M0 150H400M0 200H400M50 0V250M100 0V250M150 0V250M200 0V250M250 0V250M300 0V250M350 0V250"/></g><g fill="#e36b68"><circle cx="125" cy="75" r="8"/><circle cx="275" cy="175" r="8"/><circle cx="325" cy="75" r="8"/></g><rect x="174" y="115" width="52" height="38" rx="7" fill="#efc45b"/><circle cx="75" cy="175" r="14" fill="#fff"/></svg></div><div class="home-card-copy"><div><span class="home-type">oyun · hafıza / navigasyon</span><h2>Archive Diver</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="game" href="./games/quiet-hours/"><div class="home-preview svg-preview" style="background:#e9e8e2"><svg viewBox="0 0 400 250"><path d="M70 30V220M190 30V150M310 100V220" stroke="#34353a" stroke-width="28" stroke-linecap="round"/><path d="M245 125H390" stroke="#dc6666" stroke-width="34" opacity=".23"/><circle cx="245" cy="125" r="18" fill="#c94f4f"/><circle cx="110" cy="190" r="18" fill="#222328"/><rect x="328" y="42" width="34" height="28" rx="5" fill="#e5b84d"/></svg></div><div class="home-card-copy"><div><span class="home-type">oyun · turn-based stealth</span><h2>Quiet Hours</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="game" href="./games/pulse-weaver/"><div class="home-preview svg-preview" style="background:#171923"><svg viewBox="0 0 400 250"><g fill="none" stroke-width="15"><circle cx="200" cy="125" r="45" stroke="#7868dc" stroke-dasharray="220 65"/><circle cx="200" cy="125" r="80" stroke="#d66e92" stroke-dasharray="380 125"/><circle cx="200" cy="125" r="115" stroke="#e2a84b" stroke-dasharray="560 160"/></g><circle cx="200" cy="125" r="14" fill="#fff"/><circle cx="200" cy="30" r="8" fill="#fff"/></svg></div><div class="home-card-copy"><div><span class="home-type">oyun · timing / arcade</span><h2>Pulse Weaver</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="game" href="./games/outpost-9/"><div class="home-preview svg-preview" style="background:#d9deef"><svg viewBox="0 0 400 250"><rect x="82" y="95" width="236" height="105" rx="24" fill="#343948"/><rect x="160" y="48" width="80" height="65" rx="14" fill="#606b8b"/><path d="M200 48V20M185 20h30" stroke="#343948" stroke-width="8"/><rect x="105" y="128" width="45" height="40" rx="8" fill="#e58a55"/><rect x="177" y="128" width="45" height="40" rx="8" fill="#7086e5"/><rect x="249" y="128" width="45" height="40" rx="8" fill="#59ba99"/></svg></div><div class="home-card-copy"><div><span class="home-type">oyun · kaynak yönetimi</span><h2>Outpost 9</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="sim" href="./simulations/damped-oscillator/"><div class="home-preview oscillator-preview"><span class="spring"></span><span class="mass"></span><svg viewBox="0 0 400 160" preserveAspectRatio="none"><path d="M8 80 C35 15 58 145 85 80 S135 45 160 80 S210 62 235 80 S285 70 310 80 S360 76 392 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div><div class="home-card-copy"><div><span class="home-type">simülasyon · klasik mekanik</span><h2>Sönümlü harmonik osilatör</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="sim" href="./simulations/radioactive-decay/"><div class="home-preview decay-preview"><div class="atom-field"></div><svg viewBox="0 0 400 160" preserveAspectRatio="none"><path d="M10 18 C90 30 130 58 175 82 C225 108 300 126 390 138" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div><div class="home-card-copy"><div><span class="home-type">simülasyon · nükleer fizik / olasılık</span><h2>Radyoaktif bozunma</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="sim" href="./simulations/double-pendulum/"><div class="home-preview svg-preview" style="background:#f2e3d5"><svg viewBox="0 0 400 250"><path d="M200 28L150 118L278 202" stroke="#33343a" stroke-width="9" fill="none" stroke-linecap="round"/><circle cx="150" cy="118" r="18" fill="#7b64d6"/><circle cx="278" cy="202" r="22" fill="#df7a55"/><path d="M200 28L156 116L271 198" stroke="#d59eaa" stroke-width="6" opacity=".45" fill="none"/></svg></div><div class="home-card-copy"><div><span class="home-type">simülasyon · kaos / nonlineer dinamik</span><h2>Çift sarkaç</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="sim" href="./simulations/predator-prey/"><div class="home-preview svg-preview" style="background:#e9e2fb"><svg viewBox="0 0 400 250"><path d="M45 170C100 50 150 55 190 150S290 235 355 78" fill="none" stroke="#7865d5" stroke-width="9"/><path d="M45 205C90 190 120 85 185 80S280 155 355 165" fill="none" stroke="#df7f50" stroke-width="9"/><circle cx="190" cy="150" r="8" fill="#7865d5"/><path d="M262 115l18 10-18 10z" fill="#df7f50"/></svg></div><div class="home-card-copy"><div><span class="home-type">simülasyon · ekoloji / ODE</span><h2>Av-avcı dinamiği</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="sim" href="./simulations/heat-equation/"><div class="home-preview svg-preview heat-thumb"><svg viewBox="0 0 400 250"><defs><linearGradient id="heatg" x1="0" x2="1"><stop stop-color="#345d99"/><stop offset=".5" stop-color="#ed6b43"/><stop offset="1" stop-color="#345d99"/></linearGradient></defs><rect x="40" y="96" width="320" height="58" rx="12" fill="url(#heatg)"/><path d="M40 195C115 194 128 62 200 62s83 132 160 133" fill="none" stroke="#5d4bc2" stroke-width="7"/></svg></div><div class="home-card-copy"><div><span class="home-type">simülasyon · PDE / difüzyon</span><h2>Isı denklemi</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="sim" href="./simulations/orbital-mechanics/"><div class="home-preview svg-preview" style="background:#dfeaf4"><svg viewBox="0 0 400 250"><ellipse cx="200" cy="125" rx="145" ry="82" fill="none" stroke="#6b5bd3" stroke-width="7" transform="rotate(-14 200 125)"/><circle cx="165" cy="132" r="20" fill="#e2a64a"/><circle cx="330" cy="79" r="10" fill="#272930"/><path d="M330 79l35-24" stroke="#df6f67" stroke-width="6" stroke-linecap="round"/></svg></div><div class="home-card-copy"><div><span class="home-type">simülasyon · yörünge mekaniği</span><h2>Merkezi kütle yörüngesi</h2></div><span class="home-arrow">↗</span></div></a>
+
+<a class="home-card" data-kind="sim" href="./simulations/sir-model/"><div class="home-preview svg-preview" style="background:#edf0e8"><svg viewBox="0 0 400 250"><path d="M30 55C120 62 170 82 235 170S330 210 370 212" fill="none" stroke="#7865d5" stroke-width="8"/><path d="M30 210C95 208 122 55 185 70s78 132 185 141" fill="none" stroke="#df7a52" stroke-width="8"/><path d="M30 215C150 214 185 175 235 120S315 55 370 40" fill="none" stroke="#4aa276" stroke-width="8"/></svg></div><div class="home-card-copy"><div><span class="home-type">simülasyon · epidemiyoloji / ODE</span><h2>SIR epidemik model</h2></div><span class="home-arrow">↗</span></div></a>
+
+</section><footer class="home-footer"><span>Her gün en az 2 oyun + 2 simülasyon.</span><a href="https://github.com/vitae0/games">GitHub ↗</a></footer></main>
+<script>const buttons=[...document.querySelectorAll('.filter')],cards=[...document.querySelectorAll('.home-card')];buttons.forEach(b=>b.addEventListener('click',()=>{buttons.forEach(x=>x.classList.toggle('active',x===b));const f=b.dataset.filter;cards.forEach(c=>c.hidden=f!=='all'&&c.dataset.kind!==f)}));</script>
+</body></html>
