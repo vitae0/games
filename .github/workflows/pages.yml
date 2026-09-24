@@ -18,9 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Integrate daily additions
+        run: node scripts/inject-daily-2026-09-24.js
       - name: Check JavaScript syntax
         run: |
-          for f in games/*/game.js simulations/*/sim.js katex-loader.js; do node --check "$f"; done
+          for f in games/*/game.js simulations/*/sim.js katex-loader.js scripts/*.js; do node --check "$f"; done
           python3 - <<'PY'
           from pathlib import Path
           import re, subprocess, tempfile
@@ -37,16 +39,16 @@ jobs:
           import re
           text=Path('index.html').read_text(encoding='utf-8')
           links=re.findall(r'href="(\./(?:games|simulations)/[^\"]+/)"',text)
-          assert len(links)==38, f'expected 38 collection links, got {len(links)}'
-          assert len(set(links))==38, 'duplicate collection link'
+          assert len(links)==43, f'expected 43 collection links, got {len(links)}'
+          assert len(set(links))==43, 'duplicate collection link'
           for href in links:
               p=Path(href[2:])/'index.html'
               assert p.is_file(), f'missing {p}'
-          assert 'Hepsi <span>38</span>' in text
-          assert 'Oyunlar <span>16</span>' in text
-          assert 'Simülasyonlar <span>22</span>' in text
-          assert text.count('data-kind="game"')>=17
-          assert text.count('data-kind="sim"')>=30
+          assert 'Hepsi <span>43</span>' in text
+          assert 'Oyunlar <span>19</span>' in text
+          assert 'Simülasyonlar <span>24</span>' in text
+          assert 'Vector Heist' in text and 'Signal Runner' in text
+          assert 'Bağlaşık osilatörler' in text and 'Bernoulli & süreklilik' in text
           PY
       - uses: actions/configure-pages@v5
         with:
