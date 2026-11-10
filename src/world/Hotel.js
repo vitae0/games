@@ -452,7 +452,7 @@ export class Hotel {
       (this.bathAssets.waterMaterial.uniforms.uTime.value + Math.max(0,dt)) % 4096;
     for (const fn of this.animations) fn(dt);
     this.physics.step(dt);
-    this.actors.update(dt);
+    this.actors.update(dt, player);
   }
   dispose() {
     this.batch.dispose();
