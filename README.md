@@ -1,4 +1,4 @@
-# VitaeWorld · Alpha 0.5 (Vitae Hotel)
+# VitaeWorld · Alpha 0.6 (Vitae Hotel)
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
 
@@ -9,9 +9,9 @@ npm install
 npm run dev
 ```
 
-Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://localhost:5173`). WebGL2 ve fiziksel klavye/fare ile kullanın. `npm run build` üretim derlemesi, `npm test` otomatik testler içindir.
+Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://localhost:5173`). WebGL2 destekleyen güncel Android Chrome veya iOS/iPadOS Safari üzerinde dokunmatik; masaüstünde klavye/fare ile kullanın. `npm run build` üretim derlemesi, `npm test` otomatik testler içindir.
 
-## Alpha 0.5 özellikleri
+## Alpha 0.6 özellikleri
 
 - **Tutarlı yönler:** FPS kamerası, karakterin -Z ön ekseni, WASD hareketi, yan adım ve üçüncü şahıs kamera aynı yaw dönüşünü kullanır. `src/player/Orientation.js` için eksen ve çapraz hareket testleri var.
 - **Modern iç mekân:** Sıcak nötr duvarlar, dokulu sıva/taş/ahşap/kumaş yüzeyler, sade bir lobi ve yumuşak beyaz-amber ışık. Neon estetik yalnızca şehir manzarasında. Dokular 256×256 CanvasTexture ile istemci içinde üretilir, uzak HTTP bağımlılığı yoktur.
@@ -27,6 +27,30 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 - **İki simüle karakter:** Mira (resepsiyon) ve Nova (misafir). `E` ile konuşulur, uygun açıdan elleri tutulabilir ve kısıtlı biçimde çekilebilir. **Diğer gerçek oyuncularla ağ bağlantısı henüz yoktur.**
 - **Avatar özelleştirme:** `K` ile bedensel ölçüler (metre), kıyafet, saç, ten tonu, göz rengi ve gözlük; JSON profil localStorage'da saklanır. Prosedürel modellerde yüz ve ayrık kıyafet katmanları bulunur ve kol/bacak skinned mesh iskeleti kullanılır. Harici VRM/GLB yüklenebilir, ancak bu dosyaların beden ölçüleri varsayılan karakter kadar özelleştirilemez.
 - **Optimizasyon:** InstancedMesh geometri gruplama, paylaşımlı malzemeler, gölge haritası kapalı, harici font yok, adaptif çözünürlük ve 10 Hz HUD.
+
+## Mobil sürüm (Alpha 0.6)
+
+- **Ek yazılım veya sunucu gerektirmez:** Mobilde `pointer lock` kullanılmaz. `DÜNYAYA GİR` sonrasında dokunmatik HUD otomatik görünür; normal masaüstünde klavye/fare girişleri korunur. Test için masaüstünden `?touch=1` eklenebilir.
+- **Sol joystick:** Sürekli ve diyagonal yürüyüş; parmak kalkınca hareket hemen sıfırlanır. Sağ boş oyun alanını kaydırarak kamera yönlendirilir; böylece hareket ederken bakılabilir.
+- **Eylemler:** Zıpla, koş (aç/kapat), çömel (aç/kapat), yere otur/kalk, diz çök/kalk, üçüncü kişi kamera, karakter düzenleyici, kapı/NPC/mobilya kullan, bırak. Sol ve sağ el ayrı basılı tutulur; **İT / ÇEK** tutulan nesnenin veya NPC elinin uzaklığını değiştirir.
+- **Ekranlar:** Kat seçici, karakter özelleştirici, model yükleme alanı, başlangıç ve ayar modalları dokunulabilir boyutlarda, güvenli ekran kenar boşluklarıyla ve küçük ekranlarda kaydırılabilir. Portre ve yatay kullanım desteklenir.
+- **Performans:** Mobil varsayılanında maksimum piksel oranı 1.05 (veya daha düşük cihaz oranı); dinamik çözünürlük yavaşlamada 0.55'e kadar azalır. Ayarlarda otomatik/düşük/dengeli/yüksek kalite ve dokunmatik kamera hassasiyeti bulunur. Ayarlar `localStorage` üzerinde cihazda tutulur.
+- **Güvenilirlik:** Menü açılınca joystick ve tüm kavramalar bırakılır. Arka plana geçişte girişler sıfırlanır. Birden çok parmakla hareket, bakış ve iki farklı eli kullanmak için Pointer Events + pointer capture kullanılır. Mobil Safari/Chrome'da bazı sistem jestleri veya cihaz GPU sınırlamaları oyundan bağımsız kalır.
+- **Kısıt:** Bu sürümde fiziksel cihazda otomatik ekran görüntüsü karşılaştırması ve geniş cihaz matrisi QA yapılmadı. WebGL2 şarttır; eski cihazlarda düşük kare hızı veya destek yokluğu olabilir. Harici GLB/VRM dosyaları mobilde de 25 MB ile sınırlıdır ve cihaz belleği nedeniyle büyük modeller başarısız olabilir.
+
+### Mobil kontrol tablosu
+
+| Dokunma | Davranış |
+|---|---|
+| Sol alttaki joystick | Yürü / geri git / yana kay |
+| Sağ boş 3D görüntüde sürükle | Kamera yönünü değiştir |
+| SOL EL / SAĞ EL (basılı) | Ayrı elini uzat, yakın nesneyi/eli kavra |
+| − ÇEK / + İT | Kavrama mesafesini değiştir |
+| KULLAN | Yakındaki kapı, asansör, yatak, sandalye veya NPC ile etkileş |
+| ZIPLA / KOŞ | Zıpla / koşma modunu aç-kapat |
+| ÇÖMEL / OTUR / DİZ ÇÖK | Çömelme, yerde oturma, diz çökme ve ayağa kalkma |
+| KAMERA / KARAKTER / BIRAK | FPS-TPS, avatar editörü, kavramayı bırak |
+| ⚙ AYAR | Grafik kalitesi ve dokunmatik hassasiyet |
 
 ## Kontroller
 
@@ -77,6 +101,9 @@ src/
     Orientation.js        # Kamera + avatar + hareket ortak yönü
     PostureControls.js    # Ctrl/Space kombinasyonları ve gecikmeli zıplama
     HandRig.js            # FPS kamera kol/elleri
+  mobile/
+    TouchControls.js      # Joystick, kamera dokunuşu, iki el ve eylem butonları
+    TouchMath.js          # Joystick deadzone, kalite sınırları, hassasiyet
   avatar/
     Avatar.js             # Anatomik temel, yüz, katmanlı kıyafet, skinned mesh ve hareket
     SkinnedLimb.js        # Kemik ağırlıklı kol/bacak cilt ve giyim yüzeyi
@@ -84,7 +111,7 @@ src/
     ModelImporter.js      # Lokal VRM/GLB, dinamik VRM modülü
     AvatarConfig.js       # Profil şeması, sınırlandırma
   ui/
-    Hud.js                # HUD, avatar ayarları, asansör
+    Hud.js                # HUD, avatar ayarları, asansör ve mobil grafik ayarları
 ```
 
 ## Sınırlar ve öncelikler
