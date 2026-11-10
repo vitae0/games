@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { normalizeAvatar } from '../src/avatar/AvatarConfig.js';
 import { visibleGarmentLayers } from '../src/avatar/ClothingLayers.js';
 
-test('new Quaternius trial is default with procedural fallback', () => {
-  assert.equal(normalizeAvatar({}).baseModel, 'quaternius');
-  assert.equal(normalizeAvatar({ baseModel: 'invalid' }).baseModel, 'quaternius');
+test('VRoid male is default with Quaternius and procedural fallbacks', () => {
+  assert.equal(normalizeAvatar({}).baseModel, 'vroidMale');
+  assert.equal(normalizeAvatar({ baseModel: 'invalid' }).baseModel, 'vroidMale');
   assert.equal(normalizeAvatar({ baseModel: 'procedural' }).baseModel, 'procedural');
 });
 test('none removes all visual garment layers, not anatomy', () => {
