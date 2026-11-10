@@ -101,6 +101,10 @@ async function main() {
     const info = inspectVrm(bytes);
     if (info.skinCount < 1 || !info.hasBody || info.license !== 'CC0')
       throw new Error(`Unexpected ${source.id} rig/body/license: ${JSON.stringify(info)}`);
+    if (source.id.startsWith('vroidHair') &&
+        !info.materialNames.some(name => /hair|fringe|bangs/i.test(name))) {
+      throw new Error(`Source ${source.id} has no independent premade hair material`);
+    }
     await writeFile(path, bytes);
     console.log(`${source.id}: ${bytes.length} bytes, ${info.meshCount} meshes, ${info.skinCount} skins, ${info.license}`);
     console.log('  garment materials:', info.garmentMaterialNames.join(', ') || '(none)');
