@@ -18,7 +18,7 @@ export function npcPreparedAsset(assetId) {
   return assetId === 'vroidHairMale' || assetId === 'vroidHairFemale';
 }
 
-function isolateMaterials(scene) {
+export function isolateMaterials(scene) {
   const cloned = new Map();
   scene.traverse(obj => {
     if (!obj.isMesh || !obj.material) return;
@@ -43,7 +43,12 @@ export function mapClonedHumanoid(sourceVrm, clonedScene) {
     getNormalizedBoneNode(key) {
       const originalBone = sourceVrm.humanoid?.getNormalizedBoneNode(key)
         || sourceVrm.humanoid?.getRawBoneNode(key);
-      return (originalBone && map.get(originalBone)) || null;
+      const mapped = originalBone && (map.get(originalBone) ||
+        (originalBone.name && clonedScene.getObjectByName(originalBone.name)));
+      if (mapped) return mapped;
+      const rawBone = sourceVrm.humanoid?.getRawBoneNode(key);
+      return (rawBone && (map.get(rawBone) ||
+        (rawBone.name && clonedScene.getObjectByName(rawBone.name)))) || null;
     },
   };
 }
