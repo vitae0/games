@@ -11,6 +11,22 @@ import { join } from 'node:path';
 
 export const SOURCES = [
   {
+    id: 'vroidHairMale',
+    file: 'vroid-beta-hairsample-male.vrm',
+    url: 'https://raw.githubusercontent.com/madjin/vrm-samples/e16eb187100149a315ad92c3c9968f1d5baa6c7d/vroid/beta/HairSample_Male.vrm',
+    blob: '46e8c583ce5df3b8ee167141b59ba3ad583a2687',
+    min: 18000000,
+    max: 19000000,
+  },
+  {
+    id: 'vroidHairFemale',
+    file: 'vroid-beta-hairsample-female.vrm',
+    url: 'https://raw.githubusercontent.com/madjin/vrm-samples/e16eb187100149a315ad92c3c9968f1d5baa6c7d/vroid/beta/HairSample_Female.vrm',
+    blob: '0e5235f9a7972fbcbceb74960479b208c27a8707',
+    min: 17000000,
+    max: 18000000,
+  },
+  {
     id: 'vroidMale',
     file: 'vroid-beta-base-male.vrm',
     url: 'https://raw.githubusercontent.com/zz85/midiviz/419ef25fd70465da066e4411f26f47f661411989/violinist/assets/models/vroid-base-male.vrm',
