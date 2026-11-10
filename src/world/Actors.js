@@ -110,9 +110,9 @@ export class Actors {
         ? Math.hypot(player.position.x - actor.position.x, player.position.z - actor.position.z)
         : player ? Infinity : 0;
       const near = distance <= DRAW_DISTANCE;
-      actor.avatar.root.visible = near;
+      actor.avatar.root.visible = near && actor.ready;
       if (distance <= LOAD_DISTANCE && !actor.ready && !actor.loading) void this.loadVisual(actor);
-      if (!near) continue;
+      if (!near || !actor.ready) continue;
       const active = [...this.grips.values()].filter(g => g.actor === actor);
       if (active.length) {
         let pullX = 0, pullZ = 0;
