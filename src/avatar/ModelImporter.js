@@ -67,6 +67,8 @@ export async function loadBundledCharacterModel(baseModel = 'quaternius') {
   const names = {
     vroidMale: 'vroid-beta-base-male.vrm',
     vroidFemale: 'vroid-beta-base-female.vrm',
+    vroidHairMale: 'vroid-beta-hairsample-male.vrm',
+    vroidHairFemale: 'vroid-beta-hairsample-female.vrm',
   };
   if (Object.hasOwn(names, baseModel)) {
     const [{ GLTFLoader }, { VRMLoaderPlugin, VRMUtils }] = await Promise.all([
