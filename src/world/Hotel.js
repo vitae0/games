@@ -244,8 +244,11 @@ export class Hotel {
   makeLobby() {
     const y = Y(0);
     // The two front suites are intentionally replaced by a spacious reception and lounge.
-    this.box('slab', -6.65, y + .025, -10.85, 9.6, .045, 7.5);
-    this.box('slab', 6.65, y + .025, -10.85, 9.6, .045, 7.5);
+    // Match the corridor carpet top (~0.03 m) without a recessed strip.
+    // Reception finishes meet the carpet edges at x=±1.55, with no overlapping
+    // coplanar tops; the main structural deck underneath is already continuous.
+    this.box('wood', -6.775, y + .015, -10.85, 10.45, .030, 7.5);
+    this.box('wood',  6.775, y + .015, -10.85, 10.45, .030, 7.5);
     this.box('wood', -6.9, y + .45, -12.35, 5.4, .90, 1.26, 0, true);
     this.box('trim', -6.9, y + .95, -12.35, 5.58, .09, 1.32);
     this.box('warm', -6.9, y + 1.25, -14.58, 4.5, .09, .045);
@@ -317,7 +320,10 @@ export class Hotel {
         this.box('magenta', x, Y(floor) + 1.8, (STAIR.zLow + STAIR.zHigh) / 2, .06, .09, 4.8);
       }
     }
-    this.box('slab', -6.85, -.055, STAIR.zLow, 5.6, .11, .85);
+    // The ground floor deck already covers the staircase entrance.
+    // Its old extra slab ended at exactly y=0: two overlapping top faces
+    // produced visible first-floor z-fighting. Keep only a raised threshold.
+    this.box('trim', -6.85, .011, STAIR.zLow, 5.1, .022, .60);
   }
   nearestStaticSurface(origin, direction) {
     this.gripRaycaster.set(origin, direction);
