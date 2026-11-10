@@ -9,7 +9,7 @@ import { normalizeAvatar } from '../avatar/AvatarConfig.js';
 export const NPC_CAST = Object.freeze([
   Object.freeze({
     id: 'mira', name: 'Mira · Resepsiyon',
-    x: -5.10, z: -13.05, yaw: Math.PI, anchored: true,
+    x: -7.50, z: -13.78, yaw: Math.PI, anchored: true,
     asset: 'vroidFemale', baseModel: 'vroidFemale',
     skinTone: 'honey', eyeColor: 'hazel', hair: 'sample',
     hairColor: 'chestnut', shirtColor: 0xd4b3a2,
