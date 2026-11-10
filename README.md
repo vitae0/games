@@ -243,3 +243,15 @@ katmanı" olduğu iddia edilmiyor.
 
 Kaynakların CC0 lisansları, Git hash'leri ve sınırlamalar:
 [`docs/VROID_PREMADE_ASSETS.md`](docs/VROID_PREMADE_ASSETS.md).
+
+## NPC oyuncu karakterleri (VitaeWorld Alpha)
+
+Resepsiyondaki Mira, lobide Nova, bardaki Deniz ve bar misafiri Lina artık
+**iki cinsiyetli VRoid CC0 oyuncu karakter sistemi** ile yüklenir. İki hazır
+Base modeli ve iki hazır HairSample modeli arasında dağılım vardır; saç,
+göz ve orijinal kıyafet materyal renkleri her NPC için ayrıdır. Hiçbir yeni
+saç/kıyafet geometrisi yapay olarak üretilmez. 15 metre içinde tembel yükleme,
+21 metre dışı görünürlük sınırı ve paylaşılan geometri/doku önbelleği kullanılır.
+
+Kaynak, lisans ve teknik ayrıntılar:
+[`docs/VROID_NPC_CAST.md`](docs/VROID_NPC_CAST.md).
