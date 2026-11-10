@@ -354,10 +354,27 @@ export class Avatar {
       const action = mixer.clipAction(clip);
       actions.set(clip.name.toLowerCase(), action);
     }
-    this.external = { wrapper, group: visual, vrm: model.vrm, mixer, actions, source,
+    const parts = [];
+    visual.traverse(obj => {
+      if (obj.isMesh && parts.length < 150) {
+        parts.push({ mesh: obj, name: obj.name || obj.parent?.name || `Parça ${parts.length + 1}` });
+      }
+    });
+    this.external = { wrapper, group: visual, vrm: model.vrm, mixer, actions, source, parts,
       sourceHeight: height, sourceMinY: bounds.min.y,
       boneMap: model.boneMap || {}, baseRotations: new Map() };
     this.refreshExternalScale();
+  }
+  listExternalParts() {
+    return (this.external?.parts || []).map(({ mesh, name }, index) => ({
+      index, name, visible: mesh.visible,
+    }));
+  }
+  setExternalPartVisible(index, visible) {
+    const part = this.external?.parts?.[index];
+    if (!part || typeof visible !== 'boolean') return false;
+    part.mesh.visible = visible;
+    return true;
   }
   updateExternal(dt, speed, posture, pose) {
     const ext = this.external;
