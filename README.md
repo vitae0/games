@@ -116,3 +116,16 @@ Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoi
 ### Sınırlar ve beklentiler
 
 Telefonun WebGL2 ve yeterli GPU belleği desteklemesi gerekir. Özellikle çok büyük kullanıcı GLB/VRM dosyaları düşük bellekli cihazlarda yavaş olabilir. Fizik ve karakter etkileşimleri hâlâ tek oyunculu prototiptir, gerçek çok oyunculu sistem değildir. Mobilde gerçek cihaz üzerinde etkileşim ve performans testlerinin yapılması önerilir; GitHub Actions otomatik test ve derleme yapar, bir cihaz çiftliği değildir.
+
+## Quaternius 3D karakter denemesi
+
+Karakter menüsündeki **Temel karakter** üzerinden Quaternius Superhero Male
+veya önceki geometrik karakter seçilebilir. Yeni model varsayılan olup
+yaklaşık 741 KB'lık GLB dosyası olarak yüklenir. İskelet korunmuştur,
+ancak özgün dokular yerine tek renkli mat materyal kullanılmıştır.
+
+**Kıyafet stili > Yok** ve dört bağımsız katman anahtarı şimdilik yalnızca
+**önceki geometrik karakterin** tişört, ceket, pantolon ve ayakkabı yüzeylerini
+gizler. Quaternius gövdesine kıyafet uyumu henüz uygulanmadı.
+
+Kaynak, lisans ve kısıtlar: [QUATERNIUS_AVATAR_TRIAL.md](docs/QUATERNIUS_AVATAR_TRIAL.md).
