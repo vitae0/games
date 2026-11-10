@@ -172,16 +172,18 @@ export class Player {
     this.floor = floor;
     this.position.set(0, floor * HOTEL.floorHeight, 12.1);
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
+    this.furnitureHeight = 0; this.savedStanding = null;
     this.postureControls.reset();
     this.keys.clear(); this.setTouchMove(0, 0);
     this.yaw = Math.PI; this.bodyYaw = this.yaw; this.walkSpeed = 0;
   }
-  useFurniture(mode, x, z, yaw) {
+  useFurniture(mode, x, z, yaw, surfaceHeight = 0) {
     if (this.posture !== 'stand') return;
     this.releaseHands();
     this.savedStanding = { x: this.position.x, y: this.position.y, z: this.position.z, yaw: this.yaw, bodyYaw: this.bodyYaw };
     this.posture = mode;
-    this.position.set(x, this.floor * HOTEL.floorHeight, z);
+    this.furnitureHeight = surfaceHeight;
+    this.position.set(x, this.floor * HOTEL.floorHeight + surfaceHeight, z);
     this.yaw = yaw; this.bodyYaw = yaw; this.pitch = mode === 'rest' ? -.23 : 0;
     this.jumpOffset = 0; this.verticalSpeed = 0;
     this.events.toast(mode === 'sit' ? 'Oturuyorsun · E ile kalk' : 'Dinleniyorsun · E ile kalk');
@@ -194,7 +196,7 @@ export class Player {
       this.bodyYaw = this.savedStanding.bodyYaw;
       this.floor = groundFloor(this.position.y);
     }
-    this.posture = 'stand'; this.savedStanding = null;
+    this.posture = 'stand'; this.furnitureHeight = 0; this.savedStanding = null;
     this.events.toast('Ayağa kalktın');
   }
   update(dt) {
@@ -247,7 +249,7 @@ export class Player {
       // On stairs, feet follow the actual rise. Colliders switch floor at landing.
       this.position.y = ground + this.jumpOffset;
       this.floor = groundFloor(ground);
-    } else this.position.y = this.floor * HOTEL.floorHeight;
+    } else this.position.y = this.floor * HOTEL.floorHeight + (this.furnitureHeight || 0);
     // A held touch control adjusts the grip continuously; short taps nudge it.
     if (active && this.touchGripAdjustment) this.adjustGripDistance(this.touchGripAdjustment * dt * 1.05);
     // Pulling on a wall/railing moves the player, not the static world.

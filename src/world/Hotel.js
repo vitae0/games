@@ -22,12 +22,17 @@ export class Hotel {
     this.dynamic = [];
     this.materials = this.createMaterials();
     this.media = makeSuiteMedia();
+    this.suiteScreenGeometry = new THREE.BoxGeometry(1.70, 1.00, .025);
+    this.suiteMinibarGlowGeometry = new THREE.BoxGeometry(.54, .72, .032);
+    this.suiteBathroomDoorGeometry = new THREE.BoxGeometry(.06, 2.33, 1.12);
+    this.suiteWaterGeometry = new THREE.BoxGeometry(.025, .74, .025);
     this.batch = new BoxBatch(scene, this.materials);
     this.physics = new PhysicsWorld(this.collisions, HOTEL.floorHeight);
     this.propGeometry = new THREE.BoxGeometry(1, 1, 1);
     this.props = [];
     this.staticGrips = new Map();
     this.walkSurfaces = [];
+    this.suiteMeshes = [];
     this.furnitureDynamics = [];
     this.screenGeometry = new THREE.PlaneGeometry(1.76, 1.00);
     this.minibarDoorGeometry = new THREE.BoxGeometry(.075, .75, .62);
@@ -417,7 +422,10 @@ export class Hotel {
   dispose() {
     this.batch.dispose();
     this.city.dispose(); this.actors.dispose();
+    this.suiteMeshes.forEach(mesh => this.scene.remove(mesh));
     this.media.forEach(({ texture, material }) => { texture.dispose(); material.dispose(); });
+    this.suiteScreenGeometry.dispose(); this.suiteMinibarGlowGeometry.dispose();
+    this.suiteBathroomDoorGeometry.dispose(); this.suiteWaterGeometry.dispose();
     this.props.forEach(mesh => this.scene.remove(mesh));
     this.furnitureDynamics.forEach(mesh => this.scene.remove(mesh));
     this.screenGeometry.dispose(); this.minibarDoorGeometry.dispose(); this.bottleGeometry.dispose(); this.tvTexture.dispose();

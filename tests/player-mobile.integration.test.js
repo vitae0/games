@@ -103,3 +103,25 @@ test('third-person blocked movement does not rotate avatar', () => {
     assert.equal(p.avatar.root.rotation.y,initial);
   } finally {p.dispose();}
 });
+
+
+test('raised bed and sofa interactions keep their surface height until standing up', () => {
+  const p = playerFixture();
+  try {
+    p.touchActive = true;
+    p.position.set(2, 0, -2);
+    p.useFurniture('rest', 8, 1, 0, .62);
+    p.update(.05);
+    assert.equal(p.posture, 'rest');
+    assert.ok(Math.abs(p.position.y - .62) < 1e-8);
+    p.standUp();
+    assert.equal(p.posture, 'stand');
+    assert.equal(p.position.x, 2);
+    assert.equal(p.position.z, -2);
+    p.useFurniture('sit', 4, 1, Math.PI, .44);
+    p.update(.05);
+    assert.ok(Math.abs(p.position.y - .44) < 1e-8);
+    p.standUp();
+    assert.equal(p.furnitureHeight, 0);
+  } finally {p.dispose();}
+});
