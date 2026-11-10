@@ -85,23 +85,30 @@ async function syncBaseModel({ force = false } = {}) {
     }
     return;
   }
-  if (player.avatar.external?.source === 'bundled') return;
+  const baseModel = player.avatar.profile.baseModel;
+  const sourceName = `bundled:${baseModel}`;
+  if (player.avatar.external?.source === sourceName && !force) return;
   if (player.avatar.external?.source === 'upload' && !force) return;
   try {
-    const model = await loadBundledCharacterModel();
-    if (request !== modelRequest || player.avatar.profile.baseModel !== 'quaternius') {
+    const model = await loadBundledCharacterModel(baseModel);
+    if (request !== modelRequest || player.avatar.profile.baseModel !== baseModel) {
+      // The previous in-flight selection is stale: dispose its resources.
+      const geometry = new Set(), materials = new Set();
       model.scene.traverse(obj => {
         if (!obj.isMesh) return;
-        obj.geometry?.dispose();
-        for (const mat of Array.isArray(obj.material) ? obj.material : [obj.material]) mat?.dispose();
+        if (obj.geometry) geometry.add(obj.geometry);
+        for (const mat of Array.isArray(obj.material) ? obj.material : [obj.material]) if (mat) materials.add(mat);
       });
+      geometry.forEach(g => g.dispose());
+      materials.forEach(mat => mat.dispose());
       return;
     }
-    player.avatar.applyExternal(model, 'bundled');
+    player.avatar.applyExternal(model, sourceName);
+    hud?.refreshModelStatus?.();
   } catch (error) {
     if (request !== modelRequest) return;
-    events.toast('Quaternius modeli yüklenemedi; eski karakter kullanılıyor');
-    console.warn('Bundled avatar load failed:', error);
+    events.toast('Seçilen VRoid modeli yüklenemedi; eski karakter korunuyor');
+    console.warn('VRoid base load failed:', error);
   }
 }
 function updateAvatarProfile(profile) {
@@ -121,7 +128,7 @@ hud = new Hud(canvas, {
     player.avatar.applyExternal(model, 'upload');
     return player.avatar.listExternalParts();
   },
-  getModelParts: () => player.avatar.external?.source === 'upload' ? player.avatar.listExternalParts() : [],
+  getModelParts: () => player.avatar.external ? player.avatar.listExternalParts() : [],
   setModelPartVisible: (index, visible) => player.avatar.setExternalPartVisible(index, visible),
   resetModel: () => { player.avatar.clearExternal(); void syncBaseModel({ force: true }); },
   previewProfile: (profile) => updateAvatarProfile(profile),
