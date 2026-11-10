@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { EYE_COLORS, SKIN_TONES } from './AvatarConfig.js';
+import { EYE_COLORS, SKIN_TONES, HAIR_COLORS } from './AvatarConfig.js';
 import { discardPremadeHair } from './VRoidPremadeHair.js';
 
 const isBodySkin = name => /body.*skin|body_skin/i.test(name.toLowerCase());
@@ -19,7 +19,7 @@ export function styleMaterialClass(name) {
 export function applyVRoidColors(vrm, profile, state) {
   const cache = state.materialCache ||= new Map();
   vrm.scene.traverse(obj => {
-    if (!obj.isMesh) return;
+    if (!obj.isMesh || obj.name?.startsWith('VRoid_CC0_')) return;
     for (const material of Array.isArray(obj.material) ? obj.material : [obj.material]) {
       if (!material) continue;
       if (!cache.has(material)) {
@@ -61,8 +61,19 @@ export function applyVRoidColors(vrm, profile, state) {
       } else if (type === 'iris') {
         material.color?.setHex(EYE_COLORS[profile.eyeColor]);
       } else if (type === 'hair') {
-        // Hide the beta "cap"; show actual licensed HairSample hair meshes.
-        material.visible = false;
+        // HairSample NPCs already carry the authored, rigged hair mesh.
+        // The base models need a separate CC0 HairSample hair transplant.
+        const keep = state.keepSourceHair && profile.hair !== 'none';
+        material.visible = Boolean(keep);
+        if (keep && material.color) {
+          if (profile.hairColor === 'original') {
+            if (material.map !== original.map) { material.map = original.map; material.needsUpdate = true; }
+            if (original.color) material.color.copy(original.color);
+          } else {
+            if (material.map) { material.map = null; material.needsUpdate = true; }
+            material.color.setHex(HAIR_COLORS[profile.hairColor] ?? HAIR_COLORS.chestnut);
+          }
+        }
       }
     }
   });
