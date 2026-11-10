@@ -68,14 +68,15 @@ test('first-floor reception finish meets corridor carpet and is not laid on top 
     climbable(){},addWalkSurface(){},roomLighting:null,
   };
   Hotel.prototype.makeLobby.call(fake);
-  const finish = geometry.filter(b => b.material === 'wood' && Math.abs(b.y-.015)<1e-8 && Math.abs(b.z+10.85)<1e-8 && Math.abs(b.d-7.5)<1e-8);
-  assert.equal(finish.length, 2, 'reception has two independent finishes');
-  const left = finish.find(b => b.x < 0);
-  const right = finish.find(b => b.x > 0);
-  assert.ok(left && right);
-  assert.ok(Math.abs((left.x+left.w/2) + 1.55) < 1e-8);
-  assert.ok(Math.abs((right.x-right.w/2) - 1.55) < 1e-8);
-  assert.ok(finish.every(b => Math.abs(b.y+b.h/2-.03) < 1e-8));
+  const lobby=geometry.filter(b=>b.material==='wood'&&Math.abs(b.y-.015)<1e-8
+    &&Math.abs(b.z+10.85)<1e-8&&Math.abs(b.d-7.5)<1e-8);
+  assert.equal(lobby.length,1,'west reception retains its own finish');
+  assert.ok(Math.abs(lobby[0].x+lobby[0].w/2+1.55)<1e-8);
+  assert.ok(Math.abs(lobby[0].y+lobby[0].h/2-.03)<1e-8);
+  const bar=geometry.find(b=>b.material==='wood'&&Math.abs(b.x-6.8)<1e-8
+    &&Math.abs(b.z+10.68)<1e-8&&Math.abs(b.d-6.45)<1e-8);
+  assert.ok(bar,'bar takes east-front lobby footprint');
+  assert.ok(Math.abs((bar.y+bar.h/2)-.0355)<1e-8,'bar has a raised floor finish');
 });
 
 test('rendered riser tops agree with physical support at every tread centre', () => {
