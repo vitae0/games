@@ -1,3 +1,7 @@
+> **Arşiv / V4:** Bu sayfa eski prototipin ürettiği saç ve iç giyim
+> geometrilerini anlatır. Bu özellikler artık kullanılmıyor. Güncel
+> mimari: [Character Studio V5 — hazır CC0 varlıklar](VROID_PREMADE_ASSETS.md).
+
 # VRoid CC0 Character Studio V4
 
 This implementation replaces the legacy procedural-avatar customization panel
