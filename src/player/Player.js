@@ -177,20 +177,6 @@ export class Player {
     this.keys.clear(); this.setTouchMove(0, 0);
     this.yaw = Math.PI; this.bodyYaw = this.yaw; this.walkSpeed = 0;
   }
-  /** Enter a supported raised furnishing with a safe standing pose. */
-  climbFurniture(x,z,surfaceHeight,floor=this.floor){
-    if(!this.active || this.posture!=='stand')return false;
-    const height=Math.min(HOTEL.floorHeight-this.avatar.profile.height-.24,
-      Math.max(0,surfaceHeight));
-    if(height<surfaceHeight-.02){this.events.toast('Bu yüzeyde ayağa kalkmak için tavan çok alçak');return false;}
-    this.releaseHands();
-    this.position.set(x,floor*HOTEL.floorHeight+height,z);
-    this.floor=floor;
-    this.jumpOffset=0;this.verticalSpeed=0;
-    this.walkSpeed=0;
-    this.events.toast('Mobilyanın üzerine çıktın');
-    return true;
-  }
   useFurniture(mode, x, z, yaw, surfaceHeight = 0) {
     if (this.posture !== 'stand') return;
     this.releaseHands();
@@ -235,7 +221,8 @@ export class Player {
       const speed = crouching ? PLAYER.crouchSpeed : sprinting ? PLAYER.sprintSpeed : PLAYER.walkingSpeed;
       const traveled = this.hotel.movePlayer
         ? this.hotel.movePlayer(this.floor, this.position.x, this.position.z,
-          this.position.y - this.jumpOffset, mx * speed * dt, mz * speed * dt, PLAYER.radius)
+          this.position.y - this.jumpOffset, mx * speed * dt, mz * speed * dt,
+          PLAYER.radius,this.position.y+Math.max(0,this.verticalSpeed)*dt)
         : this.hotel.collisions.move(this.floor, this.position.x, this.position.z,
           mx * speed * dt, mz * speed * dt, PLAYER.radius);
       if (Number.isFinite(traveled.ground)) surfaceGround = traveled.ground;
@@ -244,19 +231,36 @@ export class Player {
       this.walkSpeed = Math.hypot(movedX, movedZ) / Math.max(dt, .001);
       this.position.x = traveled.x; this.position.z = traveled.z;
     } else this.walkSpeed = 0;
-    if (this.jumpOffset > 0 || this.verticalSpeed > 0) {
-      this.verticalSpeed -= PLAYER.gravity * dt;
-      this.jumpOffset = Math.max(0, this.jumpOffset + this.verticalSpeed * dt);
-      if (this.jumpOffset === 0) this.verticalSpeed = 0;
+    // Keep the world-space feet continuous while stepping onto/off raised objects.
+    // A surface is reachable only after a physical jump clears its top face.
+    const oldFeet=this.position.y;
+    const oldBase=this.position.y-this.jumpOffset;
+    if(this.jumpOffset>0||this.verticalSpeed>0){
+      this.verticalSpeed-=PLAYER.gravity*dt;
+      this.jumpOffset=Math.max(0,this.jumpOffset+this.verticalSpeed*dt);
+      if(this.jumpOffset===0)this.verticalSpeed=0;
     }
-    if (this.posture === 'stand') {
-      const ground = surfaceGround ?? (this.hotel.groundHeight
-        ? this.hotel.groundHeight(this.position.x, this.position.z, this.position.y - this.jumpOffset, this.floor)
-        : resolveGround(this.position.x, this.position.z, this.position.y - this.jumpOffset, this.floor));
-      // On stairs, feet follow the actual rise. Colliders switch floor at landing.
-      this.position.y = ground + this.jumpOffset;
-      this.floor = groundFloor(ground);
-    } else this.position.y = this.floor * HOTEL.floorHeight + (this.furnitureHeight || 0);
+    if(this.posture==='stand'){
+      const feet=oldBase+this.jumpOffset;
+      const candidate=surfaceGround??(this.hotel.groundHeight
+        ?this.hotel.groundHeight(this.position.x,this.position.z,oldBase,this.floor,
+          Math.max(feet,oldFeet))
+        :resolveGround(this.position.x,this.position.z,oldBase,this.floor));
+      let nextBase=candidate, nextFeet=feet;
+      if(candidate>oldBase+.025){
+        if(Math.max(oldFeet,feet)+.025<candidate)nextBase=oldBase;
+        else if(this.verticalSpeed<=0&&feet<=candidate){
+          nextFeet=candidate;this.jumpOffset=0;this.verticalSpeed=0;
+        }else this.jumpOffset=Math.max(0,feet-candidate);
+      }else if(candidate<oldBase-.025){
+        // Falling off the edge must not teleport immediately to the floor.
+        this.jumpOffset+=oldBase-candidate;
+        if(this.verticalSpeed>=0)this.verticalSpeed=0;
+        nextFeet=candidate+this.jumpOffset;
+      }
+      this.position.y=nextFeet;
+      this.floor=groundFloor(nextBase);
+    }else this.position.y=this.floor*HOTEL.floorHeight+(this.furnitureHeight||0);
     // A held touch control adjusts the grip continuously; short taps nudge it.
     if (active && this.touchGripAdjustment) this.adjustGripDistance(this.touchGripAdjustment * dt * 1.05);
     // Pulling on a wall/railing moves the player, not the static world.

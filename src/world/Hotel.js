@@ -95,57 +95,50 @@ export class Hotel {
     this.walkSurfaces.push({floor, minX:x-width/2,maxX:x+width/2,
       minZ:z-depth/2,maxZ:z+depth/2,topY});
   }
-  /** All low furniture uses the same support/action contract. */
-  climbable(floor, x, z, width, depth, topY, label, { sit=false }={}) {
+  /** Register an actual horizontal contact surface. Never E-teleport onto it. */
+  climbable(floor,x,z,width,depth,topY) {
     this.addWalkSurface(floor,x,z,width,depth,topY);
-    const offset=width*.5+.40;
-    const approachX=x-Math.sign(x||1)*offset;
-    this.interactables.push({
-      floor,position:new THREE.Vector3(approachX,floor*HOTEL.floorHeight+.9,z),
-      getLabel:()=>label+' · Üzerine çık',
-      activate:player=>player.climbFurniture?.(x,z,topY-floor*HOTEL.floorHeight,floor),
-    });
-    if(sit){
-      this.interactables.push({
-        floor,position:new THREE.Vector3(x+.48,floor*HOTEL.floorHeight+.9,z-offset),
-        getLabel:()=>label+' · Otur',
-        activate:player=>player.useFurniture('sit',x,z,Math.PI,topY-floor*HOTEL.floorHeight-.1),
-      });
-    }
   }
   inStairArea(x, z) {
     return x >= STAIR.minX - .45 && x <= STAIR.maxX + .45 &&
       z >= STAIR.minZ - .48 && z <= STAIR.maxZ + .48;
   }
-  /** Ordinary rooms remain freely walkable, including the raised mattresses. */
-  groundHeight(x,z,priorHeight,currentFloor) {
-    let raised=null, nearest=Infinity;
-    for(const surface of this.walkSurfaces){
-      if(surface.floor!==currentFloor)continue;
-      if(x<surface.minX||x>surface.maxX||z<surface.minZ||z>surface.maxZ)continue;
-      const difference=surface.topY-priorHeight;
-      if(difference>1.08 || difference< -1.35)continue;
-      const error=Math.abs(difference);
-      if(error<nearest){nearest=error;raised=surface.topY;}
+  /** Feet must be at or above a real top face to use a furniture surface. */
+  groundHeight(x,z,priorHeight,currentFloor,feetY=priorHeight) {
+    let top=null;
+    for(const s of this.walkSurfaces){
+      if(s.floor!==currentFloor||x<s.minX||x>s.maxX||z<s.minZ||z>s.maxZ)continue;
+      if(s.topY>feetY+.025)continue;
+      if(top===null||s.topY>top)top=s.topY;
     }
-    if(raised!==null)return raised;
+    if(top!==null)return top;
     return Hotel.prototype.inStairArea.call(this,x,z)
-      ? resolveGround(x,z,priorHeight,currentFloor) : currentFloor*HOTEL.floorHeight;
+      ?resolveGround(x,z,priorHeight,currentFloor):currentFloor*HOTEL.floorHeight;
   }
-  /** Physics surface sweep only near the shaft, preserving existing bed controls. */
-  movePlayer(floor, x, z, ground, dx, dz, radius) {
-    if (this.inStairArea(x, z) || this.inStairArea(x + dx, z + dz))
-      return walkStairs(this.collisions, x, z, ground, dx, dz, radius);
-    const moved = this.collisions.move(floor,x,z,dx,dz,radius);
-    // Tall furniture must not be traversed at ground height. The same support
-    // can be reached with E, after which the player may walk across its top.
-    for(const surface of this.walkSurfaces){
-      if(surface.floor!==floor || surface.topY-ground<=1.08)continue;
-      if(moved.x>=surface.minX && moved.x<=surface.maxX &&
-         moved.z>=surface.minZ && moved.z<=surface.maxZ)
-        return {x,z,ground};
+  /** Sweep the player against static walls and furniture at its real height.
+   * 2D solid colliders are for doors and walls only, never low sofas/tables.
+   */
+  movePlayer(floor,x,z,ground,dx,dz,radius,feetY=ground) {
+    if(this.inStairArea(x,z)||this.inStairArea(x+dx,z+dz))
+      return walkStairs(this.collisions,x,z,ground,dx,dz,radius);
+    const belowFurniture=(px,pz)=>{
+      for(const s of this.walkSurfaces){
+        if(s.floor!==floor||feetY>=s.topY-.025)continue;
+        const qx=Math.max(s.minX,Math.min(px,s.maxX));
+        const qz=Math.max(s.minZ,Math.min(pz,s.maxZ));
+        if((px-qx)**2+(pz-qz)**2<radius*radius)return true;
+      }
+      return false;
+    };
+    const n=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));
+    let nx=x,nz=z;
+    for(let i=0;i<n;i++){
+      const xMove=this.collisions.move(floor,nx,nz,dx/n,0,radius);
+      if(!belowFurniture(xMove.x,nz))nx=xMove.x;
+      const zMove=this.collisions.move(floor,nx,nz,0,dz/n,radius);
+      if(!belowFurniture(nx,zMove.z))nz=zMove.z;
     }
-    return {...moved,ground:this.groundHeight(moved.x,moved.z,ground,floor)};
+    return {x:nx,z:nz};
   }
   build() {
     const s = this.scene;
@@ -198,9 +191,9 @@ export class Hotel {
       }
       // Aperture remains open. Landing geometry belongs exclusively inside this gap.
     }
-    this.box('carpet', 0, y + .012, 0, 3.1, .035, 28.8);
-    this.box('cyan', -HALF + .12, y + .09, 0, .035, .12, 29.3);
-    this.box('magenta', HALF - .12, y + .09, 0, .035, .12, 29.3);
+    this.box('carpet',0,y+.012,0,3.1,.035,29.98);
+    this.box('cyan',-HALF+.12,y+.09,0,.035,.12,29.96);
+    this.box('magenta',HALF-.12,y+.09,0,.035,.12,29.96);
     // A sealed glass front: players cannot step outside at roof height.
     this.wallZ(floor, -6.75, -15, 10.5, 'outerWall');
     this.wallZ(floor, 6.75, -15, 10.5, 'outerWall');
@@ -226,8 +219,8 @@ export class Hotel {
     }
     for (const side of [-1, 1]) {
       for (const z of HOTEL.roomCenters) {
-        const a = z - 3.5;
-        const b = z + 3.5;
+        const a = z===HOTEL.roomCenters[0]?-15:z-3.5;
+        const b = z===HOTEL.roomCenters.at(-1)?15:z+3.5;
         const doorHalf = HOTEL.doorWidth / 2;
         this.wallX(floor, side * HALF, (a + z - doorHalf) / 2, (z - doorHalf) - a);
         this.wallX(floor, side * HALF, (z + doorHalf + b) / 2, b - (z + doorHalf));
@@ -249,6 +242,8 @@ export class Hotel {
   }
   makeDoor(floor, side, z, stairDoor = false) {
     const width = HOTEL.doorWidth - .08;
+    // 3.20 m partitions cannot have a 0.77 m hole above a 2.43 m door.
+    this.box('innerWall',side*HALF,Y(floor)+2.815,z,.17,.77,width+.07);
     const pivot = new THREE.Group();
     const px = side * HALF;
     pivot.position.set(px, Y(floor) + 1.22, z - width / 2);
