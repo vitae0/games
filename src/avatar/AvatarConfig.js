@@ -2,7 +2,7 @@
 export const AVATAR_DEFAULTS = Object.freeze({
   height: 1.73, shoulders: .43, waist: .32, hips: .39,
   legRatio: .49, armRatio: .35, headScale: 1.09,
-  baseModel: 'quaternius', outfit: 'neon', hair: 'bob', visor: false, skinTone: 'warm', eyeColor: 'brown',
+  baseModel: 'vroidMale', outfit: 'neon', hair: 'bob', visor: false, skinTone: 'warm', eyeColor: 'brown',
   shirtVisible: true, jacketVisible: true, pantsVisible: true, shoesVisible: true,
 });
 export const AVATAR_RANGES = Object.freeze({
@@ -31,7 +31,7 @@ export function normalizeAvatar(input = {}) {
     const value = Number(input[key]);
     if (Number.isFinite(value)) p[key] = Math.max(min, Math.min(max, value));
   }
-  if (['quaternius', 'procedural'].includes(input.baseModel)) p.baseModel = input.baseModel;
+  if (['vroidMale', 'vroidFemale', 'quaternius', 'procedural'].includes(input.baseModel)) p.baseModel = input.baseModel;
   if (['none', 'neon', 'stealth', 'chrome'].includes(input.outfit)) p.outfit = input.outfit;
   for (const key of ['shirtVisible', 'jacketVisible', 'pantsVisible', 'shoesVisible']) {
     if (typeof input[key] === 'boolean') p[key] = input[key];
