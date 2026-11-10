@@ -28,7 +28,11 @@ export function extractPremadeHair(sourceVrm) {
   const root = new THREE.Group();
   root.name = 'CC0_Premade_VRoid_Hair';
   const vec = new THREE.Vector3();
+  // Combine all original hair primitives sharing the exact source material.
+  // A source model with ~100 hair primitives becomes only one draw per material.
+  const byMaterial = new Map();
   let triangles = 0;
+  let originalPrimitives = 0;
 
   sourceVrm.scene.traverse(obj => {
     if (!obj.isMesh) return;
@@ -44,38 +48,52 @@ export function extractPremadeHair(sourceVrm) {
     if (obj.isSkinnedMesh) obj.skeleton?.update();
 
     for (const group of groups) {
-      const originalMaterial = materials[group.materialIndex || 0];
-      if (!originalMaterial || !isPremadeHairMaterial(originalMaterial.name)) continue;
-      const data = [], texCoords = [];
-      // Separate selected TRIANGLES from source meshes; never synthesize new ones.
+      const material = materials[group.materialIndex || 0];
+      if (!material || !isPremadeHairMaterial(material.name)) continue;
+      let part = byMaterial.get(material);
+      if (!part) {
+        part = { positions: [], uv: [], allHaveUv: true, material };
+        byMaterial.set(material, part);
+      }
       const last = Math.min(group.start + group.count,
         geometry.index?.count || positions.count);
+      let faces = 0;
       for (let i = group.start; i + 2 < last; i += 3) {
         for (let j = 0; j < 3; j++) {
           const vertex = geometry.index ? geometry.index.getX(i + j) : i + j;
           vec.fromBufferAttribute(positions, vertex);
           if (obj.isSkinnedMesh) obj.applyBoneTransform(vertex, vec);
           vec.applyMatrix4(transform);
-          data.push(vec.x, vec.y, vec.z);
-          if (uvs) texCoords.push(uvs.getX(vertex), uvs.getY(vertex));
+          part.positions.push(vec.x, vec.y, vec.z);
+          if (uvs) part.uv.push(uvs.getX(vertex), uvs.getY(vertex));
+          else part.allHaveUv = false;
         }
+        faces++;
       }
-      if (!data.length) continue;
-      const meshGeometry = new THREE.BufferGeometry();
-      meshGeometry.setAttribute('position', new THREE.Float32BufferAttribute(data, 3));
-      if (uvs) meshGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(texCoords, 2));
-      meshGeometry.computeVertexNormals();
-      const material = originalMaterial.clone();
-      material.visible = true;
-      const hair = new THREE.Mesh(meshGeometry, material);
-      hair.name = `VRoid_CC0_${originalMaterial.name}`;
-      hair.frustumCulled = false;
-      root.add(hair);
-      triangles += data.length / 9;
+      if (faces) originalPrimitives++;
+      triangles += faces;
     }
   });
   if (!triangles) throw new Error('Kaynak VRoid modelinde ayrı hazır saç mesh’i bulunamadı.');
+
+  for (const part of byMaterial.values()) {
+    if (!part.positions.length) continue;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(part.positions, 3));
+    if (part.allHaveUv && part.uv.length === part.positions.length / 3 * 2) {
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(part.uv, 2));
+    }
+    geometry.computeVertexNormals();
+    const material = part.material.clone();
+    material.visible = true;
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = `VRoid_CC0_${part.material.name}`;
+    mesh.frustumCulled = false;
+    root.add(mesh);
+  }
   root.userData.triangles = triangles;
+  root.userData.originalPrimitives = originalPrimitives;
+  root.userData.drawCalls = root.children.length;
   return root;
 }
 
