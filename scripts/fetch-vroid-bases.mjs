@@ -11,6 +11,22 @@ import { join } from 'node:path';
 
 export const SOURCES = [
   {
+    id: 'vroidHairMale',
+    file: 'vroid-beta-hairsample-male.vrm',
+    url: 'https://raw.githubusercontent.com/madjin/vrm-samples/e16eb187100149a315ad92c3c9968f1d5baa6c7d/vroid/beta/HairSample_Male.vrm',
+    blob: '46e8c583ce5df3b8ee167141b59ba3ad583a2687',
+    min: 18000000,
+    max: 19000000,
+  },
+  {
+    id: 'vroidHairFemale',
+    file: 'vroid-beta-hairsample-female.vrm',
+    url: 'https://raw.githubusercontent.com/madjin/vrm-samples/e16eb187100149a315ad92c3c9968f1d5baa6c7d/vroid/beta/HairSample_Female.vrm',
+    blob: '0e5235f9a7972fbcbceb74960479b208c27a8707',
+    min: 17000000,
+    max: 18000000,
+  },
+  {
     id: 'vroidMale',
     file: 'vroid-beta-base-male.vrm',
     url: 'https://raw.githubusercontent.com/zz85/midiviz/419ef25fd70465da066e4411f26f47f661411989/violinist/assets/models/vroid-base-male.vrm',
@@ -44,8 +60,19 @@ export function inspectVrm(bytes) {
   const gltf = JSON.parse(bytes.toString('utf8', 20, 20 + jsonLength).replace(/\0+$/g, '').trimEnd());
   const license = gltf.extensions?.VRM?.meta?.licenseName;
   const materials = (gltf.materials || []).map(m => m.name || '<unnamed>');
+  const hairMaterialIds = new Set(materials.flatMap((name,i) =>
+    /hair|fringe|bangs/i.test(name) ? [i] : []));
+  const hairPrimitives = (gltf.meshes || []).flatMap(m => m.primitives || [])
+    .filter(primitive => hairMaterialIds.has(primitive.material));
+  const hairTriangles = hairPrimitives.reduce((count, primitive) => {
+    const indices = gltf.accessors?.[primitive.indices];
+    const positions = gltf.accessors?.[primitive.attributes?.POSITION];
+    return count + Math.floor((indices?.count || positions?.count || 0) / 3);
+  }, 0);
   return {
     license: license || 'not-present',
+    hairPrimitives: hairPrimitives.length,
+    hairTriangles,
     meshCount: gltf.meshes?.length || 0,
     skinCount: gltf.skins?.length || 0,
     materialNames: materials,
@@ -85,9 +112,14 @@ async function main() {
     const info = inspectVrm(bytes);
     if (info.skinCount < 1 || !info.hasBody || info.license !== 'CC0')
       throw new Error(`Unexpected ${source.id} rig/body/license: ${JSON.stringify(info)}`);
+    if (source.id.startsWith('vroidHair') &&
+        (!info.hairPrimitives || !info.hairTriangles)) {
+      throw new Error(`Source ${source.id} has no independently drawn premade hair triangles`);
+    }
     await writeFile(path, bytes);
     console.log(`${source.id}: ${bytes.length} bytes, ${info.meshCount} meshes, ${info.skinCount} skins, ${info.license}`);
     console.log('  garment materials:', info.garmentMaterialNames.join(', ') || '(none)');
+    if (source.id.startsWith('vroidHair')) console.log('  actual hair geometry:', info.hairPrimitives, 'primitives,', info.hairTriangles, 'triangles');
   }
 }
 

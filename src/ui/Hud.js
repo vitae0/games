@@ -5,9 +5,9 @@ import { AVATAR_DEFAULTS, normalizeAvatar } from '../avatar/AvatarConfig.js';
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
   baseModel: [['vroidMale', 'Erkek • VRoid CC0'], ['vroidFemale', 'Kadın • VRoid CC0']],
-  hair: [['short', 'Kısa / doğal'], ['bob', 'Bob / katlı'], ['long', 'Uzun / serbest'], ['ponytail', 'At kuyruğu'], ['none', 'Saçsız']],
+  hair: [['sample', 'Hazır VRoid HairSample (CC0)'], ['none', 'Yok']],
   hairColor: Object.entries({
-    black:'Siyah', chestnut:'Kestane', brown:'Koyu kahve', blonde:'Sarı',
+    original:'Orijinal saç dokusu', black:'Siyah', chestnut:'Kestane', brown:'Koyu kahve', blonde:'Sarı',
     copper:'Bakır', silver:'Gümüş', pink:'Pembe', blue:'Mavi',
   }),
   eyeColor: Object.entries({
@@ -16,11 +16,11 @@ const FIELDS = {
   skinTone: Object.entries({
     porcelain:'Açık', warm:'Doğal', honey:'Buğday', umber:'Esmer', deep:'Koyu',
   }),
-  underwear: [['none', 'Yok'], ['basic', 'Standart iç giyim'], ['sport', 'Spor iç giyim']],
-  underwearColor: Object.entries({
-    black:'Siyah', white:'Beyaz', slate:'Gri-mavi', blush:'Pudra', purple:'Mor',
-  }),
-  outfit: [['none', 'Yok • yalnızca temel gövde'], ['neon', 'Orijinal örnek kıyafet']],
+  underwear: [['none', 'Düz ten / kıyafetsiz'], ['original', 'VRoid hazır beden dokusu (iç giyim çizimi)']],
+  outfit: [['none', 'Yok'], ['neon', 'VRoid orijinal hazır kıyafetleri']],
+  shirtVisible: [['true', 'VRoid hazır üst'], ['false', 'Yok']],
+  pantsVisible: [['true', 'VRoid hazır pantolon'], ['false', 'Yok']],
+  shoesVisible: [['true', 'VRoid hazır ayakkabı'], ['false', 'Yok']],
 };
 export const CHARACTER_CONTROL_IDS = Object.freeze(Object.keys(FIELDS));
 
@@ -125,8 +125,12 @@ export class Hud {
     const key = this.profile.baseModel;
     const label = key === 'vroidFemale' ? 'Kadın' : 'Erkek';
     const loaded = this.options.isBaseReady?.(key);
+    const hair = this.options.getHairStatus?.() || 'unknown';
+    const hairText = this.profile.hair === 'none' ? 'saçsız' :
+      hair === 'ready' ? 'hazır saç yüklendi' : hair === 'error' ?
+      'hazır saç yüklenemedi' : 'hazır saç yükleniyor';
     const status = $('#avatar-load-status');
-    if (status) status.textContent = `VRoid CC0 • ${label} model ${loaded ? 'yüklendi' : 'yükleniyor'} · Dış giysi ve iç giyim birbirinden bağımsız.`;
+    if (status) status.textContent = `VRoid CC0 • ${label} ${loaded ? 'yüklendi' : 'yükleniyor'} · ${hairText}`;
   }
   buildAvatarFields() {
     const parent = $('#avatar-fields');
@@ -138,9 +142,12 @@ export class Hud {
         ['eyeColor', 'Göz rengi'], ['skinTone', 'Ten tonu'],
       ]],
       ['İç giyim', [
-        ['underwear', 'İç giyim modeli'], ['underwearColor', 'İç giyim rengi'],
+        ['underwear', 'Orijinal iç giyim dokusu'],
       ]],
-      ['Dış giyim', [['outfit', 'Örnek dış kıyafet']]],
+      ['Dış giyim (VRoid hazır mesh)', [
+        ['outfit', 'Hazır dış kıyafetler'],
+        ['shirtVisible', 'Üst parça'], ['pantsVisible', 'Alt parça'], ['shoesVisible', 'Ayakkabı'],
+      ]],
     ];
     for(const [title,fields] of sections) {
       const heading=document.createElement('h3');
@@ -155,7 +162,8 @@ export class Hud {
           const opt=document.createElement('option');opt.value=value;opt.textContent=name;sel.append(opt);
         }
         sel.addEventListener('change',()=>{
-          this.profile[key]=sel.value;
+          this.profile[key]=['shirtVisible', 'pantsVisible', 'shoesVisible'].includes(key)
+            ? sel.value === 'true' : sel.value;
           this.preview();
           this.updateConditionalControls();
         });
@@ -164,18 +172,20 @@ export class Hud {
     }
     const layerNote=document.createElement('p');
     layerNote.className='small character-info';
-    layerNote.textContent='Kıyafetsiz: dış giysi ve iç giyim katmanları görünmez. İç giyim, bedenin iskeletine bağlı ayrı bir katmandır. Kaynak gövdedeki eksik yüzeyleri otomatik olarak tamamlamaz.';
+    layerNote.textContent='Saçlar eski VRoid HairSample CC0 modellerinden hazır alınır. Dış giysiler VRoid’un kendi üst, pantolon ve ayakkabı mesh’leridir. İç giyim seçeneği orijinal beden dokusudur; ayrı bir iç giyim mesh’i değildir. Eksik gövde yüzeyleri otomatik oluşmaz.';
     parent.append(layerNote);
     this.syncAvatarControls();
   }
   updateConditionalControls() {
-    const color=$('#avatar-underwearColor')?.closest('.field');
-    if(color)color.classList.toggle('hidden',this.profile.underwear==='none');
+    const showClothes = this.profile.outfit !== 'none';
+    for (const field of ['shirtVisible','pantsVisible','shoesVisible']) {
+      $('#avatar-' + field)?.closest('.field')?.classList.toggle('hidden', !showClothes);
+    }
   }
   syncAvatarControls() {
     for(const key of CHARACTER_CONTROL_IDS) {
       const input=$(`#avatar-${key}`);
-      if(input)input.value=this.profile[key];
+      if(input)input.value=String(this.profile[key]);
     }
     this.updateConditionalControls();
   }
