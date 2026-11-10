@@ -177,6 +177,20 @@ export class Player {
     this.keys.clear(); this.setTouchMove(0, 0);
     this.yaw = Math.PI; this.bodyYaw = this.yaw; this.walkSpeed = 0;
   }
+  /** Enter a supported raised furnishing with a safe standing pose. */
+  climbFurniture(x,z,surfaceHeight,floor=this.floor){
+    if(!this.active || this.posture!=='stand')return false;
+    const height=Math.min(HOTEL.floorHeight-this.avatar.profile.height-.24,
+      Math.max(0,surfaceHeight));
+    if(height<surfaceHeight-.02){this.events.toast('Bu yüzeyde ayağa kalkmak için tavan çok alçak');return false;}
+    this.releaseHands();
+    this.position.set(x,floor*HOTEL.floorHeight+height,z);
+    this.floor=floor;
+    this.jumpOffset=0;this.verticalSpeed=0;
+    this.walkSpeed=0;
+    this.events.toast('Mobilyanın üzerine çıktın');
+    return true;
+  }
   useFurniture(mode, x, z, yaw, surfaceHeight = 0) {
     if (this.posture !== 'stand') return;
     this.releaseHands();

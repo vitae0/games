@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HOTEL } from '../config.js';
-import { suitePlan } from './SuitePlan.js';
+import { suitePlan, suiteTheme } from './SuitePlan.js';
 import { buildBathroom } from './SuiteBathroom.js';
 
 const baseY = floor => floor * HOTEL.floorHeight;
@@ -46,7 +46,8 @@ export function makeSuiteMedia() {
 
 /** Builds an upscale, mirrored studio suite from a tested layout plan. */
 export function buildSuite(hotel, floor, side, z) {
-  const q = suitePlan(side, z);
+  const theme=suiteTheme(floor,side,z);
+  const q = suitePlan(side, z, theme);
   const y = baseY(floor);
   const box = (...args) => hotel.box(...args);
   const round = (...args) => hotel.rounded ? hotel.rounded(...args) : box(...args);
@@ -69,7 +70,8 @@ export function buildSuite(hotel, floor, side, z) {
   round('warm', b.x, y + .645, b.z + .83, b.w - .50, .07, .48);
   round('fabric', b.x, y + .66, b.z - .35, b.w - .25, .06, .96);
   box('darkWall', b.x, y + 1.03, b.z + b.d / 2 + .06, b.w + .34, 1.32, .18);
-  hotel.addWalkSurface(floor, b.x, b.z, b.w - .28, b.d - .22, y + .62);
+  if(hotel.climbable) hotel.climbable(floor,b.x,b.z,b.w-.28,b.d-.22,y+.62,'Yatak');
+  else hotel.addWalkSurface(floor,b.x,b.z,b.w-.28,b.d-.22,y+.62);
   for (const sign of [-1, 1]) {
     const nx = b.x + sign * (b.w / 2 + .28);
     box('wood', nx, y + .27, b.z + .72, .44, .54, .48, floor, true);
@@ -83,12 +85,15 @@ export function buildSuite(hotel, floor, side, z) {
   });
 
   const sofa = q.sofa;
-  round('black', sofa.x, y + .24, sofa.z, sofa.w + .06, .34, sofa.d + .12, floor, true);
+  round('black', sofa.x, y + .24, sofa.z, sofa.w + .06, .34, sofa.d + .12);
   round('fabric', sofa.x, y + .49, sofa.z, sofa.w, .23, sofa.d);
-  round('fabric', sofa.x, y + .93, sofa.z + .31, sofa.w, .71, .17);
+  // The back is on the -Z side, so the seat and avatar face the TV at +Z.
+  round('fabric', sofa.x, y + .93, sofa.z - .31, sofa.w, .71, .17);
+  hotel.climbable?.(floor,sofa.x,sofa.z+.12,sofa.w-.14,sofa.d-.21,y+.605,'Koltuk');
   for (const sideSign of [-1, 1]) box('wood', sofa.x + sideSign * .72, y + .64, sofa.z, .14, .37, .68);
   const ct = q.table;
-  round('wood', ct.x, y + .35, ct.z, ct.w, .10, ct.d, floor, true);
+  round('wood', ct.x, y + .35, ct.z, ct.w, .10, ct.d);
+  hotel.climbable?.(floor,ct.x,ct.z,ct.w-.08,ct.d-.06,y+.40,'Sehpa');
   box('trim', ct.x, y + .16, ct.z, .12, .30, .12);
   interact({ x: sofa.x, z: sofa.z - .75 }, () => 'Koltuk · Otur', player => {
     player.useFurniture('sit', sofa.x, sofa.z - .03, Math.PI, .44);
@@ -117,21 +122,26 @@ export function buildSuite(hotel, floor, side, z) {
 
   // A compact workstation beside the entry, without blocking the central circulation path.
   const d = q.desk;
-  round('wood', d.x, y + .77, d.z, d.w, .11, d.d, floor, true);
+  round('wood', d.x, y + .77, d.z, d.w, .11, d.d);
+  hotel.climbable?.(floor,d.x,d.z,d.w-.12,d.d-.07,y+.825,'Çalışma masası');
   for (const dx of [-.57, .57]) box('trim', d.x + dx, y + .36, d.z, .075, .67, .51);
-  box('black', d.x, y + 1.11, d.z + .18, .75, .45, .06);
-  box('glass', d.x, y + 1.11, d.z + .133, .67, .36, .017);
+  // Monitor normal points toward chair (the corridor-side -X or +X).
+  box('black', d.x+side*.18, y+1.11, d.z, .75,.45,.06,null,false,side*Math.PI/2);
+  box('glass', d.x+side*.142, y+1.11, d.z, .65,.35,.017,null,false,side*Math.PI/2);
   const ch = q.chair;
   round('wood', ch.x, y + .39, ch.z, ch.w, .14, ch.d);
-  round('fabric', ch.x, y + .73, ch.z + .25, ch.w, .65, .15);
+  // Chair back is behind the sitter, opposite the desk on ±X.
+  round('fabric', ch.x-side*.29,y+.73,ch.z,.15,.65,ch.d);
+  hotel.climbable?.(floor,ch.x,ch.z,ch.w-.1,ch.d-.1,y+.46,'Çalışma sandalyesi');
   box('trim', ch.x, y + .21, ch.z, .15, .36, .15);
   interact({ x: ch.x, z: ch.z + .7 }, () => 'Çalışma sandalyesi · Otur', player => {
-    player.useFurniture('sit', ch.x, ch.z, Math.PI, .43);
+    player.useFurniture('sit', ch.x, ch.z, -side*Math.PI/2, .43);
   });
 
   // Separate minibar and hanging wardrobe. Their doors are functional and cheap to animate.
   const mini = q.minibar;
-  round('wood', mini.x, y + .54, mini.z, mini.w, 1.08, mini.d, floor, true);
+  round('wood',mini.x,y+.54,mini.z,mini.w,1.08,mini.d);
+  hotel.climbable?.(floor,mini.x,mini.z,mini.w-.09,mini.d-.09,y+1.08,'Minibar');
   box('black', mini.x, y + .55, mini.z - mini.d / 2 - .04, mini.w - .10, .92, .04);
   const glow = new THREE.Mesh(hotel.suiteMinibarGlowGeometry, hotel.materials.warm);
   glow.position.set(mini.x, y + .52, mini.z - mini.d / 2 - .075);
@@ -150,12 +160,29 @@ export function buildSuite(hotel, floor, side, z) {
       hotel.events.toast('Minibar kapandı'); }
   });
   const wardrobe = q.wardrobe;
-  round('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d, floor, true);
+  // Full-height wardrobe is a solid fixture, not a safe standing surface.
+  round('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d);
   box('trim', wardrobe.x, y + 1.32, wardrobe.z - wardrobe.d / 2 - .016, wardrobe.w - .06, 2.48, .025);
   box('warm', wardrobe.x, y + 1.28, wardrobe.z - wardrobe.d / 2 - .045, .06, .32, .04);
 
   // Actual closed room, with a sculpted bathtub and one shared water shader.
   buildBathroom(hotel,floor,side,z);
+
+  // Four interior schemes alter furnishing arrangement, palette and activity props.
+  if(theme==='panorama'){
+    round('fabric',side*6.35,y+.35,z+2.64,1.28,.51,.45);
+    hotel.climbable?.(floor,side*6.35,z+2.64,1.14,.4,y+.605,'Pencere bankı');
+  }else if(theme==='executive'){
+    round('wood',side*7.45,y+.53,z-1.15,.72,.86,.53);
+    hotel.climbable?.(floor,side*7.45,z-1.15,.66,.47,y+.96,'Yan dolap');
+  }else if(theme==='wellness'){
+    round('fabric',side*6.60,y+.19,z+2.55,1.52,.23,.57);
+  }
+  const light=hotel.roomLighting?.register(floor,side*5.9,y+3.04,z+.36,'Süit');
+  if(light)interact({x:side*3.25,z:z+.74},light.getLabel,()=>{
+    const on=light.toggle();
+    hotel.events.toast(on?'Oda ışığı açıldı':'Oda ışığı kapandı');
+  });
 
   // Plants, prints and soft indirect lighting are lightweight geometry only.
   box('wood', side * 3.06, y + .47, z + 2.58, .48, .72, .48);

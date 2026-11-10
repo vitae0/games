@@ -48,6 +48,8 @@ export function buildBathroom(hotel,floor,side,z) {
   bathtub.scale.set(1.36,1,1.54);
   bathtub.position.set(tub.x,y+.03,tub.z);
   add(hotel,bathtub);
+  // The tub shell blocks walking through its rim; an interaction places the
+  // avatar safely inside at the basin floor, then E exits to its previous spot.
   hotel.collisions.add(floor,tub.x,tub.z,tub.w,tub.d);
   const water=new THREE.Mesh(hotel.bathAssets.waterGeometry,hotel.bathAssets.waterMaterial);
   water.rotation.x=-Math.PI/2;
@@ -56,6 +58,9 @@ export function buildBathroom(hotel,floor,side,z) {
   water.renderOrder=1;
   water.visible=false;
   add(hotel,water);
+  interact({x:side*9.80,z:z-2.65},()=> 'Küvet · İçine gir',player=>{
+    player.useFurniture('sit',tub.x,tub.z,side*Math.PI/2,.17);
+  });
   let filled=false;
   interact({x:side*9.75,z:z-2.21},()=>filled?'Küvet · Suyu boşalt':'Küvet · Suyu doldur',()=>{
     filled=!filled;
@@ -71,12 +76,13 @@ export function buildBathroom(hotel,floor,side,z) {
   const sinkX=side*11.22;
   round('wood',sinkX,y+.78,z-.98,.82,.22,.46,floor,true);
   round('ceramic',sinkX,y+.89,z-.98,.66,.13,.33);
+  hotel.climbable?.(floor,sinkX,z-.98,.66,.33,y+.955,'Lavabo');
   round('trim',sinkX,y+1.09,z-.98,.045,.27,.04);
-  // Reflective *looking* panel: no expensive real-time planar reflection.
-  // Both decorative layers sit in FRONT of the wall's interior face (z-.71).
-  // A flush mirror/wall pair would flicker or disappear at grazing camera angles.
+  // Real planar reflection is active only for the nearest bathroom, through
+  // a single reusable 256px Reflector. This frame stays visible otherwise.
   box('trim',sinkX,y+1.75,z-.742,.91,1.16,.028);
-  box('glass',sinkX,y+1.75,z-.780,.84,1.10,.016);
+  box('black',sinkX,y+1.75,z-.780,.84,1.10,.015);
+  hotel.mirrors?.register(floor,sinkX,y+1.75,z-.807);
   round('ceramic',side*9.90,y+.35,z-.99,.50,.44,.51,floor,true);
   round('ceramic',side*9.90,y+.61,z-.79,.48,.11,.34);
   box('warm',side*10.46,y+2.65,z-.72,.56,.045,.10);

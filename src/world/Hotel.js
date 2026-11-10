@@ -263,11 +263,16 @@ export class Hotel {
     const initiallyOpen=stairDoor||publicDoor;
     const collision=this.collisions.add(floor,px,z,.12,width,!initiallyOpen);
     const state={open:initiallyOpen,angle:initiallyOpen?side*Math.PI*.52:0};
+    const publicLabel=publicDoor
+      ? z===-10.5?(side===1?'Bar':'Lobi'):'Ortak tuvalet'
+      : null;
     pivot.rotation.y = state.angle;
     this.interactables.push({
       floor,
       position: new THREE.Vector3(px, Y(floor) + 1.1, z),
-      getLabel: () => stairDoor ? `Merdiven · Kapıyı ${state.open ? 'kapat' : 'aç'}` : `Oda ${floor * 100 + Math.round((z + 10.5) / 7) + 1}${side === 1 ? 'B' : 'A'} · Kapıyı ${state.open ? 'kapat' : 'aç'}`,
+      getLabel:()=> stairDoor?`Merdiven · Kapıyı ${state.open?'kapat':'aç'}`
+        :publicLabel?`${publicLabel} · Kapıyı ${state.open?'kapat':'aç'}`
+        :`Oda ${floor*100+Math.round((z+10.5)/7)+1}${side===1?'B':'A'} · Kapıyı ${state.open?'kapat':'aç'}`,
       activate: () => {
         state.open = !state.open;
         this.collisions.setActive(collision, !state.open);
