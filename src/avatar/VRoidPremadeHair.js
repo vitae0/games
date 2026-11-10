@@ -130,7 +130,10 @@ export async function loadPremadeHair(baseModel) {
         `${import.meta.env.BASE_URL}assets/characters/${file}`
       );
       const sourceVrm = gltf.userData.vrm;
-      if (!sourceVrm?.humanoid || sourceVrm.meta?.licenseName !== 'CC0')
+      // Check the actual embedded VRM 0.x JSON, not a library-specific
+      // transformed meta object. The build separately verifies the binary SHA.
+      const license = gltf.parser?.json?.extensions?.VRM?.meta?.licenseName;
+      if (!sourceVrm?.humanoid || license !== 'CC0')
         throw new Error('Hazır saç kaynağının VRM humanoid/CC0 lisansı doğrulanamadı.');
       if (sourceVrm.meta?.metaVersion === '0') VRMUtils.rotateVRM0(sourceVrm);
       const hair = extractPremadeHair(sourceVrm);
