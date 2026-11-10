@@ -1,41 +1,60 @@
 import * as THREE from 'three';
+import { normalizeAvatar, SKIN_TONES } from '../avatar/AvatarConfig.js';
 
-/** Low-cost visible hands in first-person view. Scene-owned camera must be attached. */
+/** Low-cost first-person hands with fingers. Cosmetic only: the physics grip stays in Player. */
 export class HandRig {
-  constructor(camera) {
+  constructor(camera, profile = {}) {
     this.camera = camera;
     this.root = new THREE.Group();
     camera.add(this.root);
+    this.geometries = [new THREE.SphereGeometry(1, 12, 10), new THREE.CylinderGeometry(.83, 1, 1, 12)];
+    this.sleeveMaterial = new THREE.MeshBasicMaterial({ color: 0x9b968e, depthTest: false, depthWrite: false });
+    this.skinMaterial = new THREE.MeshBasicMaterial({ color: SKIN_TONES[normalizeAvatar(profile).skinTone], depthTest: false, depthWrite: false });
+    this.materials = [this.sleeveMaterial, this.skinMaterial];
     this.arms = {};
-    this.geometries = [new THREE.BoxGeometry(.12, .39, .13), new THREE.BoxGeometry(.15, .16, .18)];
-    this.materials = [
-      new THREE.MeshBasicMaterial({ color: 0x24314c, depthTest: false, depthWrite: false }),
-      new THREE.MeshBasicMaterial({ color: 0x83e8db, depthTest: false, depthWrite: false }),
-    ];
     for (const [side, sign] of [['left', -1], ['right', 1]]) {
       const group = new THREE.Group();
-      group.position.set(sign * .37, -.47, -.73);
-      group.rotation.z = -sign * .28;
-      const sleeve = new THREE.Mesh(this.geometries[0], this.materials[0]);
-      sleeve.position.y = -.13;
-      const palm = new THREE.Mesh(this.geometries[1], this.materials[1]);
-      palm.position.y = .12;
-      group.add(sleeve, palm);
+      group.position.set(sign * .35, -.49, -.74);
+      group.rotation.z = -sign * .23;
+      const sleeve = this.add(group, 1, this.sleeveMaterial, 0, -.19, .018, .089, .38, .09);
+      const wrist = this.add(group, 0, this.skinMaterial, 0, .04, -.006, .074, .11, .073);
+      const palm = this.add(group, 0, this.skinMaterial, 0, .14, -.018, .101, .13, .053);
+      const digits = [];
+      for (let f = 0; f < 4; f++) {
+        const digit = this.add(group, 0, this.skinMaterial,
+          (f - 1.5) * .046, .25 + (1.5 - Math.abs(f - 1.5)) * .012, -.014,
+          .022, .078 - Math.abs(f - 1.5) * .010, .024);
+        digits.push(digit);
+      }
+      const thumb = this.add(group, 0, this.skinMaterial,
+        -sign * .112, .115, -.045, .033, .071, .030);
+      thumb.rotation.z = sign * .54;
+      group.add(sleeve, wrist); // re-parent no-op, preserves explicit assembly
       this.root.add(group);
       group.traverse(child => { if (child.isMesh) child.renderOrder = 100; });
-      this.arms[side] = { group, palm, sign };
+      this.arms[side] = { group, palm, digits, thumb, sign };
     }
+  }
+  add(group, geometryIndex, mat, x,y,z,sx,sy,sz) {
+    const mesh = new THREE.Mesh(this.geometries[geometryIndex], mat);
+    mesh.position.set(x,y,z); mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;
+  }
+  setProfile(profile) {
+    const p = normalizeAvatar(profile);
+    this.skinMaterial.color.setHex(SKIN_TONES[p.skinTone]);
+    this.sleeveMaterial.color.setHex({ neon:0xcac5bc, stealth:0x343d47, chrome:0x977c81 }[p.outfit]);
   }
   update(dt, left, right, visible) {
     this.root.visible = visible;
     for (const [side, data] of Object.entries(this.arms)) {
       const input = side === 'left' ? left : right;
       const reached = input.pressed ? 1 : 0;
-      const targetZ = reached ? -1.17 : -.73;
-      data.group.position.z = THREE.MathUtils.damp(data.group.position.z, targetZ, 12, dt);
-      data.group.position.y = THREE.MathUtils.damp(data.group.position.y, reached ? -.27 : -.47, 12, dt);
-      data.palm.rotation.x = THREE.MathUtils.damp(data.palm.rotation.x, input.grip ? -.7 : 0, 13, dt);
-      data.palm.scale.x = THREE.MathUtils.damp(data.palm.scale.x, input.grip ? .72 : 1, 13, dt);
+      data.group.position.z = THREE.MathUtils.damp(data.group.position.z, reached ? -1.14 : -.74, 12, dt);
+      data.group.position.y = THREE.MathUtils.damp(data.group.position.y, reached ? -.28 : -.49, 12, dt);
+      data.palm.rotation.x = THREE.MathUtils.damp(data.palm.rotation.x, input.grip ? -.27 : 0, 13, dt);
+      for (const f of data.digits) {
+        f.rotation.x = THREE.MathUtils.damp(f.rotation.x, input.grip ? -.65 : 0, 12, dt);
+      }
     }
   }
   dispose() {

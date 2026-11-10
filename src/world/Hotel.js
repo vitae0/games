@@ -6,6 +6,8 @@ import { STAIR, stairFlight } from './Stairwell.js';
 import { CitySkyline } from './CitySkyline.js';
 import { PhysicsWorld } from '../engine/PhysicsWorld.js';
 import { Actors } from './Actors.js';
+import { createSurfaceTextures, SURFACE_KIND } from './SurfaceTextures.js';
+import { UPPER_DECK } from './FloorPlan.js';
 
 const HALF = HOTEL.corridorHalfWidth;
 const Y = (floor) => floor * HOTEL.floorHeight;
@@ -32,19 +34,30 @@ export class Hotel {
     this.actors = new Actors(scene, this.collisions, events.toast);
   }
   createMaterials() {
+    this.surfaceTextures = createSurfaceTextures();
     const result = {};
     for (const [name, color] of Object.entries(COLORS)) {
-      const glow = name === 'cyan' || name === 'magenta' || name === 'warm';
-      result[name] = new THREE.MeshStandardMaterial({
-        color, roughness: glow ? 0.37 : 0.85,
-        metalness: ['black', 'trim', 'glass'].includes(name) ? 0.45 : 0.06,
+      const glow = name === 'warm';
+      const textureName = SURFACE_KIND[name];
+      const material = new THREE.MeshStandardMaterial({
+        color, map: textureName ? this.surfaceTextures[textureName] : null,
+        roughness: ['wood', 'black', 'trim'].includes(name) ? .72 : .93,
+        metalness: name === 'glass' ? .12 : .012,
         emissive: glow ? color : 0x000000,
-        emissiveIntensity: glow ? 0.92 : 0,
-        transparent: name === 'glass', opacity: name === 'glass' ? .20 : 1,
-        depthWrite: name !== 'glass', side: name === 'glass' ? THREE.DoubleSide : THREE.FrontSide,
+        emissiveIntensity: glow ? .46 : 0,
+        transparent: name === 'glass', opacity: name === 'glass' ? .14 : 1,
+        depthWrite: name !== 'glass',
+        side: name === 'glass' ? THREE.DoubleSide : THREE.FrontSide,
       });
+      result[name] = material;
     }
     return result;
+  }
+  /** A deck and its lower-level ceiling have distinct, non-coplanar surfaces.
+   * Reuse the identical footprints to preserve every stairwell opening. */
+  deck(y, x, z, width, depth) {
+    this.box('slab', x, y - .125, z, width, .25, depth);
+    this.box('ceiling', x, y - .284, z, width - .025, .038, depth - .025);
   }
   box(mat, x, y, z, w, h, d, floor = null, solid = false, angle = 0) {
     this.batch.add(mat, x, y, z, w, h, d, angle);
@@ -58,10 +71,10 @@ export class Hotel {
   }
   build() {
     const s = this.scene;
-    s.background = new THREE.Color(0x02030b);
-    s.fog = new THREE.FogExp2(0x071125, 0.0022);
-    s.add(new THREE.HemisphereLight(0x6475bb, 0x191329, 1.55));
-    const moon = new THREE.DirectionalLight(0x8f9cf5, 1.15);
+    s.background = new THREE.Color(0x070b17);
+    s.fog = new THREE.FogExp2(0x111926, 0.0021);
+    s.add(new THREE.HemisphereLight(0xbccce0, 0x64584d, 1.7));
+    const moon = new THREE.DirectionalLight(0xc2cce4, 1.0);
     moon.position.set(24, 80, -65); s.add(moon);
     // No exterior spawning surface at hotel level: the podium is 118 m below.
     this.box('cyan', -12.23, 1.6, 0, .08, 3, 30.2);
@@ -69,24 +82,25 @@ export class Hotel {
     for (let i = 0; i < HOTEL.floors; i++) this.buildFloor(i);
     this.buildStairs();
     this.box('trim', 0, Y(4) + .09, 0, 24.6, .32, 30.8);
+    this.box('ceiling', 0, Y(4) - .22, 0, 24.28, .035, 30.48);
     this.box('cyan', 0, Y(4) + .27, -15.1, 24.5, .12, .13);
     this.box('magenta', 0, Y(4) + .27, 15.1, 24.5, .12, .13);
     this.buildSign();
     this.batch.flush();
-    const lamp = new THREE.PointLight(0x30edff, 65, 17, 2);
+    const lamp = new THREE.PointLight(0xffe4c0, 34, 16, 2);
     lamp.position.set(0, 2.8, -13.5); s.add(lamp);
-    const lobbyLight = new THREE.PointLight(0xec66bc, 28, 13, 2);
+    const lobbyLight = new THREE.PointLight(0xffeddb, 22, 15, 2);
     lobbyLight.position.set(-6, 2.2, -10); s.add(lobbyLight);
   }
   buildSign() {
     const canvas = document.createElement('canvas');
     canvas.width = 1024; canvas.height = 256;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#07162c'; ctx.fillRect(0, 0, 1024, 256);
-    ctx.strokeStyle = '#55ffff'; ctx.lineWidth = 10; ctx.strokeRect(12, 12, 1000, 232);
+    ctx.fillStyle = '#292c31'; ctx.fillRect(0, 0, 1024, 256);
+    ctx.strokeStyle = '#e8d4af'; ctx.lineWidth = 10; ctx.strokeRect(12, 12, 1000, 232);
     ctx.font = 'bold 132px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#9cffff'; ctx.shadowColor = '#21cbdf'; ctx.shadowBlur = 28;
-    ctx.fillText('NEON HOTEL', 512, 132);
+    ctx.fillStyle = '#fff6e5'; ctx.shadowColor = '#d3b692'; ctx.shadowBlur = 8;
+    ctx.fillText('VITAE HOTEL', 512, 132);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     const material = new THREE.MeshBasicMaterial({ map: texture });
@@ -97,15 +111,14 @@ export class Hotel {
   }
   buildFloor(floor) {
     const y = Y(floor);
-    if (floor === 0) this.box('slab', 0, y - .16, 0, 24.3, .32, 30.5);
+    if (floor === 0) this.box('slab', 0, y - .125, 0, 24.3, .25, 30.5);
     else {
       // Real cut-out for the switchback stairwell, not a staircase through a solid slab.
-      this.box('slab', -10.88, y - .16, 0, 2.54, .32, 30.5);
-      this.box('slab', 4.0, y - .16, 0, 16.3, .32, 30.5);
-      this.box('slab', -6.85, y - .16, -3.94, 5.55, .32, 22.62);
-      this.box('slab', -6.85, y - .16, 14.42, 5.55, .32, 1.63);
-      // Narrow floor-level access to both landing ends from the corridor door.
-      this.box('slab', -3.8, y - .10, 10.45, 1.5, .18, 6.1);
+      for (const deck of UPPER_DECK) {
+        this.deck(y, deck.x, deck.z, deck.width, deck.depth);
+      }
+      // The former extra landing slab overlapped the neighbouring slab by over 1 m.
+      // The corridor's existing right-hand slab already reaches the stair entrance.
     }
     this.box('carpet', 0, y + .012, 0, 3.1, .035, 28.8);
     this.box('cyan', -HALF + .12, y + .09, 0, .035, .12, 29.3);
@@ -253,7 +266,7 @@ export class Hotel {
       floor: 0,
       position: new THREE.Vector3(-4.1, 1, -11.8),
       getLabel: () => 'Resepsiyon · Bilgi al',
-      activate: () => this.events.toast('Neon Hotel’e hoş geldiniz. 4 kat · 32 oda · Asansör koridorun sonunda.'),
+      activate: () => this.events.toast('Vitae Hotel’e hoş geldiniz. Dört üst kat · Asansör koridorun sonunda.'),
     });
   }
   addProp(floor, x, z, label, color) {
@@ -355,7 +368,7 @@ export class Hotel {
       if (person) return {
         getLabel: () => person.anchored ? 'Mira · Resepsiyonla konuş' : 'Nova · Konuş',
         activate: () => this.events.toast(person.anchored
-          ? 'Mira: Neon Hotel’in 47-50. katlarındasınız. Şehir aşağıda; merdivenler batı kanadında.'
+          ? 'Mira: Vitae Hotel’in 47-50. katlarındasınız. Şehir aşağıda; merdivenler batı kanadında.'
           : 'Nova: Merhaba! Sol veya sağ tuşla elimi tutabilirsin. Tekerlekle it veya çek.'),
       };
     }
@@ -373,5 +386,6 @@ export class Hotel {
     this.propGeometry.dispose();
     for (const obj of this.dynamic) { obj.geometry?.dispose(); obj.material?.dispose(); obj.texture?.dispose(); }
     Object.values(this.materials).forEach((m) => m.dispose());
+    Object.values(this.surfaceTextures).forEach((texture) => texture.dispose());
   }
 }

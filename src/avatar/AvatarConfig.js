@@ -1,13 +1,22 @@
+/** The public avatar profile has no dependency on the renderer. Measurements are metres. */
 export const AVATAR_DEFAULTS = Object.freeze({
-  height: 1.76, shoulders: .47, waist: .33, hips: .39,
-  legRatio: .48, armRatio: .36, headScale: 1.0,
-  outfit: 'neon', hair: 'short', visor: true,
+  height: 1.73, shoulders: .43, waist: .32, hips: .39,
+  legRatio: .49, armRatio: .35, headScale: 1.09,
+  outfit: 'neon', hair: 'bob', visor: false, skinTone: 'warm', eyeColor: 'brown',
 });
 export const AVATAR_RANGES = Object.freeze({
   height: [1.45, 2.08], shoulders: [.32, .67], waist: [.25, .56],
   hips: [.30, .64], legRatio: [.42, .55], armRatio: [.30, .42],
   headScale: [.82, 1.22],
 });
+export const SKIN_TONES = Object.freeze({
+  porcelain: 0xf1d6c5,
+  warm: 0xe4bda3,
+  honey: 0xc99065,
+  umber: 0x9b614a,
+  deep: 0x683f36,
+});
+export const EYE_COLORS = Object.freeze({ brown: 0x553b30, hazel: 0x8c633f, blue: 0x476d91, green: 0x62816b });
 export const AVATAR_FIELDS = [
   ['height', 'Boy', 'm', .01], ['shoulders', 'Omuz genişliği', 'm', .01],
   ['waist', 'Bel genişliği', 'm', .01], ['hips', 'Kalça genişliği', 'm', .01],
@@ -22,7 +31,9 @@ export function normalizeAvatar(input = {}) {
     if (Number.isFinite(value)) p[key] = Math.max(min, Math.min(max, value));
   }
   if (['neon', 'stealth', 'chrome'].includes(input.outfit)) p.outfit = input.outfit;
-  if (['short', 'mohawk', 'none'].includes(input.hair)) p.hair = input.hair;
+  if (['short', 'bob', 'long', 'ponytail', 'mohawk', 'none'].includes(input.hair)) p.hair = input.hair;
   if (typeof input.visor === 'boolean') p.visor = input.visor;
+  if (Object.hasOwn(SKIN_TONES, input.skinTone)) p.skinTone = input.skinTone;
+  if (Object.hasOwn(EYE_COLORS, input.eyeColor)) p.eyeColor = input.eyeColor;
   return p;
 }

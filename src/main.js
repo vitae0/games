@@ -51,9 +51,10 @@ const hotel = new Hotel(scene, events);
 player = new Player(canvas, camera, scene, hotel, loadProfile(), events);
 hud = new Hud(canvas, {
   getProfile: () => player.avatar.profile,
-  previewProfile: (profile) => player.avatar.rebuild(profile),
+  previewProfile: (profile) => { player.avatar.rebuild(profile); player.handRig.setProfile(profile); },
   saveProfile: (profile) => {
     player.avatar.rebuild(profile);
+    player.handRig.setProfile(profile);
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); }
     catch { events.toast('Tarayıcı yerel depolamaya erişemedi.'); }
   },

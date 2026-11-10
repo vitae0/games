@@ -9,13 +9,13 @@ export class Actors {
   constructor(scene, collisions, toast) {
     this.scene = scene; this.collisions = collisions; this.toast = toast;
     this.people = [
-      this.create('Mira · Resepsiyon', -5.1, -13.05, Math.PI, 'chrome', 'mohawk', true),
-      this.create('Nova · Otel misafiri', 0.0, -8.4, Math.PI, 'neon', 'short', false),
+      this.create('Mira · Resepsiyon', -5.1, -13.05, Math.PI, 'chrome', 'bob', true, 'honey', 'hazel'),
+      this.create('Nova · Otel misafiri', 0.0, -8.4, Math.PI, 'neon', 'long', false, 'warm', 'green'),
     ];
     this.grips = new Map();
   }
-  create(name, x, z, yaw, outfit, hair, anchored) {
-    const avatar = new Avatar(this.scene, normalizeAvatar({ outfit, hair, visor: outfit === 'chrome' }));
+  create(name, x, z, yaw, outfit, hair, anchored, skinTone, eyeColor) {
+    const avatar = new Avatar(this.scene, normalizeAvatar({ outfit, hair, visor: false, skinTone, eyeColor }));
     avatar.root.position.set(x, 0, z);
     avatar.root.rotation.y = yaw;
     return { name, avatar, anchored, start: new THREE.Vector3(x, 0, z), position: new THREE.Vector3(x, 0, z), yaw, phase: 0 };

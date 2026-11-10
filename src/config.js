@@ -19,10 +19,11 @@ export const PLAYER = Object.freeze({
   jumpSpeed: 6.3,
   maxStep: 0.0167,
 });
+/** Indoor design stays neutral and warm; outdoor city retains its own neon palette. */
 export const COLORS = Object.freeze({
-  asphalt: 0x151d2c, sidewalk: 0x343b52, slab: 0x26344b,
-  outerWall: 0x1a2c43, innerWall: 0x40546b, darkWall: 0x111f32,
-  trim: 0x0c1727, cyan: 0x54f3f0, magenta: 0xec65bb,
-  warm: 0xf9c688, carpet: 0x364761, wood: 0x72556b,
-  fabric: 0x65718d, black: 0x172334, glass: 0x183e56,
+  asphalt: 0x292d31, sidewalk: 0xc5c2bd, slab: 0xd9d5cb,
+  ceiling: 0xf2f0ea, outerWall: 0xb5b4b0, innerWall: 0xe8e6df, darkWall: 0xaaa59c,
+  trim: 0x746f66, cyan: 0xc0a88a, magenta: 0x867b75,
+  warm: 0xffe4b6, carpet: 0x928e86, wood: 0xc29c76,
+  fabric: 0x9c9992, black: 0x434341, glass: 0x9eb1b8,
 });

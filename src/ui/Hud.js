@@ -1,9 +1,11 @@
-import { AVATAR_DEFAULTS, AVATAR_FIELDS, AVATAR_RANGES, normalizeAvatar } from '../avatar/AvatarConfig.js';
+import { AVATAR_DEFAULTS, AVATAR_FIELDS, AVATAR_RANGES, SKIN_TONES, EYE_COLORS, normalizeAvatar } from '../avatar/AvatarConfig.js';
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
-  outfit: [['neon', 'Neon Runner'], ['stealth', 'Stealth / Blackout'], ['chrome', 'Chrome / Streetwear']],
-  hair: [['short', 'Kısa'], ['mohawk', 'Mohawk'], ['none', 'Saçsız']],
+  outfit: [['neon', 'Modern / taş ve keten'], ['stealth', 'Minimal / koyu'], ['chrome', 'Soft / gül tonları']],
+  hair: [['bob', 'Bob / katlı'], ['short', 'Kısa'], ['long', 'Uzun'], ['ponytail', 'At kuyruğu'], ['mohawk', 'Dik'], ['none', 'Saçsız']],
+  skinTone: Object.keys(SKIN_TONES).map((id,i) => [id, ['Açık', 'Sıcak ten', 'Buğday', 'Esmer', 'Koyu'][i]]),
+  eyeColor: Object.keys(EYE_COLORS).map((id,i) => [id, ['Kahverengi', 'Ela', 'Mavi', 'Yeşil'][i]]),
 };
 
 export class Hud {
@@ -64,7 +66,7 @@ export class Hud {
       });
       head.append(caption, output); wrap.append(head, input); parent.append(wrap);
     }
-    for (const [key, label] of [['outfit', 'Kıyafet stili'], ['hair', 'Saç modeli']]) {
+    for (const [key, label] of [['outfit', 'Kıyafet stili'], ['hair', 'Saç modeli'], ['skinTone', 'Ten rengi'], ['eyeColor', 'Göz rengi']]) {
       const wrap = document.createElement('div'); wrap.className = 'field';
       const head = document.createElement('div');
       const caption = document.createElement('label'); caption.htmlFor = `avatar-${key}`; caption.textContent = label;
@@ -77,7 +79,7 @@ export class Hud {
       wrap.append(head, sel); parent.append(wrap);
     }
     const wrap = document.createElement('div'); wrap.className = 'field';
-    const label = document.createElement('label'); label.textContent = 'Cyberpunk vizör'; label.htmlFor = 'avatar-visor';
+    const label = document.createElement('label'); label.textContent = 'İnce gözlük'; label.htmlFor = 'avatar-visor';
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = 'avatar-visor';
     checkbox.addEventListener('change', () => { this.profile.visor = checkbox.checked; this.preview(); });
     wrap.append(label, checkbox); parent.append(wrap);
@@ -90,6 +92,8 @@ export class Hud {
     }
     $('#avatar-outfit').value = this.profile.outfit;
     $('#avatar-hair').value = this.profile.hair;
+    $('#avatar-skinTone').value = this.profile.skinTone;
+    $('#avatar-eyeColor').value = this.profile.eyeColor;
     $('#avatar-visor').checked = this.profile.visor;
   }
   preview() { this.profile = normalizeAvatar(this.profile); this.options.previewProfile(this.profile); }

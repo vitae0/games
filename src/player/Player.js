@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PLAYER, HOTEL } from '../config.js';
 import { Avatar } from '../avatar/Avatar.js';
 import { HandRig } from './HandRig.js';
+import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw } from './Orientation.js';
 import { controlTap, isFloorPosture, nextFloorPosture } from './Postures.js';
 import { resolveGround, groundFloor, stairHeight, inStairLane } from '../world/Stairwell.js';
 
@@ -15,7 +16,7 @@ export class Player {
     this.keys = new Set(); this.verticalSpeed = 0; this.jumpOffset = 0;
     this.posture = 'stand'; this.thirdPerson = false; this.walkSpeed = 0;
     this.avatar = new Avatar(scene, profile);
-    this.handRig = new HandRig(camera);
+    this.handRig = new HandRig(camera, profile);
     this.hands = {
       left: { pressed: false, grip: null, distance: 1.55 },
       right: { pressed: false, grip: null, distance: 1.55 },
@@ -25,11 +26,8 @@ export class Player {
     this.bindEvents();
   }
   get active() { return document.pointerLockElement === this.canvas && !this.events.isModalOpen(); }
-  get direction() { return new THREE.Vector3(Math.sin(this.yaw), 0, -Math.cos(this.yaw)); }
-  get viewDirection() {
-    return new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch),
-      Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
-  }
+  get direction() { const v = forwardFromYaw(this.yaw); return new THREE.Vector3(v.x, 0, v.z); }
+  get viewDirection() { const v = viewFromYawPitch(this.yaw, this.pitch); return new THREE.Vector3(v.x, v.y, v.z); }
   releaseHand(side) {
     const hand = this.hands[side];
     hand.pressed = false; hand.grip = null;
@@ -43,10 +41,11 @@ export class Player {
       this.keys.has('ControlLeft') || this.keys.has('ControlRight') ? 1.08 : this.avatar.profile.height - .12;
     return new THREE.Vector3(this.position.x, this.position.y + eye, this.position.z);
   }
+  rightVector() { const v = rightFromYaw(this.yaw); return new THREE.Vector3(v.x, 0, v.z); }
   anchor(side, distance) {
     const sign = side === 'left' ? -1 : 1;
     return this.eyePosition().addScaledVector(this.viewDirection, distance)
-      .addScaledVector(new THREE.Vector3(Math.cos(this.yaw), 0, Math.sin(this.yaw)), sign * .32)
+      .addScaledVector(this.rightVector(), sign * .32)
       .add(new THREE.Vector3(0, -.24, 0));
   }
   bindEvents() {
@@ -174,16 +173,13 @@ export class Player {
     dt = Math.min(dt, .05);
     const active = this.active;
     const forward = this.direction;
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, Math.sin(this.yaw));
     let mx = 0, mz = 0;
     const crouching = this.keys.has('ControlLeft') || this.keys.has('ControlRight');
     if (active && this.posture === 'stand') {
       const f = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
       const r = Number(this.keys.has('KeyD')) - Number(this.keys.has('KeyA'));
-      mx = forward.x * f + right.x * r;
-      mz = forward.z * f + right.z * r;
-      const len = Math.hypot(mx, mz);
-      if (len > 0) { mx /= len; mz /= len; }
+      const movement = movementFromYaw(this.yaw, f, r);
+      mx = movement.x; mz = movement.z;
       const speed = crouching ? PLAYER.crouchSpeed : this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') ? PLAYER.sprintSpeed : PLAYER.walkingSpeed;
       const traveled = this.hotel.collisions.move(this.floor, this.position.x, this.position.z,
         mx * speed * dt, mz * speed * dt, PLAYER.radius);
@@ -242,7 +238,7 @@ export class Player {
     if (this.thirdPerson || this.events.isCustomizerOpen()) {
       const distance = this.events.isCustomizerOpen() ? 3.1 : 3.8;
       const target = new THREE.Vector3(this.position.x, this.position.y + this.avatar.profile.height * .6, this.position.z);
-      const behind = this.events.isCustomizerOpen() ? new THREE.Vector3(0, 0, 1) : forward.clone().multiplyScalar(-1);
+      const behind = this.events.isCustomizerOpen() ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
       const camPos = target.clone();
       for (let d = .2; d < distance; d += .2) {
         const test = target.clone().addScaledVector(behind, d);
@@ -250,6 +246,8 @@ export class Player {
         camPos.copy(test);
       }
       camPos.y += 1.0 - this.pitch * 1.3;
+      const ceiling = (this.floor + 1) * HOTEL.floorHeight - .32;
+      camPos.y = Math.min(camPos.y, ceiling);
       this.camera.position.copy(camPos);
       this.camera.lookAt(target);
     } else {

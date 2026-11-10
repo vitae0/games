@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0a101f" />
+  <meta name="theme-color" content="#1a1d23" />
   <meta name="description" content="VitaeWorld: tarayıcı tabanlı, modüler, birinci şahıs 3D dünya prototipi." />
-  <title>VitaeWorld | Neon Hotel</title>
+  <title>VitaeWorld | Vitae Hotel</title>
 </head>
 <body>
   <div id="app">
     <canvas id="world" aria-label="VitaeWorld 3D dünyası"></canvas>
-    <div class="topbar"><div class="brand"><span class="signal"></span> VITAE<span>WORLD</span><small> / NEON HOTEL · ALPHA 0.3</small></div><div class="top-controls"><span id="floor-status">47. KAT</span><span id="hand-status">LMB / RMB · ELLER</span><span id="fps">-- FPS</span><button id="avatar-toggle">KARAKTER [K]</button></div></div>
+    <div class="topbar"><div class="brand"><span class="signal"></span> VITAE<span>WORLD</span><small> / VITAE HOTEL · ALPHA 0.4</small></div><div class="top-controls"><span id="floor-status">47. KAT</span><span id="hand-status">LMB / RMB · ELLER</span><span id="fps">-- FPS</span><button id="avatar-toggle">KARAKTER [K]</button></div></div>
     <div id="crosshair" aria-hidden="true"></div>
     <div id="interact-prompt" class="prompt hidden"></div>
     <div class="bottom-left"><div id="movement-status">YÜRÜYÜŞ</div><div id="position-status">0.0, 0.0</div></div>
     <div class="controls-help">WASD hareket · Shift koş · Space zıpla · Ctrl çömel · Çift Ctrl yere otur · Ctrl+Space diz çök · E kullan · Sol/Sağ tık: tut · Tekerlek: it/çek · F bırak · O kamera · K karakter</div>
-    <section id="start-screen" class="overlay"><div class="hero"><div class="eyebrow">VITAEWORLD / 001</div><h1>NEON<br><em>HOTEL</em></h1><p>Neon City üzerinde, gökdelenin yalnızca 47–50. katları erişilebilir. Gerçek merdivenlerle yüksel, şehir ışıklarını izle, ellerinle eşyaları ve NPC ellerini tut. Otel dışına çıkılamaz.</p><button id="start-button" class="primary">DÜNYAYA GİR <span>↗</span></button><p class="hint">En iyi deneyim: masaüstü, klavye, fare ve WebGL2.</p><p class="hint"><a href="./archive/" target="_blank" rel="noopener">Önceki oyunlar ve simülasyonlar arşivi</a></p></div></section>
-    <aside id="customizer" class="sidepanel hidden" aria-label="Karakter özelleştirme"><div class="panel-heading"><div><span class="eyebrow">AVATAR LAB / V1</span><h2>Karakter</h2></div><button id="close-customizer" class="icon-button" aria-label="Kapat">×</button></div><p class="panel-intro">Ölçüler metre cinsindendir. Oranları dilediğin gibi ayarlayıp yerel olarak kaydedebilirsin.</p><div id="avatar-fields"></div><div class="panel-actions"><button id="avatar-reset">SIFIRLA</button><button id="avatar-save" class="primary">KAYDET</button></div><p id="save-message" class="small"></p></aside>
-    <section id="elevator" class="modal-overlay hidden"><div class="modal"><div class="eyebrow">NEON HOTEL / LIFT</div><h2>Kat seç</h2><div class="floor-grid"><button data-floor="0">47 <small>RESEPSİYON</small></button><button data-floor="1">48 <small>ODALAR</small></button><button data-floor="2">49 <small>ODALAR</small></button><button data-floor="3">50 <small>SUİTLER</small></button></div><button id="close-elevator" class="secondary">KAPAT [ESC]</button></div></section>
+    <section id="start-screen" class="overlay"><div class="hero"><div class="eyebrow">VITAEWORLD / 001</div><h1>VITAE<br><em>HOTEL</em></h1><p>Neon City üzerinde, gökdelenin yalnızca 47–50. katları erişilebilir. Gerçek merdivenlerle yüksel, şehir ışıklarını izle, ellerinle eşyaları ve NPC ellerini tut. İç mekânda modern tasarım, dışarıda gece şehri. Otel dışına çıkılamaz.</p><button id="start-button" class="primary">DÜNYAYA GİR <span>↗</span></button><p class="hint">En iyi deneyim: masaüstü, klavye, fare ve WebGL2.</p></div></section>
+    <aside id="customizer" class="sidepanel hidden" aria-label="Karakter özelleştirme"><div class="panel-heading"><div><span class="eyebrow">CHARACTER STUDIO / V2</span><h2>Karakter</h2></div><button id="close-customizer" class="icon-button" aria-label="Kapat">×</button></div><p class="panel-intro">Ölçüler metre cinsindendir. Oranları dilediğin gibi ayarlayıp yerel olarak kaydedebilirsin.</p><div id="avatar-fields"></div><div class="panel-actions"><button id="avatar-reset">SIFIRLA</button><button id="avatar-save" class="primary">KAYDET</button></div><p id="save-message" class="small"></p></aside>
+    <section id="elevator" class="modal-overlay hidden"><div class="modal"><div class="eyebrow">VITAE HOTEL / LIFT</div><h2>Kat seç</h2><div class="floor-grid"><button data-floor="0">47 <small>RESEPSİYON</small></button><button data-floor="1">48 <small>ODALAR</small></button><button data-floor="2">49 <small>ODALAR</small></button><button data-floor="3">50 <small>SUİTLER</small></button></div><button id="close-elevator" class="secondary">KAPAT [ESC]</button></div></section>
     <div id="toast" class="toast hidden" role="status"></div>
   </div>
   <script type="module" src="/src/main.js"></script>
