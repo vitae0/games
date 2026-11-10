@@ -6,73 +6,81 @@ import { Hotel } from '../src/world/Hotel.js';
 function suite(side, z, floor = 1) {
   const events = [];
   const record = [];
+  const makeGeometry = () => new THREE.BoxGeometry(.1, .1, .1);
+  const geometries = [makeGeometry(),makeGeometry(),makeGeometry(),makeGeometry(),
+    new THREE.CylinderGeometry(.063,.063,.2,8)];
+  const mats = [new THREE.MeshBasicMaterial(),new THREE.MeshBasicMaterial(),
+    new THREE.MeshBasicMaterial(),new THREE.MeshBasicMaterial(),new THREE.MeshBasicMaterial()];
   const fake = {
     scene: new THREE.Scene(),
-    screenGeometry: new THREE.PlaneGeometry(1.76, 1),
-    minibarDoorGeometry: new THREE.BoxGeometry(.075, .75, .62),
-    bottleGeometry: new THREE.CylinderGeometry(.062, .062, .19, 8),
-    materials: { tvOff: new THREE.MeshBasicMaterial(), tvOn: new THREE.MeshBasicMaterial(),
-      wood: new THREE.MeshBasicMaterial(), glass: new THREE.MeshBasicMaterial() },
-    interactables: [], animations: [], furnitureDynamics: [], walkSurfaces: [],
+    suiteScreenGeometry: geometries[0], suiteMinibarGlowGeometry: geometries[1],
+    suiteBathroomDoorGeometry: geometries[2], suiteWaterGeometry: geometries[3],
+    suiteBottleGeometry: geometries[4],
+    media: [{material:mats[0]}, {material:mats[1]}, {material:mats[2]}],
+    materials: {glass:mats[3],warm:mats[4]},
+    interactables: [], animations: [], suiteMeshes: [], walkSurfaces: [],
     box(name, x, y, z, width, height, depth, roomFloor, solid) {
       record.push({name, x, y, z, width, height, depth, floor:roomFloor, solid:!!solid});
     },
     addWalkSurface: Hotel.prototype.addWalkSurface,
-    makeBathroom: Hotel.prototype.makeBathroom,
+    collisions: { add:()=>1, setActive:()=>{} },
     addProp() {},
     events: { toast: x => events.push(x) },
   };
   Hotel.prototype.makeRoom.call(fake, floor, side, z);
-  return { fake, record, events, cleanup() {
-    fake.screenGeometry.dispose(); fake.minibarDoorGeometry.dispose(); fake.bottleGeometry.dispose();
-    for (const m of Object.values(fake.materials)) m.dispose();
-  } };
+  return {fake, record, events, cleanup() {
+    geometries.forEach(g=>g.dispose()); mats.forEach(m=>m.dispose());
+  }};
 }
 
-test('every suite has TV, sofa, bed, minibar, raised mattress, and walkable entry', () => {
+test('all mirrored suites include TV, sofa, bed, bath, minibar and raised mattress', () => {
   for (const side of [-1,1]) for (const z of [-10.5,-3.5,3.5,10.5]) {
     const s = suite(side,z);
     try {
       const labels = s.fake.interactables.map(i=>i.getLabel()).join(' / ');
-      for (const word of ['TV', 'Koltuk', 'Yatak', 'Minibar']) assert.ok(labels.includes(word), `${word} missing`);
-      assert.equal(s.fake.walkSurfaces.length,1);
-      const surface=s.fake.walkSurfaces[0];
-      assert.ok(Math.abs(surface.topY - (3.4 + .575)) < .00001);
-      // No collision obstacle may overlap the entry clearance corridor 1.9..3.05 m.
-      for (const b of s.record.filter(x=>x.solid)) {
-        const intersectsX = Math.abs(b.x - side*2.4) < (b.width+.3)/2;
-        const intersectsZ = Math.abs(b.z-z) < (b.depth+1.05)/2;
-        assert.ok(!(intersectsX&&intersectsZ), `entry blocked by ${JSON.stringify(b)}`);
+      for (const word of ['TV','Koltuk','Yatak','Minibar','Banyo','Duş']) {
+        assert.ok(labels.includes(word), `${word} missing`);
       }
-    } finally {s.cleanup()}
+      assert.equal(s.fake.walkSurfaces.length,1);
+      assert.ok(Math.abs(s.fake.walkSurfaces[0].topY-(3.4+.62))<1e-10);
+      for (const b of s.record.filter(x=>x.solid)) {
+        const crossesDoor = Math.abs(b.x-side*2.4)<(b.width+.35)/2 &&
+          Math.abs(b.z-z)<(b.depth+1.0)/2;
+        assert.ok(!crossesDoor,`entry blocked by ${JSON.stringify(b)}`);
+      }
+    } finally {s.cleanup();}
   }
 });
 
-test('TV and minibar interactions update scene objects and are reversible', () => {
-  const s = suite(1, 3.5);
+test('TV channel cycle and minibar door remain independent and reversible', () => {
+  const s=suite(1,3.5);
   try {
-    const tv = s.fake.interactables.find(o=>o.getLabel().startsWith('TV'));
-    const minibar = s.fake.interactables.find(o=>o.getLabel().startsWith('Minibar'));
-    assert.equal(tv.getLabel(), 'TV · Aç');
-    tv.activate(); assert.equal(tv.getLabel(), 'TV · Kapat');
-    tv.activate(); assert.equal(tv.getLabel(), 'TV · Aç');
-    assert.equal(minibar.getLabel(), 'Minibar · Aç');
-    minibar.activate(); assert.equal(minibar.getLabel(), 'Minibar · Su al');
-    minibar.activate(); assert.equal(minibar.getLabel(), 'Minibar · Kapat');
-    minibar.activate(); assert.equal(minibar.getLabel(), 'Minibar · Aç');
-    s.fake.animations.forEach(a=>a(1/60));
-    assert.ok(s.events.some(x=>x.includes('TV açıldı')));
-  } finally {s.cleanup()}
+    const tv=s.fake.interactables.find(x=>x.getLabel().startsWith('TV'));
+    const minibar=s.fake.interactables.find(x=>x.getLabel().startsWith('Minibar'));
+    assert.equal(tv.getLabel(),'TV · Aç');
+    tv.activate(); assert.match(tv.getLabel(),/City/);
+    tv.activate(); assert.match(tv.getLabel(),/Art/);
+    tv.activate(); assert.match(tv.getLabel(),/Relax/);
+    tv.activate(); assert.equal(tv.getLabel(),'TV · Aç');
+    assert.equal(minibar.getLabel(),'Minibar · Aç');
+    minibar.activate(); assert.equal(minibar.getLabel(),'Minibar · Su al');
+    minibar.activate(); assert.equal(minibar.getLabel(),'Minibar · Kapat');
+    minibar.activate(); assert.equal(minibar.getLabel(),'Minibar · Aç');
+    assert.ok(s.events.some(x=>x.includes('TV kapatıldı')));
+    assert.ok(s.events.some(x=>x.includes('su aldın')));
+  } finally {s.cleanup();}
 });
 
-test('sofa and bed call the existing Player furniture interactions', () => {
+test('bed rest, bed edge and sofa all use physical furniture interaction heights', () => {
   const s=suite(-1,-3.5);
   try {
     const used=[];
     const actor={useFurniture:(...args)=>used.push(args)};
-    s.fake.interactables.find(o=>o.getLabel().startsWith('Koltuk')).activate(actor);
-    s.fake.interactables.find(o=>o.getLabel()==='Yatak · Uzan').activate(actor);
-    s.fake.interactables.find(o=>o.getLabel()==='Yatak kenarı · Otur').activate(actor);
+    for (const prefix of ['Koltuk','Yatak · Uzan','Yatak kenarı']) {
+      const obj=s.fake.interactables.find(x=>x.getLabel().startsWith(prefix));
+      assert.ok(obj,`missing ${prefix}`); obj.activate(actor);
+    }
     assert.deepEqual(used.map(x=>x[0]),['sit','rest','sit']);
-  } finally {s.cleanup()}
+    assert.ok(used.every(x=>x[4]>.3));
+  } finally {s.cleanup();}
 });

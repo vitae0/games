@@ -8,6 +8,7 @@ import { PhysicsWorld } from '../engine/PhysicsWorld.js';
 import { Actors } from './Actors.js';
 import { createSurfaceTextures, SURFACE_KIND } from './SurfaceTextures.js';
 import { UPPER_DECK, landingFootprint } from './FloorPlan.js';
+import { buildSuite, makeSuiteMedia } from './SuiteInteriors.js';
 
 const HALF = HOTEL.corridorHalfWidth;
 const Y = (floor) => floor * HOTEL.floorHeight;
@@ -33,10 +34,7 @@ export class Hotel {
     this.staticGrips = new Map();
     this.walkSurfaces = [];
     this.suiteMeshes = [];
-    this.furnitureDynamics = [];
-    this.screenGeometry = new THREE.PlaneGeometry(1.76, 1.00);
-    this.minibarDoorGeometry = new THREE.BoxGeometry(.075, .75, .62);
-    this.bottleGeometry = new THREE.CylinderGeometry(.062, .062, .19, 8);
+    this.suiteBottleGeometry = new THREE.CylinderGeometry(.063, .063, .20, 8);
     this.gripRaycaster = new THREE.Raycaster();
     this.gripRaycaster.far = 3.3;
     this.gripObstacles = [];
@@ -62,27 +60,6 @@ export class Hotel {
       });
       result[name] = material;
     }
-    // One tiny procedurally drawn TV image shared by every suite. No remote downloads.
-    const canvas = document.createElement('canvas');
-    canvas.width = 384; canvas.height = 216;
-    const cx = canvas.getContext('2d');
-    const gradient = cx.createLinearGradient(0, 0, 384, 216);
-    gradient.addColorStop(0, '#162f45'); gradient.addColorStop(.6, '#326574'); gradient.addColorStop(1, '#c89d75');
-    cx.fillStyle = gradient; cx.fillRect(0, 0, 384, 216);
-    for (let i = 0; i < 30; i++) {
-      const x = i * 13; const h = 26 + ((i * 83) % 96);
-      cx.fillStyle = i % 3 === 0 ? '#273a51' : '#172d41';
-      cx.fillRect(x, 216 - h, 14, h);
-      cx.fillStyle = 'rgba(241,214,171,.8)';
-      for (let py = 224 - h; py < 208; py += 13) cx.fillRect(x + 4, py, 2, 3);
-    }
-    cx.font = 'bold 24px sans-serif'; cx.textAlign = 'center';
-    cx.fillStyle = '#f5e5ce'; cx.fillText('VITAE / CITY AT NIGHT', 192, 42);
-    this.tvTexture = new THREE.CanvasTexture(canvas);
-    this.tvTexture.colorSpace = THREE.SRGBColorSpace;
-    result.tvOn = new THREE.MeshBasicMaterial({ map: this.tvTexture, toneMapped: false, side: THREE.DoubleSide });
-    result.tvOff = new THREE.MeshBasicMaterial({ color: 0x14191e, side: THREE.DoubleSide });
-    result.mirror = new THREE.MeshStandardMaterial({ color: 0xb2c6c9, roughness: .18, metalness: .8 });
     return result;
   }
   /** A deck and its lower-level ceiling have distinct, non-coplanar surfaces.
@@ -427,8 +404,7 @@ export class Hotel {
     this.suiteScreenGeometry.dispose(); this.suiteMinibarGlowGeometry.dispose();
     this.suiteBathroomDoorGeometry.dispose(); this.suiteWaterGeometry.dispose();
     this.props.forEach(mesh => this.scene.remove(mesh));
-    this.furnitureDynamics.forEach(mesh => this.scene.remove(mesh));
-    this.screenGeometry.dispose(); this.minibarDoorGeometry.dispose(); this.bottleGeometry.dispose(); this.tvTexture.dispose();
+    this.suiteBottleGeometry.dispose();
     this.propGeometry.dispose();
     for (const obj of this.dynamic) { obj.geometry?.dispose(); obj.material?.dispose(); obj.texture?.dispose(); }
     Object.values(this.materials).forEach((m) => m.dispose());
