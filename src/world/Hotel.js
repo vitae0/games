@@ -98,9 +98,10 @@ export class Hotel {
   /** All low furniture uses the same support/action contract. */
   climbable(floor, x, z, width, depth, topY, label, { sit=false }={}) {
     this.addWalkSurface(floor,x,z,width,depth,topY);
-    const offset=depth*.5+.42;
+    const offset=width*.5+.40;
+    const approachX=x-Math.sign(x||1)*offset;
     this.interactables.push({
-      floor,position:new THREE.Vector3(x, floor*HOTEL.floorHeight+.9,z-offset),
+      floor,position:new THREE.Vector3(approachX,floor*HOTEL.floorHeight+.9,z),
       getLabel:()=>label+' · Üzerine çık',
       activate:player=>player.climbFurniture?.(x,z,topY-floor*HOTEL.floorHeight,floor),
     });

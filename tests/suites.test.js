@@ -113,3 +113,16 @@ test('bath is a full-height room with continuous wall segments, a door, and a no
     }finally{s.cleanup()}
   }
 });
+
+
+test('tub offers a separate enter action with a seated posture inside its basin',()=>{
+  const s=suite(1,3.5);
+  try{
+    const tub=s.fake.interactables.find(o=>o.getLabel().startsWith('Küvet · İçine gir'));
+    assert.ok(tub);
+    const args=[];
+    tub.activate({useFurniture:(...x)=>args.push(x)});
+    assert.equal(args[0][0],'sit');
+    assert.equal(args[0][4],.17);
+  }finally{s.cleanup()}
+});

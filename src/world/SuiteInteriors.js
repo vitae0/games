@@ -161,7 +161,7 @@ export function buildSuite(hotel, floor, side, z) {
   });
   const wardrobe = q.wardrobe;
   // Full-height wardrobe is a solid fixture, not a safe standing surface.
-  round('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d);
+  round('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d, floor, true);
   box('trim', wardrobe.x, y + 1.32, wardrobe.z - wardrobe.d / 2 - .016, wardrobe.w - .06, 2.48, .025);
   box('warm', wardrobe.x, y + 1.28, wardrobe.z - wardrobe.d / 2 - .045, .06, .32, .04);
 
