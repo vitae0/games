@@ -11,3 +11,8 @@ export function rectanglesOverlap(a, b, clearance = 0) {
   return Math.abs(a.x - b.x) < (a.width + b.width) / 2 + clearance &&
     Math.abs(a.z - b.z) < (a.depth + b.depth) / 2 + clearance;
 }
+
+/** Landing fits inside the exact stair void; no overlapping coplanar decks. */
+export function landingFootprint(forward) {
+  return { x: -6.90, z: forward ? 13.25 : 7.75, width: 5.46, depth: forward ? .70 : .75 };
+}

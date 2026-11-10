@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { stairFlight, stairHeight, resolveGround, groundFloor, STAIR } from '../src/world/Stairwell.js';
 import { HOTEL } from '../src/config.js';
+import { Hotel } from '../src/world/Hotel.js';
 
 test('three stairs join four actual heights without elevator teleportation', () => {
   assert.equal(stairFlight(3), null);
@@ -27,4 +28,13 @@ test('stair lanes and floor labels never escape playable bounds', () => {
   assert.equal(stairHeight(2, 0, 10), null);
   assert.equal(groundFloor(-3), 0);
   assert.equal(groundFloor(9999), 3);
+});
+
+
+test('hotel walk surfaces can override flat room ground for raised furniture tops', () => {
+  const fake = { walkSurfaces:[{ floor:1, minX:-1, maxX:1, minZ:-1, maxZ:1, topY:4.0 }] };
+  const h = Hotel.prototype.groundHeight.call(fake, 0, 0, 3.52, 1);
+  assert.equal(h, 4.0);
+  const base = Hotel.prototype.groundHeight.call(fake, 2, 0, 3.52, 1);
+  assert.ok(Math.abs(base - resolveGround(2, 0, 3.52, 1)) < 1e-9);
 });

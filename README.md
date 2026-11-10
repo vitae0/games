@@ -117,6 +117,42 @@ Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoi
 
 Telefonun WebGL2 ve yeterli GPU belleği desteklemesi gerekir. Özellikle çok büyük kullanıcı GLB/VRM dosyaları düşük bellekli cihazlarda yavaş olabilir. Fizik ve karakter etkileşimleri hâlâ tek oyunculu prototiptir, gerçek çok oyunculu sistem değildir. Mobilde gerçek cihaz üzerinde etkileşim ve performans testlerinin yapılması önerilir; GitHub Actions otomatik test ve derleme yapar, bir cihaz çiftliği değildir.
 
+## Alpha 0.7 — Modern suitler ve etkileşimler
+
+- Yatak, lounge koltuğu, masa, gardırop ve mini bar, oda kapılarını açık bırakacak şekilde yeniden yerleştirildi.
+- Her suitte duş, lavabo, ayna etkili panel ve havlu nişi olan kompakt banyo bölümü var (ayna gerçek zamanlı yansıma değildir).
+- TV'ler `E` veya mobil **KULLAN** ile açılıp kapanır. TV içeriği önceden çizilmiş, çevrimdışı bir şehir görüntüsüdür.
+- Minibar açılır; içinden su alınabilir, ardından kapatılabilir.
+- Lounge koltuğuna oturulabilir; yatakta uzanma ve yatağın üstünde yürüme desteklenir.
+- Merdiven sahanlığı üst katların döşemeleriyle çakışmaz. Koridor/merdiven açıklığı korunur.
+- Kamera fare hızı yaklaşık %16, dokunmatik varsayılan hassasiyeti %15 artırıldı. Mevcut kaydedilmiş mobil ayarlar korunur.
+- Bütün yeni objeler prosedürel ve ortak materyallerle oluşturulur; ekstra dış model isteği yoktur.
+
+
+## Alpha 0.8 — Modern suites, physics-aware furniture and lobby
+
+- Suite geometry lives in `src/world/SuiteInteriors.js`; the mirrored layout and
+  entry clearances are pure functions in `src/world/SuitePlan.js`. Add or rearrange
+  furniture here without editing the rendering loop.
+- Every regular suite includes a walkable platform bed, seating/coffee table,
+  workstation, wardrobe, interactive minibar and sliding bathroom door.
+- The bathroom includes a vanity, decorative mirror, shower and toilet. E switches
+  the shower visual on and off. The mirror is a **stylized decorative surface**,
+  not a GPU-expensive planar reflection.
+- E cycles TV: OFF → CITY → ART → RELAX → OFF. Images are locally generated
+  256×128 static textures. There are no streaming videos or network connections.
+- Sofa and desk chairs are sit-able; the bed can be walked onto and used to rest.
+  Furniture sitting and resting use raised posture height without overwriting
+  actual navigable floor levels.
+- The former reception-area bedrooms were removed so the lobby has a usable
+  lounge, reception counter, coffee corner and plants.
+- The stair aperture remains open; the overlapping threshold slab was replaced
+  with a narrow decorative strip that stays within the preexisting deck.
+- Mouse camera response is slightly faster and mobile default sensitivity is 1.15×
+  (existing users' saved sensitivity remains unchanged).
+- Known limitations: no fluid simulation, real video decoding, real mirror reflections,
+  dynamic multibody seating collision, or full character-to-furniture IK.
+
 ## Quaternius 3D karakter denemesi
 
 Karakter menüsündeki **Temel karakter** üzerinden Quaternius Superhero Male
