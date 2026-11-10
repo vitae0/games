@@ -126,3 +126,12 @@ html,body,#app{width:100%;height:100%;height:100dvh;overscroll-behavior:none}
 /* Momentum scrolling for touch dialogs, without scrolling the 3D viewport. */
 .sidepanel,.modal,.overlay{-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .mobile-ui .touch-look,.mobile-ui .touch-joystick,.mobile-ui .touch-grid button,.mobile-ui .touch-extra button{touch-action:none}
+
+/* External avatar mesh-level visibility laboratory: no third-party assets are hosted. */
+.asset-import a{color:#8af9ed;text-decoration:underline;text-underline-offset:3px}
+#avatar-parts{margin-top:14px;padding:12px;border:1px solid rgba(142,239,229,.22);border-radius:6px;max-height:260px;overflow:auto;overscroll-behavior:contain}
+#avatar-parts>p{line-height:1.55}
+#avatar-parts>button{width:100%;margin-bottom:10px}
+.avatar-mesh-switch{display:flex;align-items:center;gap:10px;margin:7px 0;padding:4px;font-size:11px;overflow-wrap:anywhere;cursor:pointer}
+.avatar-mesh-switch input{accent-color:#78efed;flex:none}
+.avatar-mesh-switch span{flex:1}
