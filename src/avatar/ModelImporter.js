@@ -62,16 +62,35 @@ export async function importCharacterModel(file) {
   }
 }
 
-/** Bundled CC0 Quaternius test base, lazy loaded only when selected. */
-export async function loadBundledCharacterModel() {
+/** Lazy load only one selected CC0 base; never preload both 16–18 MB files. */
+export async function loadBundledCharacterModel(baseModel = 'quaternius') {
+  const names = {
+    vroidMale: 'vroid-beta-base-male.vrm',
+    vroidFemale: 'vroid-beta-base-female.vrm',
+  };
+  if (Object.hasOwn(names, baseModel)) {
+    const [{ GLTFLoader }, { VRMLoaderPlugin, VRMUtils }] = await Promise.all([
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('@pixiv/three-vrm'),
+    ]);
+    const loader = new GLTFLoader();
+    loader.register(parser => new VRMLoaderPlugin(parser));
+    const gltf = await loader.loadAsync(
+      `${import.meta.env.BASE_URL}assets/characters/${names[baseModel]}`
+    );
+    const vrm = gltf.userData.vrm;
+    if (!vrm?.humanoid) throw new Error('CC0 VRoid modelinde humanoid iskelet bulunamadı.');
+    if (vrm.meta?.metaVersion === '0') VRMUtils.rotateVRM0(vrm);
+    return { scene: vrm.scene, clips: gltf.animations, vrm, boneMap: {} };
+  }
+
+  // Legacy comparison model remains small and available offline.
   const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
   const gltf = await new GLTFLoader().loadAsync(
     `${import.meta.env.BASE_URL}assets/characters/quaternius-superhero-male.glb`
   );
   return {
-    scene: gltf.scene,
-    clips: gltf.animations,
-    vrm: null,
+    scene: gltf.scene, clips: gltf.animations, vrm: null,
     boneMap: findHumanoidBones(gltf.scene),
   };
 }
