@@ -170,3 +170,25 @@ Kaynak, lisans ve kısıtlar: [QUATERNIUS_AVATAR_TRIAL.md](docs/QUATERNIUS_AVATA
 ## Fiziksel merdivenler
 
 19 basamaklı her merdiven kolu artık görsel bloklarla aynı yükseklikte fiziksel basamaklara sahiptir. Merdiven hareketi 8 cm'lik alt adımlarla çözümlenir; aşağı ve yukarı yürürken aynı 17,9 cm basamak eşiği uygulanır. Üst katlardaki gerçek açıklıklarda görünmez döşeme bulunmaz; yalnızca sahanlık ve merdiven kolları üzerinde yürünebilir. Yan açıklıktan çıkma ve yüksek basamakların içinden geçme engellenir. Merdiven dışındaki mobilya/yatak etkileşimleri korunur.
+
+## CC0 VRoid beta: erkek + kadın karakter denemesi
+
+Varsayılan temel model **VRoid CC0 Erkek**; karakter panelinde **VRoid CC0 Kadın**
+seçeneği de vardır. Modeller, VRoid Studio'nun **eski beta** Base Male / Base
+Female dosyalarıdır. Güncel VRoid Studio modellerinin tümü CC0 değildir.
+
+Modellerin yaklaşık 17.9 MB ve 16.3 MB boyutundaki VRM dosyaları repo içinde
+saklanmaz: Pages yayınında sabit Git commit'lerine bağlanan iki CC0 kaynak
+dosyasından indirip git blob SHA-1 doğrulamasıyla `dist` içine kopyalanırlar.
+Tarayıcı seçilen modeli tembel yükler, aynı anda ikisini yüklemez.
+
+Yerelde indirmek için `npm run assets:download`, ardından `npm run dev`
+veya `npm run build` çalıştır. Modeller olmadığında küçük Quaternius
+karakterine dönülmezse tarayıcıda hata mesajı çıkabilir.
+
+**Kıyafet stili > Yok** VRoid karakterde tanınan giysi materyallerini
+kapatır. **Bu bir hazır uyarlanmış kıyafet gardırobu değildir.** Bir modelin
+kıyafet altında bulunmayan deri geometrisini kendiliğinden oluşturamayız.
+Özel kullanıcı FBX/GLB/VRM yükleme ve bağımsız mesh görünürlük testleri korunur.
+
+Kaynaklar, lisans ve eksikler: [VRoid base denemesi](docs/VROID_CC0_BASES.md).
