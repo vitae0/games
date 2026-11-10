@@ -41,7 +41,7 @@ export function inspectVrm(bytes) {
   const jsonLength = bytes.readUInt32LE(12);
   if (jsonLength > 1024 * 1024 * 8 || bytes.toString('utf8', 16, 20) !== 'JSON')
     throw new Error('Malformed GLB JSON header');
-  const gltf = JSON.parse(bytes.toString('utf8', 20, 20 + jsonLength));
+  const gltf = JSON.parse(bytes.toString('utf8', 20, 20 + jsonLength).replace(/\\u0000+$/g, '').trimEnd());
   const license = gltf.extensions?.VRM?.meta?.licenseName;
   const materials = (gltf.materials || []).map(m => m.name || '<unnamed>');
   return {
