@@ -127,16 +127,16 @@ test('raised bed and sofa interactions keep their surface height until standing 
 });
 
 
-test('Player climbs a low furnishing, remains on its surface, and exits safely',()=>{
+test('physical jump lands on raised furniture without E-to-climb',()=>{
   const p=playerFixture();
   try{
     p.touchActive=true;
-    p.hotel.groundHeight=(x,z,h,floor)=> Math.abs(x-4)<.65&&Math.abs(z-2)<.65?.72:floor*3.4;
-    assert.equal(p.climbFurniture(4,2,.72,0),true);
-    p.update(.05);
-    assert.equal(p.position.y,.72);
-    assert.equal(p.jumpOffset,0);
-    assert.equal(p.posture,'stand');
-    assert.equal(p.climbFurniture(4,2,2.9,0),false,'cannot stand through room ceiling');
-  }finally{p.dispose();}
+    p.position.set(4,0,2);
+    p.hotel.groundHeight=(x,z,base,f,feet)=>
+      Math.abs(x-4)<.7&&Math.abs(z-2)<.7&&feet>=.72-.025?.72:0;
+    p.jump();
+    for(let i=0;i<50;i++)p.update(1/60);
+    assert.ok(Math.abs(p.position.y-.72)<.025,`feet=${p.position.y}`);
+    assert.equal(typeof p.climbFurniture,'undefined');
+  }finally{p.dispose()}
 });

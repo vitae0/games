@@ -16,7 +16,7 @@ export function suitePlan(side, z, theme='studio') {
     table: { x: side * 4.95, z: z + 1.78, w: .83, d: .45 },
     tv: { x: side * 4.95, z: z + 3.27, w: 1.82, d: .11 },
     wardrobe: { x: side * 11.15, z: z + 2.78, w: .72, d: 1.04 },
-    minibar: { x: side * 3.24, z: z - 2.38, w: .72, d: .76 },
+    minibar: { x: side * 3.85, z: z - 3.05, w: .72, d: .76 },
     entry: { x: side * 2.60, z, w: 1.15, d: 1.25 },
   };
   if(theme==='panorama'){

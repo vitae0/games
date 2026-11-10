@@ -32,7 +32,7 @@ test('bar has working service, seats, counter surface and a clear entry',()=>{
     const labels=f.hotel.interactables.map(x=>x.getLabel());
     assert.ok(labels.some(x=>x.includes('sipariş')));
     assert.ok(labels.filter(x=>x.includes('Bar taburesi')).length>=3);
-    assert.ok(f.surfaces.some(x=>x.label==='Bar tezgâhı'));
+    assert.ok(f.surfaces.some(x=>Math.abs(x.x-8.4)<.01&&Math.abs(x.y-1.35)<.01));
     const drink=f.hotel.interactables.find(x=>x.getLabel().includes('sipariş'));
     drink.activate();drink.activate();
     assert.equal(f.events.length,2);

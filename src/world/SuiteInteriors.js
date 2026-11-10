@@ -56,7 +56,7 @@ export function buildSuite(hotel, floor, side, z) {
   });
 
   // Warm layered flooring & timber acoustic wall panels.
-  box('wood', side * 7.2, y + .016, z, 8.98, .028, 6.87);
+  box('wood',side*6.8,y+.016,z,10.45,.028,6.95);
   box('fabric', side * 6.62, y + .037, z + .6, 5.9, .020, 3.94);
   box('darkWall', side * 8.8, y + 1.40, z + 3.38, 5.8, 2.68, .085);
   for (let j = 0; j < 9; j++) box('wood', side * (6.65 + j * .46), y + 1.38, z + 3.32, .08, 2.55, .055);
@@ -74,7 +74,8 @@ export function buildSuite(hotel, floor, side, z) {
   else hotel.addWalkSurface(floor,b.x,b.z,b.w-.28,b.d-.22,y+.62);
   for (const sign of [-1, 1]) {
     const nx = b.x + sign * (b.w / 2 + .28);
-    box('wood', nx, y + .27, b.z + .72, .44, .54, .48, floor, true);
+    box('wood',nx,y+.27,b.z+.72,.44,.54,.48);
+    hotel.addWalkSurface(floor,nx,b.z+.72,.39,.44,y+.54);
     box('warm', nx, y + .81, b.z + .68, .22, .32, .22);
   }
   interact({ x: side * 7.18, z: b.z - .5 }, () => 'Yatak · Uzan', player => {
