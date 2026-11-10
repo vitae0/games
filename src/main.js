@@ -115,7 +115,14 @@ hud = new Hud(canvas, {
   player,
   setQuality,
   getProfile: () => player.avatar.profile,
-  loadModel: async (file) => { ++modelRequest; const model = await importCharacterModel(file); player.avatar.applyExternal(model, 'upload'); },
+  loadModel: async (file) => {
+    ++modelRequest;
+    const model = await importCharacterModel(file);
+    player.avatar.applyExternal(model, 'upload');
+    return player.avatar.listExternalParts();
+  },
+  getModelParts: () => player.avatar.external?.source === 'upload' ? player.avatar.listExternalParts() : [],
+  setModelPartVisible: (index, visible) => player.avatar.setExternalPartVisible(index, visible),
   resetModel: () => { player.avatar.clearExternal(); void syncBaseModel({ force: true }); },
   previewProfile: (profile) => updateAvatarProfile(profile),
   saveProfile: (profile) => {
