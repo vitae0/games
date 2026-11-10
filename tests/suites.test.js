@@ -40,8 +40,8 @@ test('all mirrored suites include usable TV, bathroom, minibar, seating, and rai
       const labels=s.fake.interactables.map(o=>o.getLabel()).join(' / ');
       for(const text of ['TV','Koltuk','Yatak','Minibar','Banyo kapısı','Küvet'])
         assert.ok(labels.includes(text),`${text} missing for side ${side} z ${z}`);
-      assert.equal(s.fake.walkSurfaces.length,1);
-      assert.equal(s.fake.walkSurfaces[0].topY,3.4+.62);
+      assert.ok(s.fake.walkSurfaces.length>=2,'bed and other furniture surfaces are physically available');
+      assert.ok(s.fake.walkSurfaces.some(item=>Math.abs(item.topY-(3.4+.62))<1e-8));
       const p=suitePlan(side,z);
       assert.ok(Math.abs(p.entry.x-side*2.6)<.000001);
     }finally{s.cleanup()}

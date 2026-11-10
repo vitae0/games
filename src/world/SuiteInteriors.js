@@ -51,8 +51,10 @@ export function buildSuite(hotel, floor, side, z) {
   const y = baseY(floor);
   const box = (...args) => hotel.box(...args);
   const round = (...args) => hotel.rounded ? hotel.rounded(...args) : box(...args);
-  const interact = (position, label, activate) => hotel.interactables.push({
-    floor, position: new THREE.Vector3(position.x, y + .95, position.z), getLabel: label, activate,
+  const interact = (position,label,activate,anchor=position) => hotel.interactables.push({
+    floor,position:new THREE.Vector3(position.x,y+.95,position.z),
+    labelPosition:new THREE.Vector3(anchor.x,y+(anchor.y??1.0),anchor.z),
+    getLabel:label,activate,
   });
 
   // Warm layered flooring & timber acoustic wall panels.
@@ -80,7 +82,7 @@ export function buildSuite(hotel, floor, side, z) {
   }
   interact({ x: side * 7.18, z: b.z - .5 }, () => 'Yatak · Uzan', player => {
     player.useFurniture('rest', b.x, b.z - .18, side === -1 ? -Math.PI / 2 : Math.PI / 2, .62);
-  });
+  },{x:b.x,z:b.z,y:.65});
   interact({ x: side * 8.10, z: b.z - 1.04 }, () => 'Yatak kenarı · Otur', player => {
     player.useFurniture('sit', b.x, b.z - .87, side * Math.PI / 2, .61);
   });
@@ -98,7 +100,7 @@ export function buildSuite(hotel, floor, side, z) {
   box('trim', ct.x, y + .16, ct.z, .12, .30, .12);
   interact({ x: sofa.x, z: sofa.z - .75 }, () => 'Koltuk · Otur', player => {
     player.useFurniture('sit', sofa.x, sofa.z - .03, Math.PI, .44);
-  });
+  },{x:sofa.x,z:sofa.z,y:.68});
 
   const tv = q.tv;
   box('darkWall', tv.x, y + 1.67, tv.z + .02, 2.23, 1.45, .14);
@@ -119,7 +121,7 @@ export function buildSuite(hotel, floor, side, z) {
     screen.visible = television.powered;
     screen.material = hotel.media[television.channel].material;
     hotel.events.toast(television.powered ? `TV: ${['CITY', 'ART', 'RELAX'][television.channel]}` : 'TV kapatıldı');
-  });
+  },{x:tv.x,z:tv.z-.16,y:1.67});
 
   // A compact workstation beside the entry, without blocking the central circulation path.
   const d = q.desk;
@@ -137,7 +139,7 @@ export function buildSuite(hotel, floor, side, z) {
   box('trim', ch.x, y + .21, ch.z, .15, .36, .15);
   interact({ x: ch.x, z: ch.z + .7 }, () => 'Çalışma sandalyesi · Otur', player => {
     player.useFurniture('sit', ch.x, ch.z, -side*Math.PI/2, .43);
-  });
+  },{x:ch.x,z:ch.z,y:.55});
 
   // Separate minibar and hanging wardrobe. Their doors are functional and cheap to animate.
   const mini = q.minibar;
@@ -159,7 +161,7 @@ export function buildSuite(hotel, floor, side, z) {
       hotel.events.toast('Minibardan su aldın'); }
     else { fridgeOpen = false; glow.visible = false;
       hotel.events.toast('Minibar kapandı'); }
-  });
+  },{x:mini.x,z:mini.z,y:1.05});
   const wardrobe = q.wardrobe;
   // Full-height wardrobe is a solid fixture, not a safe standing surface.
   round('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d, floor, true);

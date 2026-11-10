@@ -3,6 +3,7 @@ import './style.css';
 import { Hotel } from './world/Hotel.js';
 import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
+import { WorldActionLabels } from './ui/WorldActionLabels.js';
 import { normalizeAvatar } from './avatar/AvatarConfig.js';
 import { loadBundledCharacterModel } from './avatar/ModelImporter.js';
 import { isTouchCapable } from './input/TouchMath.js';
@@ -136,6 +137,7 @@ hud = new Hud(canvas, {
   },
 });
 
+const worldActions = new WorldActionLabels({hotel,player,camera,touch:touchDevice});
 let prev = performance.now();
 let frameCounter = 0;
 let lastHudUpdate = 0;
@@ -149,8 +151,9 @@ function frame(now) {
   hotel.update(dt,player);
   const target = hotel.closestInteraction(player, player.direction);
   if (now - lastHudUpdate >= 100) {
-    hud.update(target, player, speed, displayedFps);
-    lastHudUpdate = now;
+    hud.update(target,player,speed,displayedFps);
+    worldActions.update();
+    lastHudUpdate=now;
   }
   renderer.render(scene, camera);
   frameCounter++;
@@ -176,5 +179,5 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 window.addEventListener('beforeunload', () => {
-  hud?.dispose(); player.dispose(); hotel.dispose(); renderer.dispose();
+  worldActions.dispose();hud?.dispose();player.dispose();hotel.dispose();renderer.dispose();
 });

@@ -1,6 +1,14 @@
-# VitaeWorld · Alpha 0.10 (Vitae Hotel)
+# VitaeWorld · Alpha 0.11 (Vitae Hotel)
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
+
+## Alpha 0.11: fiziksel mobilyalar ve 90° merdivenler
+
+- **Tırmanma düzeltmesi:** E ile mobilyanın üstüne aniden taşınma kaldırıldı. Yükseklik destekleri zıplama sırasında ayağın üst yüzeye ulaşıp ulaşmadığına göre hesaplanır. Alçak nesneler artık zeminde görünmez 2D engel olarak yer almaz.
+- **Nesne üzeri etkileşim:** Yakındaki nesnelerin üzerindeki küçük `E · Aksiyon` kartları 3D konumdan projekte edilir; mobilde dokunulabilir. Paneller fare ve dokunmatik kamera kontrolüyle çalışır.
+- **90° döndürülmüş merdiven:** Daraltılmış, kapı girişinin sağındaki doğu-batı yönünde gerçek basamaklar, yeni sahanlık, yenilenmiş döşeme açıklığı.
+- **İlk kat ve duvarlar:** Süit, resepsiyon, bar ve ortak tuvalette kaplamalar dış ve iç duvar sınırlarına kadar uzatıldı. Koridor halısı da uç duvarlara kadar devam eder. Koridor ve banyo kapılarının üstleri duvar ile kapatıldı.
+- **Minibar:** Odanın iç ön duvarına yaslandı.
 
 ## Alpha 0.10: yaşanabilir otel, farklı süitler ve büyük şehir
 

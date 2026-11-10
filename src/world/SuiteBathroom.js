@@ -13,8 +13,10 @@ export function buildBathroom(hotel,floor,side,z) {
   const bath=p.bath, tub=p.tub, y=Y(floor);
   const box=(...args)=>hotel.box(...args);
   const round=(...args)=>hotel.rounded?hotel.rounded(...args):box(...args);
-  const interact=(pos,label,activate)=>hotel.interactables.push({
-    floor,position:new THREE.Vector3(pos.x,y+.95,pos.z),getLabel:label,activate,
+  const interact=(pos,label,activate,anchor=pos)=>hotel.interactables.push({
+    floor,position:new THREE.Vector3(pos.x,y+.95,pos.z),
+    labelPosition:new THREE.Vector3(anchor.x,y+(anchor.y??1),anchor.z),
+    getLabel:label,activate,
   });
   const wallX=side*9.14;
   // Stone-tile finish sits above timber by 24 mm. Never draw two coplanar top faces.
@@ -36,7 +38,7 @@ export function buildBathroom(hotel,floor,side,z) {
     open=!open;
     hotel.collisions.setActive(doorCollider,!open);
     hotel.events.toast(open?'Banyo kapısı açıldı':'Banyo kapısı kapatıldı');
-  });
+  },{x:wallX,z:z-1.89,y:1.8});
   hotel.animations.push(dt=>{
     const target=z-(open?2.82:1.89);
     door.position.z=THREE.MathUtils.damp(door.position.z,target,9,dt);
@@ -61,7 +63,7 @@ export function buildBathroom(hotel,floor,side,z) {
   add(hotel,water);
   interact({x:side*9.80,z:z-2.65},()=> 'Küvet · İçine gir',player=>{
     player.useFurniture('sit',tub.x,tub.z,side*Math.PI/2,.17);
-  });
+  },{x:tub.x,z:tub.z,y:.55});
   let filled=false;
   interact({x:side*9.75,z:z-2.21},()=>filled?'Küvet · Suyu boşalt':'Küvet · Suyu doldur',()=>{
     filled=!filled;
