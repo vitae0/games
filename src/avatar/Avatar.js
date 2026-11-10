@@ -312,6 +312,7 @@ export class Avatar {
     if (!ext?.vrm) return;
     ext.style ||= { materialCache: new Map(), hairRoot: null, hairKey: null, hairRequest: 0 };
     const style = ext.style;
+    style.keepSourceHair = !!ext.preserveSourceHair;
     applyVRoidColors(ext.vrm, this.profile, style);
     ext.wardrobeState = applyVRoidWardrobe(ext.group, this.profile);
 
@@ -319,6 +320,15 @@ export class Avatar {
     const key = `${this.profile.baseModel}:${this.profile.hair}:${this.profile.hairColor}`;
     if (style.hairKey === key) return;
     style.hairKey = key;
+    if (ext.preserveSourceHair) {
+      // The CC0 HairSample model already includes the artist's hairstyle.
+      // Do not load or construct another hair object on top of it.
+      const ticket = ++style.hairRequest;
+      discardPremadeHair(style.hairRoot);
+      style.hairRoot = null;
+      style.hairStatus = this.profile.hair === 'none' ? 'hidden' : 'ready';
+      return;
+    }
     const ticket = ++style.hairRequest;
     discardPremadeHair(style.hairRoot);
     style.hairRoot = null;
@@ -373,7 +383,7 @@ export class Avatar {
     // Imported or bundled file owns its own geometries; dispose on replacement.
     this.external.group.traverse(obj => {
       if (!obj.isMesh) return;
-      obj.geometry?.dispose();
+      if (!this.external.sharedGeometry) obj.geometry?.dispose();
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const mat of materials) mat?.dispose();
     });
@@ -406,6 +416,8 @@ export class Avatar {
       }
     });
     this.external = { wrapper, group: visual, vrm: model.vrm, mixer, actions, source, parts,
+      sharedGeometry: !!model.sharedGeometry,
+      preserveSourceHair: !!model.preserveSourceHair,
       sourceHeight: height, sourceMinY: bounds.min.y,
       boneMap: model.boneMap || {}, baseRotations: new Map() };
     this.refreshExternalScale();
