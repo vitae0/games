@@ -76,6 +76,9 @@ export function buildSuite(hotel, floor, side, z) {
   interact({ x: side * 7.18, z: b.z - .5 }, () => 'Yatak · Uzan', player => {
     player.useFurniture('rest', b.x, b.z - .18, side === -1 ? -Math.PI / 2 : Math.PI / 2, .62);
   });
+  interact({ x: side * 8.10, z: b.z - 1.04 }, () => 'Yatak kenarı · Otur', player => {
+    player.useFurniture('sit', b.x, b.z - .87, side * Math.PI / 2, .61);
+  });
 
   const sofa = q.sofa;
   box('black', sofa.x, y + .24, sofa.z, sofa.w + .06, .34, sofa.d + .12, floor, true);
@@ -131,10 +134,18 @@ export function buildSuite(hotel, floor, side, z) {
   const glow = new THREE.Mesh(hotel.suiteMinibarGlowGeometry, hotel.materials.warm);
   glow.position.set(mini.x, y + .52, mini.z - mini.d / 2 - .075);
   glow.visible = false; hotel.scene.add(glow); hotel.suiteMeshes.push(glow);
-  let fridgeOpen = false;
-  interact({ x: mini.x, z: mini.z + .68 }, () => fridgeOpen ? 'Minibar · Kapat' : 'Minibar · Aç', () => {
-    fridgeOpen = !fridgeOpen; glow.visible = fridgeOpen;
-    hotel.events.toast(fridgeOpen ? 'Minibar açıldı' : 'Minibar kapandı');
+  const waterBottle = new THREE.Mesh(hotel.suiteBottleGeometry, hotel.materials.glass);
+  waterBottle.position.set(mini.x, y + .82, mini.z - mini.d / 2 - .13);
+  waterBottle.visible = false; hotel.scene.add(waterBottle); hotel.suiteMeshes.push(waterBottle);
+  let fridgeOpen = false, waterAvailable = true;
+  interact({ x: mini.x, z: mini.z + .68 }, () => !fridgeOpen ? 'Minibar · Aç' :
+    waterAvailable ? 'Minibar · Su al' : 'Minibar · Kapat', () => {
+    if (!fridgeOpen) { fridgeOpen = true; glow.visible = true; waterBottle.visible = true;
+      hotel.events.toast('Minibar açıldı'); }
+    else if (waterAvailable) { waterAvailable = false; waterBottle.visible = false;
+      hotel.events.toast('Minibardan su aldın'); }
+    else { fridgeOpen = false; glow.visible = false;
+      hotel.events.toast('Minibar kapandı'); }
   });
   const wardrobe = q.wardrobe;
   box('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d, floor, true);
