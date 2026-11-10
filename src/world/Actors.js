@@ -1,25 +1,71 @@
 import * as THREE from 'three';
 import { Avatar } from '../avatar/Avatar.js';
-import { normalizeAvatar } from '../avatar/AvatarConfig.js';
+import { NPC_CAST, npcProfile, validateNpcCast } from './NpcCast.js';
+import { loadNpcModel, tintNpcClothing } from './NpcModelPool.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
+const LOAD_DISTANCE = 15; // Stream heavy VRMs only when the NPC may enter view.
+const DRAW_DISTANCE = 21;
 
 /** Local simulated characters. Multiplayer presence requires a future network transport. */
 export class Actors {
   constructor(scene, collisions, toast) {
-    this.scene = scene; this.collisions = collisions; this.toast = toast;
-    this.people = [
-      this.create('Mira · Resepsiyon', -5.1, -13.05, Math.PI, 'chrome', 'bob', true, 'honey', 'hazel'),
-      this.create('Nova · Otel misafiri', 0.0, -8.4, Math.PI, 'neon', 'long', false, 'warm', 'green'),
-    ];
+    this.scene = scene;
+    this.collisions = collisions;
+    this.toast = toast;
+    this.disposed = false;
+    validateNpcCast();
+    this.people = NPC_CAST.map(spec => this.create(spec));
     this.grips = new Map();
   }
-  create(name, x, z, yaw, outfit, hair, anchored, skinTone, eyeColor) {
-    const avatar = new Avatar(this.scene, normalizeAvatar({ outfit, hair, visor: false, skinTone, eyeColor }));
-    avatar.root.position.set(x, 0, z);
-    avatar.root.rotation.y = yaw;
-    return { name, avatar, anchored, start: new THREE.Vector3(x, 0, z), position: new THREE.Vector3(x, 0, z), yaw, phase: 0 };
+
+  create(spec) {
+    const profile = npcProfile(spec);
+    const avatar = new Avatar(this.scene, profile);
+    avatar.root.position.set(spec.x, 0, spec.z);
+    avatar.root.rotation.y = spec.yaw;
+    // We do not render the obsolete geometric placeholder while real VRMs load.
+    avatar.body.visible = false;
+    return {
+      id: spec.id, name: spec.name, spec,
+      avatar, anchored: spec.anchored,
+      start: new THREE.Vector3(spec.x, 0, spec.z),
+      position: new THREE.Vector3(spec.x, 0, spec.z),
+      yaw: spec.yaw, phase: 0, ready: false,
+      loading: false, error: null,
+    };
   }
+
+  async loadVisual(actor) {
+    if (actor.loading || this.disposed) return;
+    actor.loading = true;
+    try {
+      // Clone the SKINNED rig while sharing source geometry and textures.
+      // Never assign one mutable material/skeleton to all NPCs.
+      const model = await loadNpcModel(actor.spec.asset);
+      if (this.disposed || !this.people.includes(actor)) {
+        // A scene unload can happen while VRMs load. The pooled geometry
+        // survives, but the isolated copy's materials must be discarded.
+        model.scene.traverse(obj => {
+          if (!obj.isMesh) return;
+          for (const m of Array.isArray(obj.material) ? obj.material : [obj.material])
+            m?.dispose();
+        });
+        return;
+      }
+      actor.avatar.applyExternal(model, `npc:${actor.spec.asset}`);
+      tintNpcClothing(actor.avatar.external.group, actor.spec);
+      actor.ready = true;
+    } catch (error) {
+      actor.error = error?.message || String(error);
+      // The fallback is deliberate, not a claim of a successful VRM load.
+      // Keep the previous geometric character available on failed networks.
+      actor.avatar.body.visible = true;
+      actor.ready = true;
+      console.warn(`NPC ${actor.id} ready-made CC0 VRoid could not load:`, error);
+    }
+  }
+
   handPoint(person, side) {
     const sign = side === 'left' ? -1 : 1;
     const local = new THREE.Vector3(sign * .45, person.avatar.profile.height * .69, -.32);
@@ -28,7 +74,7 @@ export class Actors {
   }
   nearestHand(origin, direction, maxReach = 3.3) {
     let candidate = null, best = Infinity;
-    for (const actor of this.people) for (const hand of ['left', 'right']) {
+    for (const actor of this.people) if (actor.ready) for (const hand of ['left', 'right']) {
       const handPos = this.handPoint(actor, hand);
       const offset = handPos.sub(origin);
       const along = offset.dot(direction);
@@ -52,13 +98,20 @@ export class Actors {
   getNearby(player) {
     if (player.floor !== 0) return null;
     const forward = player.direction;
-    return this.people.find(actor => {
+    return this.people.find(actor => actor.ready && (() => {
       const d = actor.position.clone().sub(player.position);
       return d.length() < 2.75 && d.dot(forward) > -.1;
-    }) || null;
+    })()) || null;
   }
-  update(dt) {
+  update(dt, player = null) {
     for (const actor of this.people) {
+      const distance = player && player.floor === 0
+        ? Math.hypot(player.position.x - actor.position.x, player.position.z - actor.position.z)
+        : player ? Infinity : 0;
+      const near = distance <= DRAW_DISTANCE;
+      actor.avatar.root.visible = near;
+      if (distance <= LOAD_DISTANCE && !actor.ready && !actor.loading) void this.loadVisual(actor);
+      if (!near) continue;
       const active = [...this.grips.values()].filter(g => g.actor === actor);
       if (active.length) {
         let pullX = 0, pullZ = 0;
@@ -87,5 +140,9 @@ export class Actors {
         active.some(g => g.remoteHand === 'right') ? 1.2 : .12, 10, dt);
     }
   }
-  dispose() { for (const actor of this.people) actor.avatar.dispose(); }
+  dispose() {
+    this.disposed = true;
+    this.grips.clear();
+    for (const actor of this.people) actor.avatar.dispose();
+  }
 }
