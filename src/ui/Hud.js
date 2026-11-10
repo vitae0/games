@@ -1,15 +1,29 @@
 import { TouchControls } from '../input/TouchControls.js';
 import { isTouchCapable, clampTouchSensitivity } from '../input/TouchMath.js';
-import { AVATAR_DEFAULTS, AVATAR_FIELDS, AVATAR_RANGES, SKIN_TONES, EYE_COLORS, normalizeAvatar } from '../avatar/AvatarConfig.js';
+import { AVATAR_DEFAULTS, SKIN_TONES, EYE_COLORS, HAIR_COLORS, UNDERWEAR_COLORS, normalizeAvatar } from '../avatar/AvatarConfig.js';
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
-  baseModel: [['vroidMale', 'VRoid CC0 • Erkek anime gövde'], ['vroidFemale', 'VRoid CC0 • Kadın anime gövde'], ['quaternius', 'Quaternius • Eski 3D deneme'], ['procedural', 'Önceki geometrik karakter']],
-  outfit: [['none', 'Yok • sadece beden'], ['neon', 'Modern / taş ve keten'], ['stealth', 'Minimal / koyu'], ['chrome', 'Soft / gül tonları']],
-  hair: [['bob', 'Bob / katlı'], ['short', 'Kısa'], ['long', 'Uzun'], ['ponytail', 'At kuyruğu'], ['mohawk', 'Dik'], ['none', 'Saçsız']],
-  skinTone: Object.keys(SKIN_TONES).map((id,i) => [id, ['Açık', 'Sıcak ten', 'Buğday', 'Esmer', 'Koyu'][i]]),
-  eyeColor: Object.keys(EYE_COLORS).map((id,i) => [id, ['Kahverengi', 'Ela', 'Mavi', 'Yeşil'][i]]),
+  baseModel: [['vroidMale', 'Erkek • VRoid CC0'], ['vroidFemale', 'Kadın • VRoid CC0']],
+  hair: [['short', 'Kısa / doğal'], ['bob', 'Bob / katlı'], ['long', 'Uzun / serbest'], ['ponytail', 'At kuyruğu'], ['none', 'Saçsız']],
+  hairColor: Object.entries({
+    black:'Siyah', chestnut:'Kestane', brown:'Koyu kahve', blonde:'Sarı',
+    copper:'Bakır', silver:'Gümüş', pink:'Pembe', blue:'Mavi',
+  }),
+  eyeColor: Object.entries({
+    brown:'Kahverengi', hazel:'Ela', blue:'Mavi', green:'Yeşil', gray:'Gri', violet:'Mor',
+  }),
+  skinTone: Object.entries({
+    porcelain:'Açık', warm:'Doğal', honey:'Buğday', umber:'Esmer', deep:'Koyu',
+  }),
+  underwear: [['none', 'Yok'], ['basic', 'Standart iç giyim'], ['sport', 'Spor iç giyim']],
+  underwearColor: Object.entries({
+    black:'Siyah', white:'Beyaz', slate:'Gri-mavi', blush:'Pudra', purple:'Mor',
+  }),
+  outfit: [['none', 'Yok • yalnızca temel gövde'], ['neon', 'Orijinal örnek kıyafet']],
 };
+export const CHARACTER_CONTROL_IDS = Object.freeze(Object.keys(FIELDS));
+
 
 export class Hud {
   constructor(canvas, options) {
@@ -35,7 +49,7 @@ export class Hud {
     }
     this.bind();
     this.buildAvatarFields();
-    this.bindModelImport();
+    this.refreshModelStatus();
   }
   bind() {
     $('#start-button').addEventListener('click', () => {
@@ -107,138 +121,66 @@ export class Hud {
     this.startScreen.classList.add('hidden');
   }
   closeSettings() { this.settings.classList.add('hidden'); this.refreshStartScreen(); }
-  bindModelImport() {
-    const input = $('#avatar-model');
-    const status = $('#avatar-model-status');
-    input.addEventListener('change', async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      input.disabled = true;
-      status.textContent = 'Model işleniyor...';
-      try {
-        const parts = await this.options.loadModel(file);
-        this.renderModelParts(parts);
-        status.textContent = `${file.name} · ${parts.length} görünürlük parçası · yalnızca bu cihazda`;
-        this.toast('3D karakter yüklendi; mesh katmanlarını inceleyebilirsiniz');
-      } catch (error) {
-        status.textContent = `Hata: ${error?.message || 'Bilinmeyen'}`;
-        this.toast('Model yüklenemedi');
-      } finally {
-        input.disabled = false;
-        input.value = '';
-      }
-    });
-    $('#avatar-model-reset').addEventListener('click', () => {
-      this.options.resetModel();
-      this.renderModelParts([]);
-      this.refreshModelStatus();
-    });
-    this.renderModelParts(this.options.getModelParts?.() || []);
-  }
   refreshModelStatus() {
-    const parts = this.options.getModelParts?.() || [];
-    this.renderModelParts(parts);
     const key = this.profile.baseModel;
-    const label = key === 'vroidMale' ? 'VRoid CC0 erkek' :
-      key === 'vroidFemale' ? 'VRoid CC0 kadın' :
-      key === 'quaternius' ? 'Quaternius CC0' : 'Geometrik avatar';
-    $('#avatar-model-status').textContent = `${label} • ${parts.length} mesh • giysi materyalleri ayrı gizlenebilir`;
-  }
-  renderModelParts(parts = []) {
-    const parent = $('#avatar-parts');
-    parent.replaceChildren();
-    parent.classList.toggle('hidden', !parts.length);
-    if (!parts.length) return;
-    const title = document.createElement('p');
-    title.className = 'small';
-    title.textContent = `Modelin ${parts.length} mesh parçası. Giysi olduğu kesin olmayan parçaları da burada kapatabilirsiniz.`;
-    parent.append(title);
-    const reset = document.createElement('button');
-    reset.type = 'button'; reset.textContent = 'TÜM PARÇALARI GÖSTER';
-    reset.addEventListener('click', () => {
-      for (const part of parts) this.options.setModelPartVisible(part.index, true);
-      this.renderModelParts(this.options.getModelParts?.() || []);
-    });
-    parent.append(reset);
-    for (const part of parts) {
-      const row = document.createElement('label');
-      row.className = 'avatar-mesh-switch';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.checked = part.visible;
-      cb.addEventListener('change', () => this.options.setModelPartVisible(part.index, cb.checked));
-      const name = document.createElement('span');
-      name.textContent = `${part.index + 1}. ${part.name}`;
-      row.append(cb, name);
-      parent.append(row);
-    }
+    const label = key === 'vroidFemale' ? 'Kadın' : 'Erkek';
+    const loaded = this.options.isBaseReady?.(key);
+    const status = $('#avatar-load-status');
+    if (status) status.textContent = `VRoid CC0 • ${label} model ${loaded ? 'yüklendi' : 'yükleniyor'} · Dış giysi ve iç giyim birbirinden bağımsız.`;
   }
   buildAvatarFields() {
-    const parent = $('#avatar-fields'); parent.replaceChildren();
-    for (const [key, label, unit, step] of AVATAR_FIELDS) {
-      const wrap = document.createElement('div'); wrap.className = 'field';
-      const head = document.createElement('div');
-      const caption = document.createElement('label'); caption.textContent = label;
-      const output = document.createElement('output');
-      const input = document.createElement('input'); input.type = 'range'; input.id = `avatar-${key}`;
-      input.min = String(AVATAR_RANGES[key][0]); input.max = String(AVATAR_RANGES[key][1]); input.step = String(step);
-      caption.htmlFor = input.id;
-      input.addEventListener('input', () => {
-        this.profile[key] = Number(input.value);
-        output.textContent = `${this.profile[key].toFixed(step === .005 ? 3 : 2)} ${unit}`;
-        this.preview();
-      });
-      head.append(caption, output); wrap.append(head, input); parent.append(wrap);
+    const parent = $('#avatar-fields');
+    parent.replaceChildren();
+    const sections = [
+      ['Temel karakter', [['baseModel', 'Karakter']]],
+      ['Yüz ve saç', [
+        ['hair', 'Saç modeli'], ['hairColor', 'Saç rengi'],
+        ['eyeColor', 'Göz rengi'], ['skinTone', 'Ten tonu'],
+      ]],
+      ['İç giyim', [
+        ['underwear', 'İç giyim modeli'], ['underwearColor', 'İç giyim rengi'],
+      ]],
+      ['Dış giyim', [['outfit', 'Örnek dış kıyafet']]],
+    ];
+    for(const [title,fields] of sections) {
+      const heading=document.createElement('h3');
+      heading.className='character-section-title'; heading.textContent=title;
+      parent.append(heading);
+      for(const [key,label] of fields) {
+        const wrap=document.createElement('div');wrap.className='field';
+        const caption=document.createElement('label');
+        caption.htmlFor=`avatar-${key}`;caption.textContent=label;
+        const sel=document.createElement('select'); sel.id=`avatar-${key}`;
+        for(const [value,name] of FIELDS[key]){
+          const opt=document.createElement('option');opt.value=value;opt.textContent=name;sel.append(opt);
+        }
+        sel.addEventListener('change',()=>{
+          this.profile[key]=sel.value;
+          this.preview();
+          this.updateConditionalControls();
+        });
+        wrap.append(caption,sel);parent.append(wrap);
+      }
     }
-    for (const [key, label] of [['baseModel', 'Temel karakter (test)'], ['outfit', 'Kıyafet stili'], ['hair', 'Saç modeli'], ['skinTone', 'Ten rengi'], ['eyeColor', 'Göz rengi']]) {
-      const wrap = document.createElement('div'); wrap.className = 'field';
-      const head = document.createElement('div');
-      const caption = document.createElement('label'); caption.htmlFor = `avatar-${key}`; caption.textContent = label;
-      head.append(caption);
-      const sel = document.createElement('select'); sel.id = `avatar-${key}`;
-      FIELDS[key].forEach(([value, name]) => {
-        const opt = document.createElement('option'); opt.value = value; opt.textContent = name; sel.append(opt);
-      });
-      sel.addEventListener('change', () => { this.profile[key] = sel.value; this.preview(); });
-      wrap.append(head, sel); parent.append(wrap);
-    }
-    const wrap = document.createElement('div'); wrap.className = 'field';
-    const label = document.createElement('label'); label.textContent = 'İnce gözlük'; label.htmlFor = 'avatar-visor';
-    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = 'avatar-visor';
-    checkbox.addEventListener('change', () => { this.profile.visor = checkbox.checked; this.preview(); });
-    wrap.append(label, checkbox); parent.append(wrap);
-    const garmentNote = document.createElement('p');
-    garmentNote.className = 'small';
-    garmentNote.textContent = 'VRoid beta CC0 gövdelerinde mevcut giysi materyalleri gizlenebilir. Yok seçeneği dış katmanları kaldırır; bazı bölgelerde gövde yüzeyi eksik olabilir. Tişört / pantolon / ayakkabı kontrolleri VRoid için de uygulanır; ceket kontrolü henüz prosedürel avatara özeldir.';
-    parent.append(garmentNote);
-    for (const [key, name] of [
-      ['shirtVisible', 'Tişört katmanı'], ['jacketVisible', 'Ceket katmanı'],
-      ['pantsVisible', 'Pantolon katmanı'], ['shoesVisible', 'Ayakkabı katmanı'],
-    ]) {
-      const layerWrap = document.createElement('div'); layerWrap.className = 'field';
-      const layerLabel = document.createElement('label'); layerLabel.htmlFor = `avatar-${key}`; layerLabel.textContent = name;
-      const layerCheck = document.createElement('input'); layerCheck.type = 'checkbox'; layerCheck.id = `avatar-${key}`;
-      layerCheck.addEventListener('change', () => { this.profile[key] = layerCheck.checked; this.preview(); });
-      layerWrap.append(layerLabel, layerCheck); parent.append(layerWrap);
-    }
+    const layerNote=document.createElement('p');
+    layerNote.className='small character-info';
+    layerNote.textContent='Kıyafetsiz: dış giysi ve iç giyim katmanları görünmez. İç giyim, bedenin iskeletine bağlı ayrı bir katmandır. Kaynak gövdedeki eksik yüzeyleri otomatik olarak tamamlamaz.';
+    parent.append(layerNote);
     this.syncAvatarControls();
   }
+  updateConditionalControls() {
+    const color=$('#avatar-underwearColor')?.closest('.field');
+    if(color)color.classList.toggle('hidden',this.profile.underwear==='none');
+  }
   syncAvatarControls() {
-    for (const [key,, unit, step] of AVATAR_FIELDS) {
-      $(`#avatar-${key}`).value = String(this.profile[key]);
-      $(`#avatar-${key}`).parentElement.querySelector('output').textContent = `${this.profile[key].toFixed(step === .005 ? 3 : 2)} ${unit}`;
+    for(const key of CHARACTER_CONTROL_IDS) {
+      const input=$(`#avatar-${key}`);
+      if(input)input.value=this.profile[key];
     }
-    $('#avatar-baseModel').value = this.profile.baseModel;
-    $('#avatar-outfit').value = this.profile.outfit;
-    $('#avatar-hair').value = this.profile.hair;
-    $('#avatar-skinTone').value = this.profile.skinTone;
-    $('#avatar-eyeColor').value = this.profile.eyeColor;
-    $('#avatar-visor').checked = this.profile.visor;
-    for (const key of ['shirtVisible', 'jacketVisible', 'pantsVisible', 'shoesVisible']) {
-      $(`#avatar-${key}`).checked = this.profile[key];
-    }
+    this.updateConditionalControls();
   }
   preview() {
-    this.profile = normalizeAvatar(this.profile);
+    this.profile=normalizeAvatar(this.profile);
     this.options.previewProfile(this.profile);
     this.refreshModelStatus();
   }
