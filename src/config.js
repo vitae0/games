@@ -26,4 +26,5 @@ export const COLORS = Object.freeze({
   trim: 0x746f66, cyan: 0xc0a88a, magenta: 0x867b75,
   warm: 0xffe4b6, carpet: 0x928e86, wood: 0xc29c76,
   fabric: 0x9c9992, black: 0x434341, glass: 0x9eb1b8,
+  ceramic: 0xe9e6df,
 });

@@ -4,6 +4,7 @@ export function suitePlan(side, z) {
   return {
     bed: { x: side * 8.83, z: z + 1.55, w: 2.65, d: 2.65 },
     bath: { x: side * 10.48, z: z - 2.05, w: 2.60, d: 2.80 },
+    tub: { x: side * 11.0, z: z - 2.39, w: 1.56, d: 1.72 },
     desk: { x: side * 6.55, z: z - 2.20, w: 1.55, d: .65 },
     chair: { x: side * 5.15, z: z - 2.25, w: .70, d: .73 },
     sofa: { x: side * 4.95, z: z + .79, w: 1.48, d: .79 },

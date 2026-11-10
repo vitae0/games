@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BoxBatch } from '../engine/BoxBatch.js';
+import { RoundedBatch } from '../engine/RoundedBatch.js';
 import { CollisionWorld } from '../engine/Collision.js';
 import { HOTEL, COLORS } from '../config.js';
 import { STAIR, STAIR_RISE, STAIR_RUN, stairFlight, resolveGround, walkStairs } from './Stairwell.js';
@@ -9,6 +10,7 @@ import { Actors } from './Actors.js';
 import { createSurfaceTextures, SURFACE_KIND } from './SurfaceTextures.js';
 import { UPPER_DECK, landingFootprint } from './FloorPlan.js';
 import { buildSuite, makeSuiteMedia } from './SuiteInteriors.js';
+import { createBathAssets } from './BathAssets.js';
 
 const HALF = HOTEL.corridorHalfWidth;
 const Y = (floor) => floor * HOTEL.floorHeight;
@@ -26,8 +28,9 @@ export class Hotel {
     this.suiteScreenGeometry = new THREE.BoxGeometry(1.70, 1.00, .025);
     this.suiteMinibarGlowGeometry = new THREE.BoxGeometry(.54, .72, .032);
     this.suiteBathroomDoorGeometry = new THREE.BoxGeometry(.06, 2.33, 1.12);
-    this.suiteWaterGeometry = new THREE.BoxGeometry(.025, .74, .025);
     this.batch = new BoxBatch(scene, this.materials);
+    this.roundedBatch = new RoundedBatch(scene, this.materials);
+    this.bathAssets = createBathAssets();
     this.physics = new PhysicsWorld(this.collisions, HOTEL.floorHeight);
     this.propGeometry = new THREE.BoxGeometry(1, 1, 1);
     this.props = [];
@@ -50,7 +53,7 @@ export class Hotel {
       const textureName = SURFACE_KIND[name];
       const material = new THREE.MeshStandardMaterial({
         color, map: textureName ? this.surfaceTextures[textureName] : null,
-        roughness: ['wood', 'black', 'trim'].includes(name) ? .72 : .93,
+        roughness: name === 'ceramic' ? .27 : ['wood', 'black', 'trim'].includes(name) ? .72 : .93,
         metalness: name === 'glass' ? .12 : .012,
         emissive: glow ? color : 0x000000,
         emissiveIntensity: glow ? .46 : 0,
@@ -71,6 +74,11 @@ export class Hotel {
   box(mat, x, y, z, w, h, d, floor = null, solid = false, angle = 0) {
     this.batch.add(mat, x, y, z, w, h, d, angle);
     if (solid && floor !== null) this.collisions.add(floor, x, z, w, d);
+  }
+  /** Soft-edged instanced furniture, kept separate from crisp load-bearing architecture. */
+  rounded(mat, x, y, z, w, h, d, floor = null, solid = false) {
+    this.roundedBatch.add(mat,x,y,z,w,h,d);
+    if (solid && floor !== null) this.collisions.add(floor,x,z,w,d);
   }
   wallX(floor, x, z, depth, mat = 'innerWall') {
     this.box(mat, x, Y(floor) + 1.6, z, 0.17, 3.2, depth, floor, true);
@@ -120,6 +128,7 @@ export class Hotel {
     this.box('magenta', 0, Y(4) + .27, 15.1, 24.5, .12, .13);
     this.buildSign();
     this.batch.flush();
+    this.roundedBatch.flush();
     const lamp = new THREE.PointLight(0xffe4c0, 34, 16, 2);
     lamp.position.set(0, 2.8, -13.5); s.add(lamp);
     const lobbyLight = new THREE.PointLight(0xffeddb, 22, 15, 2);
@@ -413,17 +422,22 @@ export class Hotel {
     return found;
   }
   update(dt) {
+    // Shared procedural water animation advances once per frame, not once per suite.
+    this.bathAssets.waterMaterial.uniforms.uTime.value =
+      (this.bathAssets.waterMaterial.uniforms.uTime.value + Math.max(0,dt)) % 4096;
     for (const fn of this.animations) fn(dt);
     this.physics.step(dt);
     this.actors.update(dt);
   }
   dispose() {
     this.batch.dispose();
+    this.roundedBatch.dispose();
+    this.bathAssets.dispose();
     this.city.dispose(); this.actors.dispose();
     this.suiteMeshes.forEach(mesh => this.scene.remove(mesh));
     this.media.forEach(({ texture, material }) => { texture.dispose(); material.dispose(); });
     this.suiteScreenGeometry.dispose(); this.suiteMinibarGlowGeometry.dispose();
-    this.suiteBathroomDoorGeometry.dispose(); this.suiteWaterGeometry.dispose();
+    this.suiteBathroomDoorGeometry.dispose();
     this.props.forEach(mesh => this.scene.remove(mesh));
     this.suiteBottleGeometry.dispose();
     this.propGeometry.dispose();

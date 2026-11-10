@@ -82,5 +82,5 @@ export function createSurfaceTextures() {
 export const SURFACE_KIND = Object.freeze({
   slab:'stone', ceiling:'plaster', outerWall:'wallPanel', innerWall:'plaster',
   darkWall:'wallPanel', carpet:'fabric', wood:'wood', fabric:'fabric',
-  trim:'marble', black:'wood', sidewalk:'stone',
+  trim:'marble', black:'wood', sidewalk:'stone', ceramic:'marble',
 });

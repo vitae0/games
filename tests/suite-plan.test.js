@@ -31,3 +31,15 @@ test('large room footprints do not intersect each other or entry path', () => {
 test('invalid room orientations rejected', () => {
   assert.throws(() => suitePlan(0,3.5));
 });
+
+
+test('bathtubs are contained in bathroom enclosure without obstructing the room entry',()=>{
+  for(const side of [-1,1])for(const z of [-10.5,-3.5,3.5,10.5]){
+    const p=suitePlan(side,z);
+    assert.ok(Math.abs(p.tub.x-p.bath.x)+(p.tub.w/2) < p.bath.w/2+.000001);
+    assert.ok(Math.abs(p.tub.z-p.bath.z)+(p.tub.d/2) < p.bath.d/2+.000001);
+    assert.equal(overlaps2D(p.entry,p.bath),false);
+    assert.equal(overlaps2D(p.bed,p.bath),false);
+    assert.equal(overlaps2D(p.desk,p.bath),false);
+  }
+});

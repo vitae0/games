@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HOTEL } from '../config.js';
 import { suitePlan } from './SuitePlan.js';
+import { buildBathroom } from './SuiteBathroom.js';
 
 const baseY = floor => floor * HOTEL.floorHeight;
 
@@ -48,6 +49,7 @@ export function buildSuite(hotel, floor, side, z) {
   const q = suitePlan(side, z);
   const y = baseY(floor);
   const box = (...args) => hotel.box(...args);
+  const round = (...args) => hotel.rounded ? hotel.rounded(...args) : box(...args);
   const interact = (position, label, activate) => hotel.interactables.push({
     floor, position: new THREE.Vector3(position.x, y + .95, position.z), getLabel: label, activate,
   });
@@ -61,11 +63,11 @@ export function buildSuite(hotel, floor, side, z) {
 
   const b = q.bed;
   // Raised mattress is an actual walkable surface; the slab is NOT an impassable wall.
-  box('wood', b.x, y + .165, b.z, b.w + .18, .33, b.d + .12);
-  box('black', b.x, y + .33, b.z, b.w + .02, .12, b.d + .05);
-  box('fabric', b.x, y + .495, b.z, b.w - .20, .25, b.d - .18);
-  box('warm', b.x, y + .645, b.z + .83, b.w - .50, .07, .48);
-  box('fabric', b.x, y + .66, b.z - .35, b.w - .25, .06, .96);
+  round('wood', b.x, y + .165, b.z, b.w + .18, .33, b.d + .12);
+  round('black', b.x, y + .33, b.z, b.w + .02, .12, b.d + .05);
+  round('fabric', b.x, y + .495, b.z, b.w - .20, .25, b.d - .18);
+  round('warm', b.x, y + .645, b.z + .83, b.w - .50, .07, .48);
+  round('fabric', b.x, y + .66, b.z - .35, b.w - .25, .06, .96);
   box('darkWall', b.x, y + 1.03, b.z + b.d / 2 + .06, b.w + .34, 1.32, .18);
   hotel.addWalkSurface(floor, b.x, b.z, b.w - .28, b.d - .22, y + .62);
   for (const sign of [-1, 1]) {
@@ -81,12 +83,12 @@ export function buildSuite(hotel, floor, side, z) {
   });
 
   const sofa = q.sofa;
-  box('black', sofa.x, y + .24, sofa.z, sofa.w + .06, .34, sofa.d + .12, floor, true);
-  box('fabric', sofa.x, y + .49, sofa.z, sofa.w, .23, sofa.d);
-  box('fabric', sofa.x, y + .93, sofa.z + .31, sofa.w, .71, .17);
+  round('black', sofa.x, y + .24, sofa.z, sofa.w + .06, .34, sofa.d + .12, floor, true);
+  round('fabric', sofa.x, y + .49, sofa.z, sofa.w, .23, sofa.d);
+  round('fabric', sofa.x, y + .93, sofa.z + .31, sofa.w, .71, .17);
   for (const sideSign of [-1, 1]) box('wood', sofa.x + sideSign * .72, y + .64, sofa.z, .14, .37, .68);
   const ct = q.table;
-  box('wood', ct.x, y + .35, ct.z, ct.w, .10, ct.d, floor, true);
+  round('wood', ct.x, y + .35, ct.z, ct.w, .10, ct.d, floor, true);
   box('trim', ct.x, y + .16, ct.z, .12, .30, .12);
   interact({ x: sofa.x, z: sofa.z - .75 }, () => 'Koltuk · Otur', player => {
     player.useFurniture('sit', sofa.x, sofa.z - .03, Math.PI, .44);
@@ -115,13 +117,13 @@ export function buildSuite(hotel, floor, side, z) {
 
   // A compact workstation beside the entry, without blocking the central circulation path.
   const d = q.desk;
-  box('wood', d.x, y + .77, d.z, d.w, .11, d.d, floor, true);
+  round('wood', d.x, y + .77, d.z, d.w, .11, d.d, floor, true);
   for (const dx of [-.57, .57]) box('trim', d.x + dx, y + .36, d.z, .075, .67, .51);
   box('black', d.x, y + 1.11, d.z + .18, .75, .45, .06);
   box('glass', d.x, y + 1.11, d.z + .133, .67, .36, .017);
   const ch = q.chair;
-  box('wood', ch.x, y + .39, ch.z, ch.w, .14, ch.d);
-  box('fabric', ch.x, y + .73, ch.z + .25, ch.w, .65, .15);
+  round('wood', ch.x, y + .39, ch.z, ch.w, .14, ch.d);
+  round('fabric', ch.x, y + .73, ch.z + .25, ch.w, .65, .15);
   box('trim', ch.x, y + .21, ch.z, .15, .36, .15);
   interact({ x: ch.x, z: ch.z + .7 }, () => 'Çalışma sandalyesi · Otur', player => {
     player.useFurniture('sit', ch.x, ch.z, Math.PI, .43);
@@ -129,7 +131,7 @@ export function buildSuite(hotel, floor, side, z) {
 
   // Separate minibar and hanging wardrobe. Their doors are functional and cheap to animate.
   const mini = q.minibar;
-  box('wood', mini.x, y + .54, mini.z, mini.w, 1.08, mini.d, floor, true);
+  round('wood', mini.x, y + .54, mini.z, mini.w, 1.08, mini.d, floor, true);
   box('black', mini.x, y + .55, mini.z - mini.d / 2 - .04, mini.w - .10, .92, .04);
   const glow = new THREE.Mesh(hotel.suiteMinibarGlowGeometry, hotel.materials.warm);
   glow.position.set(mini.x, y + .52, mini.z - mini.d / 2 - .075);
@@ -148,53 +150,12 @@ export function buildSuite(hotel, floor, side, z) {
       hotel.events.toast('Minibar kapandı'); }
   });
   const wardrobe = q.wardrobe;
-  box('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d, floor, true);
+  round('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d, floor, true);
   box('trim', wardrobe.x, y + 1.32, wardrobe.z - wardrobe.d / 2 - .016, wardrobe.w - .06, 2.48, .025);
   box('warm', wardrobe.x, y + 1.28, wardrobe.z - wardrobe.d / 2 - .045, .06, .32, .04);
 
-  // Bathroom: actual partition with a usable door, sink/vanity, shower and toilet.
-  const bath = q.bath;
-  box('slab', bath.x, y + .02, bath.z, bath.w, .035, bath.d);
-  const partitionX = side * 9.17;
-  box('glass', partitionX, y + 1.31, z - 2.97, .065, 2.62, .76, floor, true);
-  box('glass', partitionX, y + 1.31, z - .68, .065, 2.62, .64, floor, true);
-  box('trim', partitionX, y + 2.64, z - 1.91, .08, .065, 2.82);
-  const doorGeo = hotel.suiteBathroomDoorGeometry;
-  const slidingDoor = new THREE.Mesh(doorGeo, hotel.materials.glass);
-  slidingDoor.position.set(partitionX, y + 1.20, z - 1.95);
-  hotel.scene.add(slidingDoor); hotel.suiteMeshes.push(slidingDoor);
-  const doorCollider = hotel.collisions.add(floor, partitionX, z - 1.95, .07, 1.12);
-  let bathroomOpen = false;
-  interact({ x: side * 8.6, z: z - 1.93 }, () => bathroomOpen ? 'Banyo kapısı · Kapat' : 'Banyo kapısı · Aç', () => {
-    bathroomOpen = !bathroomOpen;
-    hotel.collisions.setActive(doorCollider, !bathroomOpen);
-    hotel.events.toast(bathroomOpen ? 'Banyo kapısı açıldı' : 'Banyo kapısı kapatıldı');
-  });
-  hotel.animations.push(dt => {
-    const targetZ = z - (bathroomOpen ? 2.66 : 1.95);
-    slidingDoor.position.z = THREE.MathUtils.damp(slidingDoor.position.z, targetZ, 8, dt);
-  });
-  const sinkX = side * 10.55;
-  box('wood', sinkX, y + .79, z - .98, .97, .19, .57, floor, true);
-  box('glass', sinkX, y + .91, z - .98, .66, .055, .35);
-  box('trim', sinkX, y + 1.12, z - .90, .05, .32, .045);
-  box('glass', sinkX, y + 1.68, z - .52, 1.04, 1.15, .045);
-  box('trim', sinkX, y + 1.68, z - .50, 1.12, 1.25, .035);
-  const showerX = side * 10.93;
-  box('glass', showerX, y + .12, z - 2.88, .90, .11, .81);
-  box('trim', showerX, y + 2.12, z - 2.84, .44, .075, .16);
-  box('glass', side * 9.90, y + 1.16, z - 3.24, .056, 2.24, .06);
-  box('fabric', side * 11.02, y + .28, z - 1.98, .48, .39, .68);
-  box('ceiling', side * 11.02, y + .49, z - 1.98, .42, .12, .54);
-  const waterGeo = hotel.suiteWaterGeometry;
-  const water = new THREE.Mesh(waterGeo, hotel.materials.glass);
-  water.position.set(showerX, y + 1.54, z - 2.80);
-  water.visible = false; hotel.scene.add(water); hotel.suiteMeshes.push(water);
-  let showerRunning = false;
-  interact({ x: side * 10.0, z: z - 2.60 }, () => showerRunning ? 'Duş · Kapat' : 'Duş · Aç', () => {
-    showerRunning = !showerRunning; water.visible = showerRunning;
-    hotel.events.toast(showerRunning ? 'Duş açıldı' : 'Duş kapatıldı');
-  });
+  // Actual closed room, with a sculpted bathtub and one shared water shader.
+  buildBathroom(hotel,floor,side,z);
 
   // Plants, prints and soft indirect lighting are lightweight geometry only.
   box('wood', side * 3.06, y + .47, z + 2.58, .48, .72, .48);

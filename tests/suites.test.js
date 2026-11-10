@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { Hotel } from '../src/world/Hotel.js';
 import { suitePlan } from '../src/world/SuitePlan.js';
+import { createBathAssets } from '../src/world/BathAssets.js';
 
 function suite(side, z, floor = 1) {
   const events = [], geometry = [], doors = new Map();
@@ -12,10 +13,11 @@ function suite(side, z, floor = 1) {
     new THREE.CylinderGeometry(.063,.063,.20,8)];
   const mats = {warm:new THREE.MeshBasicMaterial(), glass:new THREE.MeshBasicMaterial()};
   const media = Array.from({length:3}, () => ({material:new THREE.MeshBasicMaterial()}));
+  const bathAssets = createBathAssets();
   const fake = {
     scene: new THREE.Scene(), suiteScreenGeometry:geometries[0], suiteMinibarGlowGeometry:geometries[1],
     suiteBathroomDoorGeometry:geometries[2], suiteWaterGeometry:geometries[3], suiteBottleGeometry:geometries[4],
-    media, materials:mats, suiteMeshes:[], interactables:[], animations:[], walkSurfaces:[],
+    media, materials:mats, bathAssets, suiteMeshes:[], interactables:[], animations:[], walkSurfaces:[],
     box(name, x, y, z, width, height, depth, roomFloor, solid) {
       geometry.push({name,x,y,z,width,height,depth,floor:roomFloor,solid:!!solid});
     },
@@ -27,7 +29,7 @@ function suite(side, z, floor = 1) {
   Hotel.prototype.makeRoom.call(fake, floor, side, z);
   return {fake,geometry,doors,events,cleanup(){
     geometries.forEach(g=>g.dispose());media.forEach(m=>m.material.dispose());
-    Object.values(mats).forEach(m=>m.dispose());
+    Object.values(mats).forEach(m=>m.dispose()); bathAssets.dispose();
   }};
 }
 
@@ -36,7 +38,7 @@ test('all mirrored suites include usable TV, bathroom, minibar, seating, and rai
     const s=suite(side,z);
     try {
       const labels=s.fake.interactables.map(o=>o.getLabel()).join(' / ');
-      for(const text of ['TV','Koltuk','Yatak','Minibar','Banyo kapısı','Duş'])
+      for(const text of ['TV','Koltuk','Yatak','Minibar','Banyo kapısı','Küvet'])
         assert.ok(labels.includes(text),`${text} missing for side ${side} z ${z}`);
       assert.equal(s.fake.walkSurfaces.length,1);
       assert.equal(s.fake.walkSurfaces[0].topY,3.4+.62);
@@ -68,13 +70,17 @@ test('minibar and bath doors, shower and water each toggle their state',()=>{
     minibar.activate(); assert.ok(minibar.getLabel().includes('Kapat'));
     minibar.activate(); assert.ok(minibar.getLabel().includes('Aç'));
     const bath=get('Banyo kapısı');
-    assert.equal([...s.doors.values()].at(-1),true);
-    bath.activate(); assert.equal([...s.doors.values()].at(-1),false);
+    assert.ok([...s.doors.values()].every(Boolean));
+    bath.activate(); assert.ok([...s.doors.values()].some(active=>!active));
     s.fake.animations.forEach(fn=>fn(1/60));
-    bath.activate(); assert.equal([...s.doors.values()].at(-1),true);
-    const shower=get('Duş');
-    shower.activate(); assert.ok(shower.getLabel().includes('Kapat'));
-    shower.activate(); assert.ok(shower.getLabel().includes('Aç'));
+    bath.activate(); assert.ok([...s.doors.values()].every(Boolean));
+    const tub=get('Küvet');
+    const water=s.fake.suiteMeshes.find(mesh=>mesh.material.isShaderMaterial);
+    assert.ok(water && water.visible===false);
+    tub.activate(); assert.ok(tub.getLabel().includes('boşalt'));
+    assert.equal(water.visible,true);
+    tub.activate(); assert.ok(tub.getLabel().includes('doldur'));
+    assert.equal(water.visible,false);
   }finally{s.cleanup()}
 });
 
@@ -88,4 +94,22 @@ test('bed edge, bed resting, lounge sofa and desk chair use Player furniture API
     assert.equal(calls[0][4],.62);
     assert.equal(calls[1][4],.61);
   }finally{s.cleanup()}
+});
+
+
+test('bath is a full-height room with continuous wall segments, a door, and a non-overlapping tub', () => {
+  for(const side of [-1,1]){
+    const s=suite(side,3.5);
+    try {
+      const q=suitePlan(side,3.5);
+      const wallX=side*9.14;
+      const partitions=s.geometry.filter(b=>b.name==='innerWall'&&Math.abs(b.x-wallX)<1e-5&&b.height>3);
+      assert.equal(partitions.length,2,'both sides of bathroom door must be full height');
+      assert.ok(s.geometry.some(b=>b.name==='ceiling'&&Math.abs(b.x-q.bath.x)<1e-5),'bathroom has separate ceiling');
+      assert.ok(s.geometry.some(b=>b.name==='innerWall'&&Math.abs(b.z-(3.5-.65))<1e-5),'bathroom closed at its front');
+      assert.ok(s.fake.suiteMeshes.some(mesh=>mesh.geometry===s.fake.bathAssets.tubGeometry),'oval tub exists');
+      const tile=s.geometry.find(b=>b.name==='slab'&&Math.abs(b.x-q.bath.x)<1e-5);
+      assert.ok(tile&&Math.abs((tile.y+tile.height/2)-(3.4+.0735))<1e-5,'tile raised above wood floor');
+    }finally{s.cleanup()}
+  }
 });
