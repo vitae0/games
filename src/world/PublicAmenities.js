@@ -13,9 +13,9 @@ export function buildBar(hotel) {
   box('wood',6.8,y+.018,-10.68,9.8,.035,6.45);
   box('darkWall',8.55,y+1.38,-14.73,6.1,2.65,.09);
   for(let i=0;i<8;i++)box('wood',5.9+i*.72,y+1.32,-14.63,.08,2.35,.075);
-  round('black',8.40,y+.62,-12.75,5.7,1.20,.82,0,true);
+  round('black',8.40,y+.62,-12.75,5.7,1.20,.82);
   round('wood',8.40,y+1.28,-12.75,5.86,.14,1.00);
-  hotel.addWalkSurface(0,8.40,-12.75,5.86,.96,1.35);
+  hotel.climbable?.(0,8.40,-12.75,5.7,.8,1.35,'Bar tezgâhı');
   box('glass',8.40,y+1.81,-14.53,4.6,.05,.42);
   box('glass',8.40,y+2.29,-14.53,4.6,.05,.42);
   for(let i=0;i<7;i++){
@@ -56,10 +56,14 @@ export function buildPublicRestrooms(hotel) {
   box('darkWall',10.99,1.47,-6.70,.12,2.9,.16);
   // Sink bank is against the north wall; access lane remains clear.
   for(const z of [-5.25,-3.55,-1.85]){
-    round('ceramic',5.38,.69,z,.88,.23,.52,0,true);
+    round('ceramic',5.38,.69,z,.88,.23,.52);
     round('glass',5.38,.86,z,.66,.045,.35);
     box('warm',5.37,2.49,z,.71,.04,.10);
     hotel.climbable?.(0,5.38,z,.74,.44,.84,'Lavabo bankosu');
+    // Individual wall-mounted mirrors use the same nearby Reflector as suites.
+    box('trim',6.04,1.73,z,.032,1.06,.80);
+    box('black',6.00,1.73,z,.017,.98,.73);
+    hotel.mirrors?.register(0,5.983,1.73,z,-Math.PI/2);
   }
   const stalls=[-5.20,-1.80];
   for(const z of stalls){

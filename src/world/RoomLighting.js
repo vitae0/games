@@ -42,7 +42,7 @@ export class RoomLighting {
     if(active)this.point.position.set(active.x,active.y-.65,active.z);
   }
   dispose(){
-    this.scene.remove(this.point);this.point.dispose();
+    this.scene.remove(this.point);this.point.dispose?.();
     for(const r of this.entries){this.scene.remove(r.mesh);r.material.dispose();}
     this.geometry.dispose();this.entries.length=0;
   }

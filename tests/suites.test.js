@@ -126,3 +126,18 @@ test('tub offers a separate enter action with a seated posture inside its basin'
     assert.equal(args[0][4],.17);
   }finally{s.cleanup()}
 });
+
+
+test('sofa faces the TV and desk chair faces the workstation in both mirrored suites',()=>{
+  for(const side of [-1,1]){
+    const s=suite(side,3.5);
+    try{
+      const commands=[];
+      const actor={useFurniture:(...args)=>commands.push(args)};
+      s.fake.interactables.find(i=>i.getLabel()==='Koltuk · Otur').activate(actor);
+      s.fake.interactables.find(i=>i.getLabel()==='Çalışma sandalyesi · Otur').activate(actor);
+      assert.equal(commands[0][3],Math.PI,'sofa must point toward north-facing TV');
+      assert.equal(commands[1][3],-side*Math.PI/2,'chair must point toward its workstation');
+    }finally{s.cleanup()}
+  }
+});

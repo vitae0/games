@@ -28,8 +28,8 @@ export class MirrorPool {
     };
     scene.add(this.reflection);
   }
-  register(floor, x, y, z) {
-    const place = { floor, x, y, z };
+  register(floor, x, y, z, yaw=Math.PI) {
+    const place = { floor, x, y, z, yaw };
     this.locations.push(place);
     return place;
   }
@@ -46,7 +46,10 @@ export class MirrorPool {
     }
     this.active = nearest;
     this.reflection.visible = !!nearest;
-    if (nearest) this.reflection.position.set(nearest.x,nearest.y,nearest.z);
+    if (nearest) {
+      this.reflection.position.set(nearest.x,nearest.y,nearest.z);
+      this.reflection.rotation.y=nearest.yaw;
+    }
   }
   dispose() {
     this.scene.remove(this.reflection);
