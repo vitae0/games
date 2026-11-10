@@ -3,6 +3,7 @@ import { normalizeAvatar, SKIN_TONES, EYE_COLORS } from './AvatarConfig.js';
 import { createSkinnedLimb } from './SkinnedLimb.js';
 import { poseFor } from './PoseMath.js';
 import { visibleGarmentLayers } from './ClothingLayers.js';
+import { applyVRoidWardrobe } from './VRoidLayers.js';
 
 /**
  * Stylised human with exposed skin anatomy and detachable visual clothing layers.
@@ -107,6 +108,7 @@ export class Avatar {
       this.root.add(this.external.wrapper);
       this.body.visible = false;
       this.refreshExternalScale();
+      if (this.external.vrm) this.external.wardrobeState = applyVRoidWardrobe(this.external.group, this.profile);
     }
     this.root.userData.height = p.height;
   }
@@ -364,6 +366,7 @@ export class Avatar {
       sourceHeight: height, sourceMinY: bounds.min.y,
       boneMap: model.boneMap || {}, baseRotations: new Map() };
     this.refreshExternalScale();
+    if (model.vrm) this.external.wardrobeState = applyVRoidWardrobe(visual, this.profile);
   }
   listExternalParts() {
     return (this.external?.parts || []).map(({ mesh, name }, index) => ({
