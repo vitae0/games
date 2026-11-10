@@ -4,7 +4,7 @@ import { AVATAR_DEFAULTS, AVATAR_FIELDS, AVATAR_RANGES, SKIN_TONES, EYE_COLORS, 
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
-  baseModel: [['quaternius', 'Quaternius • 3D Male (deneme)'], ['procedural', 'Önceki geometrik karakter']],
+  baseModel: [['vroidMale', 'VRoid CC0 • Erkek anime gövde'], ['vroidFemale', 'VRoid CC0 • Kadın anime gövde'], ['quaternius', 'Quaternius • Eski 3D deneme'], ['procedural', 'Önceki geometrik karakter']],
   outfit: [['none', 'Yok • sadece beden'], ['neon', 'Modern / taş ve keten'], ['stealth', 'Minimal / koyu'], ['chrome', 'Soft / gül tonları']],
   hair: [['bob', 'Bob / katlı'], ['short', 'Kısa'], ['long', 'Uzun'], ['ponytail', 'At kuyruğu'], ['mohawk', 'Dik'], ['none', 'Saçsız']],
   skinTone: Object.keys(SKIN_TONES).map((id,i) => [id, ['Açık', 'Sıcak ten', 'Buğday', 'Esmer', 'Koyu'][i]]),
@@ -131,11 +131,18 @@ export class Hud {
     $('#avatar-model-reset').addEventListener('click', () => {
       this.options.resetModel();
       this.renderModelParts([]);
-      status.textContent = this.profile.baseModel === 'quaternius'
-        ? 'Quaternius Superhero Male (CC0) • kıyafet uyumu henüz eklenmedi'
-        : 'Geometrik karakter • kıyafet katmanları denenebilir';
+      this.refreshModelStatus();
     });
     this.renderModelParts(this.options.getModelParts?.() || []);
+  }
+  refreshModelStatus() {
+    const parts = this.options.getModelParts?.() || [];
+    this.renderModelParts(parts);
+    const key = this.profile.baseModel;
+    const label = key === 'vroidMale' ? 'VRoid CC0 erkek' :
+      key === 'vroidFemale' ? 'VRoid CC0 kadın' :
+      key === 'quaternius' ? 'Quaternius CC0' : 'Geometrik avatar';
+    $('#avatar-model-status').textContent = `${label} • ${parts.length} mesh • giysi materyalleri ayrı gizlenebilir`;
   }
   renderModelParts(parts = []) {
     const parent = $('#avatar-parts');
@@ -201,7 +208,7 @@ export class Hud {
     wrap.append(label, checkbox); parent.append(wrap);
     const garmentNote = document.createElement('p');
     garmentNote.className = 'small';
-    garmentNote.textContent = 'Katman testi şimdilik geometrik karakterde çalışır. Quaternius gerçek 3D gövdesine kıyafetler henüz uyarlanmadı.';
+    garmentNote.textContent = 'VRoid beta CC0 gövdelerinde mevcut giysi materyalleri gizlenebilir. Yok seçeneği dış katmanları kaldırır; bazı bölgelerde gövde yüzeyi eksik olabilir. Tişört / pantolon / ayakkabı kontrolleri VRoid için de uygulanır; ceket kontrolü henüz prosedürel avatara özeldir.';
     parent.append(garmentNote);
     for (const [key, name] of [
       ['shirtVisible', 'Tişört katmanı'], ['jacketVisible', 'Ceket katmanı'],
@@ -233,22 +240,13 @@ export class Hud {
   preview() {
     this.profile = normalizeAvatar(this.profile);
     this.options.previewProfile(this.profile);
-    const importedParts = this.options.getModelParts?.() || [];
-    if (importedParts.length) {
-      this.renderModelParts(importedParts);
-      $('#avatar-model-status').textContent = `Yerel model aktif · ${importedParts.length} ayrı mesh görünürlük kontrolü`;
-      return;
-    }
-    this.renderModelParts([]);
-    $('#avatar-model-status').textContent = this.profile.baseModel === 'quaternius'
-      ? 'Quaternius Superhero Male (CC0) • dış kıyafetler henüz uyarlanmadı'
-      : 'Geometrik avatar • katmanları ayrı ayrı açıp kapatabilirsiniz';
+    this.refreshModelStatus();
   }
   isCustomizerOpen() { return !this.customizer.classList.contains('hidden'); }
   isElevatorOpen() { return !this.elevator.classList.contains('hidden'); }
   isModalOpen() { return this.isCustomizerOpen() || this.isElevatorOpen() || this.isSettingsOpen(); }
   toggleCustomizer() { this.isCustomizerOpen() ? this.closeCustomizer() : this.openCustomizer(); }
-  openCustomizer() { this.touchControls?.suspend(); this.profile = normalizeAvatar(this.options.getProfile()); this.syncAvatarControls(); this.customizer.classList.remove('hidden'); $('#save-message').textContent = ''; document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
+  openCustomizer() { this.touchControls?.suspend(); this.profile = normalizeAvatar(this.options.getProfile()); this.syncAvatarControls(); this.customizer.classList.remove('hidden'); this.refreshModelStatus(); $('#save-message').textContent = ''; document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
   closeCustomizer() { this.customizer.classList.add('hidden'); this.refreshStartScreen(); }
   openElevator() { this.touchControls?.suspend(); this.elevator.classList.remove('hidden'); document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
   closeElevator() { this.elevator.classList.add('hidden'); this.refreshStartScreen(); }
