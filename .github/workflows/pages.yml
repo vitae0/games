@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Build and deploy VitaeWorld to GitHub Pages
 on:
   push:
     branches: [main]
@@ -11,50 +11,24 @@ concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
-  deploy:
+  build-and-deploy:
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Integrate daily additions
-        run: node scripts/inject-daily-2026-09-24.js
-      - name: Check JavaScript syntax
-        run: |
-          for f in games/*/game.js simulations/*/sim.js katex-loader.js scripts/*.js; do node --check "$f"; done
-          python3 - <<'PY'
-          from pathlib import Path
-          import re, subprocess, tempfile
-          text=Path('index.html').read_text(encoding='utf-8')
-          for script in re.findall(r'<script>(.*?)</script>',text,re.S):
-              with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:
-                  f.write(script); name=f.name
-              subprocess.run(['node','--check',name],check=True)
-          PY
-      - name: Check links and required pages
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          text=Path('index.html').read_text(encoding='utf-8')
-          links=re.findall(r'href="(\./(?:games|simulations)/[^\"]+/)"',text)
-          assert len(links)==43, f'expected 43 collection links, got {len(links)}'
-          assert len(set(links))==43, 'duplicate collection link'
-          for href in links:
-              p=Path(href[2:])/'index.html'
-              assert p.is_file(), f'missing {p}'
-          assert 'Hepsi <span>43</span>' in text
-          assert 'Oyunlar <span>19</span>' in text
-          assert 'Simülasyonlar <span>24</span>' in text
-          assert 'Vector Heist' in text and 'Signal Runner' in text
-          assert 'Bağlaşık osilatörler' in text and 'Bernoulli & süreklilik' in text
-          PY
-      - uses: actions/configure-pages@v5
+      - uses: actions/setup-node@v4
         with:
-          enablement: true
+          node-version: '22'
+      - run: npm install
+      - run: npm test
+      - run: npm run build
+      - run: cp -a archive dist/archive
+      - run: touch dist/.nojekyll
+      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
-      - id: deployment
+          path: ./dist
+      - id: deploy
         uses: actions/deploy-pages@v4
