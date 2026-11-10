@@ -165,3 +165,8 @@ ancak özgün dokular yerine tek renkli mat materyal kullanılmıştır.
 gizler. Quaternius gövdesine kıyafet uyumu henüz uygulanmadı.
 
 Kaynak, lisans ve kısıtlar: [QUATERNIUS_AVATAR_TRIAL.md](docs/QUATERNIUS_AVATAR_TRIAL.md).
+
+
+## Fiziksel merdivenler
+
+19 basamaklı her merdiven kolu artık görsel bloklarla aynı yükseklikte fiziksel basamaklara sahiptir. Merdiven hareketi 8 cm'lik alt adımlarla çözümlenir; aşağı ve yukarı yürürken aynı 17,9 cm basamak eşiği uygulanır. Üst katlardaki gerçek açıklıklarda görünmez döşeme bulunmaz; yalnızca sahanlık ve merdiven kolları üzerinde yürünebilir. Yan açıklıktan çıkma ve yüksek basamakların içinden geçme engellenir. Merdiven dışındaki mobilya/yatak etkileşimleri korunur.

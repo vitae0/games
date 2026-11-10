@@ -5,7 +5,7 @@ import { HandRig } from './HandRig.js';
 import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw, yawFromDisplacement, approachYaw } from './Orientation.js';
 import { isFloorPosture, nextFloorPosture } from './Postures.js';
 import { PostureControls } from './PostureControls.js';
-import { resolveGround, groundFloor, stairHeight, inStairLane } from '../world/Stairwell.js';
+import { resolveGround, groundFloor } from '../world/Stairwell.js';
 
 const clamp = THREE.MathUtils.clamp;
 
@@ -205,6 +205,7 @@ export class Player {
     const forward = this.direction;
     let mx = 0, mz = 0;
     let movedX = 0, movedZ = 0;
+    let surfaceGround = null;
     const crouching = this.postureControls.crouching || this.touchCrouch;
     if (this.postureControls.consumeJump(performance.now()) &&
       this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching) {
@@ -218,20 +219,12 @@ export class Player {
       mx = movement.x * intensity; mz = movement.z * intensity;
       const sprinting = this.touchRun || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
       const speed = crouching ? PLAYER.crouchSpeed : sprinting ? PLAYER.sprintSpeed : PLAYER.walkingSpeed;
-      const traveled = this.hotel.collisions.move(this.floor, this.position.x, this.position.z,
-        mx * speed * dt, mz * speed * dt, PLAYER.radius);
-      // No stepping sideways off a staircase mid-air. Only the two landings
-      // connect the switchback to the adjacent floor.
-      const grounded = this.position.y - this.jumpOffset;
-      const onFlight = [0, 1, 2].find(f => {
-        const h = stairHeight(f, this.position.x, this.position.z);
-        return h !== null && Math.abs(h - grounded) < .25 &&
-          Math.abs(h - f * HOTEL.floorHeight) > .22 &&
-          Math.abs(h - (f + 1) * HOTEL.floorHeight) > .22;
-      });
-      if (onFlight !== undefined && !inStairLane(onFlight, traveled.x, traveled.z, .08)) {
-        traveled.x = this.position.x; traveled.z = this.position.z;
-      }
+      const traveled = this.hotel.movePlayer
+        ? this.hotel.movePlayer(this.floor, this.position.x, this.position.z,
+          this.position.y - this.jumpOffset, mx * speed * dt, mz * speed * dt, PLAYER.radius)
+        : this.hotel.collisions.move(this.floor, this.position.x, this.position.z,
+          mx * speed * dt, mz * speed * dt, PLAYER.radius);
+      if (Number.isFinite(traveled.ground)) surfaceGround = traveled.ground;
       movedX = traveled.x - this.position.x;
       movedZ = traveled.z - this.position.z;
       this.walkSpeed = Math.hypot(movedX, movedZ) / Math.max(dt, .001);
@@ -243,9 +236,9 @@ export class Player {
       if (this.jumpOffset === 0) this.verticalSpeed = 0;
     }
     if (this.posture === 'stand') {
-      const ground = this.hotel.groundHeight
+      const ground = surfaceGround ?? (this.hotel.groundHeight
         ? this.hotel.groundHeight(this.position.x, this.position.z, this.position.y - this.jumpOffset, this.floor)
-        : resolveGround(this.position.x, this.position.z, this.position.y - this.jumpOffset, this.floor);
+        : resolveGround(this.position.x, this.position.z, this.position.y - this.jumpOffset, this.floor));
       // On stairs, feet follow the actual rise. Colliders switch floor at landing.
       this.position.y = ground + this.jumpOffset;
       this.floor = groundFloor(ground);
@@ -260,10 +253,18 @@ export class Player {
       const offset = this.hotel.staticGripOffset(side, this.anchor(side, hand.distance));
       if (!offset) continue;
       const power = Math.min(1, dt * 7);
-      const shift = this.hotel.collisions.move(this.floor, this.position.x, this.position.z,
-        clamp(offset.x * power, -.1, .1), clamp(offset.z * power, -.1, .1), PLAYER.radius);
+      const mx = clamp(offset.x * power, -.1, .1);
+      const mz = clamp(offset.z * power, -.1, .1);
+      const shift = this.hotel.movePlayer
+        ? this.hotel.movePlayer(this.floor, this.position.x, this.position.z,
+          this.position.y - this.jumpOffset, mx, mz, PLAYER.radius)
+        : this.hotel.collisions.move(this.floor, this.position.x, this.position.z, mx, mz, PLAYER.radius);
       this.position.x = shift.x;
       this.position.z = shift.z;
+      if (Number.isFinite(shift.ground)) {
+        this.position.y = shift.ground + this.jumpOffset;
+        this.floor = groundFloor(shift.ground);
+      }
     }
     // Camera yaw is independent from avatar facing in third-person mode.
     // Rotate only after genuine horizontal locomotion; camera orbit while idle is free.

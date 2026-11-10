@@ -14,15 +14,22 @@ test('three stairs join four actual heights without elevator teleportation', () 
   assert.equal(stairHeight(2, STAIR.xLeft, STAIR.zHigh), 3 * HOTEL.floorHeight);
   assert.equal(groundFloor(3 * HOTEL.floorHeight), 3);
 });
-test('grounding follows one stair flight continuously from foot to landing', () => {
+test('grounding follows discrete physical treads uphill and downhill', () => {
   let y = 0, floor = 0;
-  for (let step = 0; step <= 140; step++) {
-    const z = STAIR.zLow + (STAIR.zHigh - STAIR.zLow) * step / 140;
+  for (let i = 0; i <= 140; i++) {
+    const z = STAIR.zLow + (STAIR.zHigh - STAIR.zLow) * i / 140;
     y = resolveGround(STAIR.xLeft, z, y, floor);
     floor = groundFloor(y);
-    assert.ok(Math.abs(y - step / 140 * HOTEL.floorHeight) < .00001);
+    assert.ok(Math.abs(y - stairHeight(0, STAIR.xLeft, z)) < .000001);
   }
   assert.equal(floor, 1);
+  for (let i = 140; i >= 0; i--) {
+    const z = STAIR.zLow + (STAIR.zHigh - STAIR.zLow) * i / 140;
+    y = resolveGround(STAIR.xLeft, z, y, floor);
+    floor = groundFloor(y);
+    assert.ok(Math.abs(y - stairHeight(0, STAIR.xLeft, z)) < .000001);
+  }
+  assert.equal(floor, 0);
 });
 test('stair lanes and floor labels never escape playable bounds', () => {
   assert.equal(stairHeight(2, 0, 10), null);
@@ -47,7 +54,7 @@ test('first-floor stair entrance does not duplicate the structural deck face', (
     b.x > -12 && b.x < 12 && b.z > -15 && b.z < 15 &&
     Math.abs(b.y + b.h / 2) < 1e-8);
   assert.equal(firstFloorCoplanar.length, 0, 'stair geometry must not have a top face at y=0');
-  const threshold = geometry.find(b => b.material === 'trim' && Math.abs(b.z - STAIR.zLow) < 1e-8);
+  const threshold = geometry.find(b => b.material === 'trim' && Math.abs(b.z - (STAIR.zLow - .18)) < 1e-8);
   assert.ok(threshold && threshold.y - threshold.h / 2 >= 0, 'threshold rests on top of main slab');
   assert.ok(geometry.filter(b=>b.material==='slab').length>=STAIR.steps*3, 'all three flights are kept');
 });
@@ -67,4 +74,20 @@ test('first-floor reception finish meets corridor carpet and is not laid on top 
   assert.ok(Math.abs((left.x+left.w/2) + 1.55) < 1e-8);
   assert.ok(Math.abs((right.x-right.w/2) - 1.55) < 1e-8);
   assert.ok(finish.every(b => Math.abs(b.y+b.h/2-.03) < 1e-8));
+});
+
+test('rendered riser tops agree with physical support at every tread centre', () => {
+  const boxes=[];
+  Hotel.prototype.buildStairs.call({box:(material,x,y,z,w,h,d)=>boxes.push({material,x,y,z,w,h,d})});
+  for (let f=0;f<3;f++) {
+    const flight=stairFlight(f);
+    for (let i=0;i<STAIR.steps;i++) {
+      const z=flight.forward
+        ? STAIR.zLow+(i+.5)*(STAIR.zHigh-STAIR.zLow)/STAIR.steps
+        : STAIR.zHigh-(i+.5)*(STAIR.zHigh-STAIR.zLow)/STAIR.steps;
+      const slab=boxes.find(b=>b.material==='slab' && Math.abs(b.x-flight.x)<1e-8 && Math.abs(b.z-z)<1e-8);
+      assert.ok(slab, 'stair step not rendered');
+      assert.ok(Math.abs(slab.y+slab.h/2-stairHeight(f,flight.x,z))<1e-8);
+    }
+  }
 });

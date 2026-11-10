@@ -19,3 +19,13 @@ test('all alternating staircase landings fit entirely in the open deck aperture'
       assert.equal(rectanglesOverlap(landing, deck), false, `landing overlaps deck ${JSON.stringify(deck)}`);
   }
 });
+
+test('landing gaps avoid coplanar deck and step geometry', () => {
+  const high=landingFootprint(true), low=landingFootprint(false);
+  const frontDeckMax=UPPER_DECK[2].z+UPPER_DECK[2].depth/2;
+  const backDeckMin=UPPER_DECK[3].z-UPPER_DECK[3].depth/2;
+  assert.ok(low.z-low.depth/2>frontDeckMax);
+  assert.ok(low.z+low.depth/2<7.75);
+  assert.ok(high.z-high.depth/2>13.25);
+  assert.ok(high.z+high.depth/2<backDeckMin);
+});

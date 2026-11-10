@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BoxBatch } from '../engine/BoxBatch.js';
 import { CollisionWorld } from '../engine/Collision.js';
 import { HOTEL, COLORS } from '../config.js';
-import { STAIR, stairFlight, resolveGround } from './Stairwell.js';
+import { STAIR, STAIR_RISE, STAIR_RUN, stairFlight, resolveGround, walkStairs } from './Stairwell.js';
 import { CitySkyline } from './CitySkyline.js';
 import { PhysicsWorld } from '../engine/PhysicsWorld.js';
 import { Actors } from './Actors.js';
@@ -81,16 +81,26 @@ export class Hotel {
   addWalkSurface(floor, x, z, width, depth, topY) {
     this.walkSurfaces.push({ floor, minX: x - width / 2, maxX: x + width / 2, minZ: z - depth / 2, maxZ: z + depth / 2, topY });
   }
+  inStairArea(x, z) {
+    return x >= STAIR.minX - .45 && x <= STAIR.maxX + .45 &&
+      z >= STAIR.minZ - .48 && z <= STAIR.maxZ + .48;
+  }
+  /** Ordinary rooms remain freely walkable, including the raised mattresses. */
   groundHeight(x, z, priorHeight, currentFloor) {
-    let height = resolveGround(x, z, priorHeight, currentFloor);
-    let bestError = Infinity;
     for (const surface of this.walkSurfaces) {
       if (surface.floor !== currentFloor) continue;
       if (x < surface.minX || x > surface.maxX || z < surface.minZ || z > surface.maxZ) continue;
-      const error = Math.abs(priorHeight - surface.topY);
-      if (error < bestError && error < .82) { bestError = error; height = surface.topY; }
+      if (Math.abs(priorHeight - surface.topY) < .82) return surface.topY;
     }
-    return height;
+    return Hotel.prototype.inStairArea.call(this, x, z)
+      ? resolveGround(x, z, priorHeight, currentFloor) : currentFloor * HOTEL.floorHeight;
+  }
+  /** Physics surface sweep only near the shaft, preserving existing bed controls. */
+  movePlayer(floor, x, z, ground, dx, dz, radius) {
+    if (this.inStairArea(x, z) || this.inStairArea(x + dx, z + dz))
+      return walkStairs(this.collisions, x, z, ground, dx, dz, radius);
+    const moved = this.collisions.move(floor, x, z, dx, dz, radius);
+    return { ...moved, ground: this.groundHeight(moved.x, moved.z, ground, floor) };
   }
   build() {
     const s = this.scene;
@@ -299,31 +309,36 @@ export class Hotel {
     body.label = label;
     this.props.push(mesh);
   }
+  /** Stair meshes are filled physical risers, with actual tread heights matching
+   * Stairwell.stairHeight. Rails sit outside the capsule's walking clearance. */
   buildStairs() {
-    const count = STAIR.steps;
     for (let floor = 0; floor < HOTEL.floors - 1; floor++) {
       const flight = stairFlight(floor);
-      for (let i = 0; i < count; i++) {
-        const fraction = (i + .5) / count;
-        const z = flight.forward
-          ? STAIR.zLow + fraction * (STAIR.zHigh - STAIR.zLow)
-          : STAIR.zHigh - fraction * (STAIR.zHigh - STAIR.zLow);
-        const y = Y(floor) + fraction * HOTEL.floorHeight;
-        // Each stair is a visible tread, while movement uses a smooth grounded ramp.
-        this.box('slab', flight.x, y - .07, z, STAIR.width, .15, (STAIR.zHigh - STAIR.zLow) / count + .018);
-        this.box('cyan', flight.x, y + .02, z + (flight.forward ? -.13 : .13), STAIR.width - .15, .04, .035);
+      const base = Y(floor);
+      for (let i = 0; i < STAIR.steps; i++) {
+        const rise = (i + 1) * STAIR_RISE;
+        const z = flight.forward ? STAIR.zLow + (i + .5) * STAIR_RUN
+          : STAIR.zHigh - (i + .5) * STAIR_RUN;
+        // The riser extends from the floor below to the top of the tread.
+        this.box('slab', flight.x, base + rise / 2, z, STAIR.width, rise, STAIR_RUN);
+        this.box('wood', flight.x, base + rise + .010, z,
+          STAIR.width - .16, .020, STAIR_RUN - .035);
+        for (const side of [-1, 1]) {
+          const railX = flight.x + side * (STAIR.width / 2 + .08);
+          this.box('trim', railX, base + rise + .95, z, .105, .10, STAIR_RUN - .025);
+          if (i % 3 === 0 || i === STAIR.steps - 1)
+            this.box('trim', railX, base + rise + .52, z, .095, 1.04, .095);
+        }
       }
-      // Landing, located at the next floor, bridges the two side-by-side flights.
+      // Landing occupies only the true open well; it does not intersect the
+      // upper-floor deck or the final stair tread at the same height.
       const landing = landingFootprint(flight.forward);
-      this.box('slab', landing.x, Y(floor + 1) - .09, landing.z, landing.width, .18, landing.depth);
-      for (const x of [STAIR.xLeft - 1.2, STAIR.xRight + 1.2]) {
-        this.box('magenta', x, Y(floor) + 1.8, (STAIR.zLow + STAIR.zHigh) / 2, .06, .09, 4.8);
-      }
+      this.box('slab', landing.x, Y(floor + 1) - .09, landing.z,
+        landing.width, .18, landing.depth);
     }
-    // The ground floor deck already covers the staircase entrance.
-    // Its old extra slab ended at exactly y=0: two overlapping top faces
-    // produced visible first-floor z-fighting. Keep only a raised threshold.
-    this.box('trim', -6.85, .011, STAIR.zLow, 5.1, .022, .60);
+    // Ground floor already has one structural slab. This threshold does not
+    // duplicate the deck surface or overlap the first tread.
+    this.box('trim', -6.85, .011, STAIR.zLow - .18, 5.1, .022, .34);
   }
   nearestStaticSurface(origin, direction) {
     this.gripRaycaster.set(origin, direction);
