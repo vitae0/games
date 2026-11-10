@@ -7,7 +7,7 @@ import { normalizeAvatar } from './avatar/AvatarConfig.js';
 import { loadBundledCharacterModel } from './avatar/ModelImporter.js';
 import { isTouchCapable } from './input/TouchMath.js';
 
-const PROFILE_KEY = 'vitaeworld.avatar.v1';
+const PROFILE_KEY = 'vitaeworld.avatar.v2';
 const canvas = document.querySelector('#world');
 const touchDevice = isTouchCapable(window);
 const scene = new THREE.Scene();
