@@ -41,6 +41,7 @@ export function extractPremadeHair(sourceVrm) {
       ? geometry.groups
       : [{ start: 0, count: geometry.index?.count || positions.count, materialIndex: 0 }];
     const transform = inverseHead.clone().multiply(obj.matrixWorld);
+    if (obj.isSkinnedMesh) obj.skeleton?.update();
 
     for (const group of groups) {
       const originalMaterial = materials[group.materialIndex || 0];
