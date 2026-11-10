@@ -8,6 +8,7 @@ import { PhysicsWorld } from '../engine/PhysicsWorld.js';
 import { Actors } from './Actors.js';
 import { createSurfaceTextures, SURFACE_KIND } from './SurfaceTextures.js';
 import { UPPER_DECK, landingFootprint } from './FloorPlan.js';
+import { buildSuite, makeSuiteMedia } from './SuiteInteriors.js';
 
 const HALF = HOTEL.corridorHalfWidth;
 const Y = (floor) => floor * HOTEL.floorHeight;
