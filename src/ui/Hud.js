@@ -116,9 +116,10 @@ export class Hud {
       input.disabled = true;
       status.textContent = 'Model işleniyor...';
       try {
-        await this.options.loadModel(file);
-        status.textContent = `${file.name} · geçici yerel model`;
-        this.toast('İskeletli karakter yüklendi');
+        const parts = await this.options.loadModel(file);
+        this.renderModelParts(parts);
+        status.textContent = `${file.name} · ${parts.length} görünürlük parçası · yalnızca bu cihazda`;
+        this.toast('3D karakter yüklendi; mesh katmanlarını inceleyebilirsiniz');
       } catch (error) {
         status.textContent = `Hata: ${error?.message || 'Bilinmeyen'}`;
         this.toast('Model yüklenemedi');
@@ -129,10 +130,40 @@ export class Hud {
     });
     $('#avatar-model-reset').addEventListener('click', () => {
       this.options.resetModel();
+      this.renderModelParts([]);
       status.textContent = this.profile.baseModel === 'quaternius'
         ? 'Quaternius Superhero Male (CC0) • kıyafet uyumu henüz eklenmedi'
         : 'Geometrik karakter • kıyafet katmanları denenebilir';
     });
+    this.renderModelParts(this.options.getModelParts?.() || []);
+  }
+  renderModelParts(parts = []) {
+    const parent = $('#avatar-parts');
+    parent.replaceChildren();
+    parent.classList.toggle('hidden', !parts.length);
+    if (!parts.length) return;
+    const title = document.createElement('p');
+    title.className = 'small';
+    title.textContent = `Modelin ${parts.length} mesh parçası. Giysi olduğu kesin olmayan parçaları da burada kapatabilirsiniz.`;
+    parent.append(title);
+    const reset = document.createElement('button');
+    reset.type = 'button'; reset.textContent = 'TÜM PARÇALARI GÖSTER';
+    reset.addEventListener('click', () => {
+      for (const part of parts) this.options.setModelPartVisible(part.index, true);
+      this.renderModelParts(this.options.getModelParts?.() || []);
+    });
+    parent.append(reset);
+    for (const part of parts) {
+      const row = document.createElement('label');
+      row.className = 'avatar-mesh-switch';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = part.visible;
+      cb.addEventListener('change', () => this.options.setModelPartVisible(part.index, cb.checked));
+      const name = document.createElement('span');
+      name.textContent = `${part.index + 1}. ${part.name}`;
+      row.append(cb, name);
+      parent.append(row);
+    }
   }
   buildAvatarFields() {
     const parent = $('#avatar-fields'); parent.replaceChildren();
@@ -202,6 +233,13 @@ export class Hud {
   preview() {
     this.profile = normalizeAvatar(this.profile);
     this.options.previewProfile(this.profile);
+    const importedParts = this.options.getModelParts?.() || [];
+    if (importedParts.length) {
+      this.renderModelParts(importedParts);
+      $('#avatar-model-status').textContent = `Yerel model aktif · ${importedParts.length} ayrı mesh görünürlük kontrolü`;
+      return;
+    }
+    this.renderModelParts([]);
     $('#avatar-model-status').textContent = this.profile.baseModel === 'quaternius'
       ? 'Quaternius Superhero Male (CC0) • dış kıyafetler henüz uyarlanmadı'
       : 'Geometrik avatar • katmanları ayrı ayrı açıp kapatabilirsiniz';
