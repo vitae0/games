@@ -13,6 +13,6 @@ test('invalid or out-of-range values cannot corrupt rig', () => {
   assert.equal(p.height, AVATAR_DEFAULTS.height);
   assert.equal(p.shoulders, .67);
   assert.equal(p.hips, .30);
-  assert.equal(p.outfit, 'neon');
+  assert.equal(p.outfit, 'none');
   assert.equal(p.visor, false);
 });
