@@ -4,7 +4,7 @@ import { Hotel } from './world/Hotel.js';
 import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
 import { normalizeAvatar } from './avatar/AvatarConfig.js';
-import { importCharacterModel, loadBundledCharacterModel } from './avatar/ModelImporter.js';
+import { loadBundledCharacterModel } from './avatar/ModelImporter.js';
 import { isTouchCapable } from './input/TouchMath.js';
 
 const PROFILE_KEY = 'vitaeworld.avatar.v1';
@@ -113,24 +113,17 @@ async function syncBaseModel({ force = false } = {}) {
 }
 function updateAvatarProfile(profile) {
   const changedBase = player.avatar.profile.baseModel !== profile.baseModel;
-  player.avatar.rebuild(profile);
+  if (changedBase) player.avatar.rebuild(profile);
+  else player.avatar.updateStyle(profile);
   player.handRig.setProfile(profile);
-  void syncBaseModel({ force: changedBase });
+  if (changedBase) void syncBaseModel({ force: true });
 }
 void syncBaseModel();
 hud = new Hud(canvas, {
   player,
   setQuality,
   getProfile: () => player.avatar.profile,
-  loadModel: async (file) => {
-    ++modelRequest;
-    const model = await importCharacterModel(file);
-    player.avatar.applyExternal(model, 'upload');
-    return player.avatar.listExternalParts();
-  },
-  getModelParts: () => player.avatar.external ? player.avatar.listExternalParts() : [],
-  setModelPartVisible: (index, visible) => player.avatar.setExternalPartVisible(index, visible),
-  resetModel: () => { player.avatar.clearExternal(); void syncBaseModel({ force: true }); },
+  isBaseReady: (baseModel) => player.avatar.external?.source === `bundled:${baseModel}`,
   previewProfile: (profile) => updateAvatarProfile(profile),
   saveProfile: (profile) => {
     updateAvatarProfile(profile);
