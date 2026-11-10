@@ -20,6 +20,7 @@ test('touch hardware detection includes coarse pointer and hybrid touch devices'
   assert.equal(isTouchCapable({matchMedia:() => ({ matches:false }),navigator:{maxTouchPoints:0}}), false);
   assert.equal(isTouchCapable({matchMedia:() => ({ matches:true }),navigator:{maxTouchPoints:0}}), true);
   assert.equal(isTouchCapable({matchMedia:() => ({ matches:false }),navigator:{maxTouchPoints:5}}), true);
+  assert.equal(isTouchCapable({matchMedia:() => ({ matches:false }),navigator:{maxTouchPoints:0},location:{search:'?touch'}}), true);
   assert.equal(isTouchCapable({matchMedia:() => {throw new Error('privacy')} }), false);
 });
 

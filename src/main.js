@@ -9,12 +9,13 @@ import { isTouchCapable } from './input/TouchMath.js';
 
 const PROFILE_KEY = 'vitaeworld.avatar.v1';
 const canvas = document.querySelector('#world');
+const touchDevice = isTouchCapable(window);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(74, 1, .08, 650);
 scene.add(camera);
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: touchDevice ? 'low-power' : 'high-performance', alpha: false });
 } catch (error) {
   document.querySelector('#start-button').disabled = true;
   document.querySelector('#start-hint').textContent = 'Bu cihazda WebGL başlatılamadı. Güncel bir tarayıcı, WebGL2 destekli ekran kartı ve yeterli bellek gerekiyor.';
@@ -25,7 +26,6 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
 renderer.shadowMap.enabled = false;
 
-const touchDevice = isTouchCapable(window);
 const hardwareDpr = window.devicePixelRatio || 1;
 let qualityMode = 'auto';
 let maxDpr = Math.min(hardwareDpr, touchDevice ? 1.15 : 1.5);

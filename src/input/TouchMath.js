@@ -18,6 +18,7 @@ export function clampTouchSensitivity(value) {
 export function isTouchCapable(environment = globalThis) {
   try {
     return !!(environment.matchMedia?.('(pointer: coarse)')?.matches ||
-      environment.navigator?.maxTouchPoints > 0);
+      environment.navigator?.maxTouchPoints > 0 ||
+      new URLSearchParams(environment.location?.search || '').has('touch'));
   } catch { return false; }
 }

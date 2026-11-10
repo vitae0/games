@@ -90,11 +90,11 @@ export class Player {
   }
   bindEvents() {
     this.mouseMove = (event) => {
-      if (!this.active) return;
+      if (!this.active || document.pointerLockElement !== this.canvas) return;
       this.lookBy(event.movementX, event.movementY);
     };
     this.mouseDown = (event) => {
-      if (!this.active || this.posture !== 'stand') return;
+      if (!this.active || this.posture !== 'stand' || (this.touchActive && document.pointerLockElement !== this.canvas)) return;
       if (event.button !== 0 && event.button !== 2) return;
       event.preventDefault();
       this.pressHand(event.button === 0 ? 'left' : 'right');

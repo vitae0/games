@@ -104,7 +104,7 @@ Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoi
 
 ## Mobil ve tablet desteği (Alpha 0.6)
 
-- **Başlangıç:** Dokunmatik ekran algılandığında **DOKUN VE OYNA** düğmesiyle açılır. `Pointer Lock` veya fare gerekmez. Masaüstü klavye/fare kontrolleri korunur.
+- **Başlangıç:** Dokunmatik ekran algılandığında **DOKUN VE OYNA** düğmesiyle açılır. `Pointer Lock` veya fare gerekmez. Masaüstünde mobil kontrolleri denemek için `?touch` parametresi kullanılabilir. Masaüstü klavye/fare kontrolleri korunur.
 - **Sol joystick:** Analog yürüme ve yön değiştirme (joystick hızın şiddetini de belirler).
 - **Sağ ekran:** Parmağı sürükleyerek kamera açısını değiştir. Kamera hassasiyeti **⚙ Ayarlar** içinden 0.45–2.00× olarak değiştirilebilir.
 - **Temel düğmeler:** Koş (basılı tut), Kullan, Zıpla, Sol El/Sağ El (basılı tut), Çömel (basılı tut), Çek/İt (basılı tut veya kısa dokun), Daha.
