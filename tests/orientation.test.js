@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { forwardFromYaw, rightFromYaw, movementFromYaw, viewFromYawPitch } from '../src/player/Orientation.js';
+import { forwardFromYaw, rightFromYaw, movementFromYaw, viewFromYawPitch, yawFromDisplacement, approachYaw } from '../src/player/Orientation.js';
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-10, `${a} ≠ ${b}`);
 test('view, movement and avatar -Z axes agree at every cardinal yaw', () => {
   for (const yaw of [0, Math.PI/2, Math.PI, -Math.PI/2, .6, 4.2]) {
@@ -21,4 +21,18 @@ test('diagonal travel is normalized and vertical look does not affect travel', (
   const camera = viewFromYawPitch(1.4, .7);
   close(camera.y, Math.sin(.7));
   close(Math.hypot(camera.x, camera.z), Math.cos(.7));
+});
+
+test('body yaw follows actual travel on shortest arc and never guesses from idle motion', () => {
+  assert.equal(yawFromDisplacement(0, 0), null);
+  assert.equal(yawFromDisplacement(1e-8, 0), null);
+  for (const yaw of [0, Math.PI/2, Math.PI, -Math.PI/2, 1.25]) {
+    const {x,z} = forwardFromYaw(yaw);
+    const found = yawFromDisplacement(x, z);
+    close(Math.sin(found - yaw), 0);
+    close(Math.cos(found - yaw), 1);
+  }
+  const a = approachYaw(Math.PI - .05, -Math.PI + .05, .05);
+  assert.ok(a > Math.PI - .05 && a < Math.PI + .05, 'turn across ±π uses shortest arc');
+  close(approachYaw(.4, 1.5, 0), .4);
 });

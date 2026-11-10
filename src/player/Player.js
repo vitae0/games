@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PLAYER, HOTEL } from '../config.js';
 import { Avatar } from '../avatar/Avatar.js';
 import { HandRig } from './HandRig.js';
-import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw } from './Orientation.js';
+import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw, yawFromDisplacement, approachYaw } from './Orientation.js';
 import { isFloorPosture, nextFloorPosture } from './Postures.js';
 import { PostureControls } from './PostureControls.js';
 import { resolveGround, groundFloor, stairHeight, inStairLane } from '../world/Stairwell.js';
@@ -13,7 +13,7 @@ export class Player {
   constructor(canvas, camera, scene, hotel, profile, events) {
     this.canvas = canvas; this.camera = camera; this.hotel = hotel; this.events = events;
     this.position = new THREE.Vector3(0, 0, -11.4); // All doors to outside are sealed.
-    this.floor = 0; this.yaw = Math.PI; this.pitch = -.04;
+    this.floor = 0; this.yaw = Math.PI; this.bodyYaw = this.yaw; this.pitch = -.04;
     this.keys = new Set(); this.verticalSpeed = 0; this.jumpOffset = 0;
     this.posture = 'stand'; this.thirdPerson = false; this.walkSpeed = 0;
     this.touchActive = false; this.touchMove = { x: 0, forward: 0 };
@@ -48,6 +48,7 @@ export class Player {
   toggleCamera() {
     if (!this.active) return;
     this.thirdPerson = !this.thirdPerson;
+    if (this.thirdPerson) this.bodyYaw = this.yaw;
     this.events.toast(this.thirdPerson ? 'Üçüncü şahıs kamerası' : 'Birinci şahıs kamerası');
   }
   adjustGripDistance(delta) {
@@ -173,15 +174,15 @@ export class Player {
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
     this.postureControls.reset();
     this.keys.clear(); this.setTouchMove(0, 0);
-    this.yaw = Math.PI; this.walkSpeed = 0;
+    this.yaw = Math.PI; this.bodyYaw = this.yaw; this.walkSpeed = 0;
   }
   useFurniture(mode, x, z, yaw) {
     if (this.posture !== 'stand') return;
     this.releaseHands();
-    this.savedStanding = { x: this.position.x, y: this.position.y, z: this.position.z, yaw: this.yaw };
+    this.savedStanding = { x: this.position.x, y: this.position.y, z: this.position.z, yaw: this.yaw, bodyYaw: this.bodyYaw };
     this.posture = mode;
     this.position.set(x, this.floor * HOTEL.floorHeight, z);
-    this.yaw = yaw; this.pitch = mode === 'rest' ? -.23 : 0;
+    this.yaw = yaw; this.bodyYaw = yaw; this.pitch = mode === 'rest' ? -.23 : 0;
     this.jumpOffset = 0; this.verticalSpeed = 0;
     this.events.toast(mode === 'sit' ? 'Oturuyorsun · E ile kalk' : 'Dinleniyorsun · E ile kalk');
   }
@@ -190,6 +191,7 @@ export class Player {
     if (this.savedStanding) {
       this.position.set(this.savedStanding.x, this.savedStanding.y, this.savedStanding.z);
       this.yaw = this.savedStanding.yaw;
+      this.bodyYaw = this.savedStanding.bodyYaw;
       this.floor = groundFloor(this.position.y);
     }
     this.posture = 'stand'; this.savedStanding = null;
@@ -200,6 +202,7 @@ export class Player {
     const active = this.active;
     const forward = this.direction;
     let mx = 0, mz = 0;
+    let movedX = 0, movedZ = 0;
     const crouching = this.postureControls.crouching || this.touchCrouch;
     if (this.postureControls.consumeJump(performance.now()) &&
       this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching) {
@@ -227,7 +230,9 @@ export class Player {
       if (onFlight !== undefined && !inStairLane(onFlight, traveled.x, traveled.z, .08)) {
         traveled.x = this.position.x; traveled.z = this.position.z;
       }
-      this.walkSpeed = Math.hypot(traveled.x - this.position.x, traveled.z - this.position.z) / Math.max(dt, .001);
+      movedX = traveled.x - this.position.x;
+      movedZ = traveled.z - this.position.z;
+      this.walkSpeed = Math.hypot(movedX, movedZ) / Math.max(dt, .001);
       this.position.x = traveled.x; this.position.z = traveled.z;
     } else this.walkSpeed = 0;
     if (this.jumpOffset > 0 || this.verticalSpeed > 0) {
@@ -257,8 +262,15 @@ export class Player {
       this.position.x = shift.x;
       this.position.z = shift.z;
     }
+    // Camera yaw is independent from avatar facing in third-person mode.
+    // Rotate only after genuine horizontal locomotion; camera orbit while idle is free.
+    if (!this.thirdPerson) this.bodyYaw = this.yaw;
+    else if (this.posture === 'stand') {
+      const desiredFacing = yawFromDisplacement(movedX, movedZ);
+      if (desiredFacing !== null) this.bodyYaw = approachYaw(this.bodyYaw, desiredFacing, dt, 14);
+    }
     this.avatar.root.position.copy(this.position);
-    this.avatar.root.rotation.y = this.yaw;
+    this.avatar.root.rotation.y = this.bodyYaw;
     this.avatar.update(dt, this.walkSpeed, this.posture === 'stand' && crouching ? 'crouch' : this.posture);
     for (const side of ['left', 'right']) {
       const hand = this.hands[side];

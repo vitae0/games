@@ -58,3 +58,47 @@ test('mobile posture and hands stay accessible without physical keys', () => {
     assert.equal(p.hands.left.pressed,false);
   } finally {p.dispose();}
 });
+
+test('third-person camera orbit never rotates stationary avatar, movement rotates avatar toward travel', () => {
+  const p=playerFixture();
+  try {
+    p.touchActive=true;
+    p.toggleCamera();
+    p.update(.05);
+    const initialFacing=p.avatar.root.rotation.y;
+    const cameraBefore=p.camera.position.clone();
+    p.lookBy(550,-60);
+    p.update(.05);
+    assert.ok(Math.abs(p.yaw-initialFacing)>.5, 'camera orientation changed');
+    assert.equal(p.avatar.root.rotation.y,initialFacing,'idle character kept facing');
+    assert.ok(p.camera.position.distanceTo(cameraBefore)>.05,'camera orbited around stationary character');
+
+    p.setTouchMove(0,1);
+    for(let i=0;i<20;i++) p.update(.05);
+    const movementFacing=p.avatar.root.rotation.y;
+    assert.ok(Math.abs(Math.atan2(Math.sin(movementFacing-p.yaw),Math.cos(movementFacing-p.y)))<.02,
+      'walking forward turns avatar to actual heading');
+    p.setTouchMove(0,0);
+    p.lookBy(-350,0);
+    p.update(.05);
+    assert.equal(p.avatar.root.rotation.y,movementFacing,'facing persists after stopping even if camera turns');
+    p.toggleCamera();
+    p.update(.05);
+    assert.equal(p.avatar.root.rotation.y,p.yaw,'first-person restores camera-aligned facing');
+  } finally {p.dispose();}
+});
+
+test('third-person blocked movement does not rotate avatar', () => {
+  const p=playerFixture();
+  try {
+    p.touchActive=true;
+    p.toggleCamera();
+    p.hotel.collisions.move=(_floor,x,z)=>({x,z});
+    const initial=p.avatar.root.rotation.y;
+    p.lookBy(500,0);
+    p.setTouchMove(0,1);
+    p.update(.05);
+    assert.equal(p.walkSpeed,0);
+    assert.equal(p.avatar.root.rotation.y,initial);
+  } finally {p.dispose();}
+});
