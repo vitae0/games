@@ -1,6 +1,6 @@
 import { TouchControls } from '../input/TouchControls.js';
 import { isTouchCapable, clampTouchSensitivity } from '../input/TouchMath.js';
-import { AVATAR_DEFAULTS, SKIN_TONES, EYE_COLORS, HAIR_COLORS, UNDERWEAR_COLORS, normalizeAvatar } from '../avatar/AvatarConfig.js';
+import { AVATAR_DEFAULTS, normalizeAvatar } from '../avatar/AvatarConfig.js';
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
@@ -188,8 +188,24 @@ export class Hud {
   isElevatorOpen() { return !this.elevator.classList.contains('hidden'); }
   isModalOpen() { return this.isCustomizerOpen() || this.isElevatorOpen() || this.isSettingsOpen(); }
   toggleCustomizer() { this.isCustomizerOpen() ? this.closeCustomizer() : this.openCustomizer(); }
-  openCustomizer() { this.touchControls?.suspend(); this.profile = normalizeAvatar(this.options.getProfile()); this.syncAvatarControls(); this.customizer.classList.remove('hidden'); this.refreshModelStatus(); $('#save-message').textContent = ''; document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
-  closeCustomizer() { this.customizer.classList.add('hidden'); this.refreshStartScreen(); }
+  openCustomizer() {
+    this.touchControls?.suspend();
+    this.profile = normalizeAvatar(this.options.getProfile());
+    this.syncAvatarControls();
+    this.customizer.classList.remove('hidden');
+    this.restoreFirstPerson = !this.options.player.thirdPerson;
+    if (this.restoreFirstPerson) this.options.player.toggleCamera();
+    this.refreshModelStatus();
+    $('#save-message').textContent = '';
+    document.exitPointerLock?.();
+    this.startScreen.classList.add('hidden');
+  }
+  closeCustomizer() {
+    this.customizer.classList.add('hidden');
+    if (this.restoreFirstPerson && this.options.player.thirdPerson) this.options.player.toggleCamera();
+    this.restoreFirstPerson = false;
+    this.refreshStartScreen();
+  }
   openElevator() { this.touchControls?.suspend(); this.elevator.classList.remove('hidden'); document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
   closeElevator() { this.elevator.classList.add('hidden'); this.refreshStartScreen(); }
   toast(text) {
