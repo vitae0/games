@@ -333,9 +333,11 @@ export class Avatar {
       head.add(hair);
       style.hairRoot = hair;
       style.hairStatus = 'ready';
+      this.onStyleLoad?.();
     }).catch(error => {
       if (this.external !== ext || style.hairRequest !== ticket) return;
       style.hairStatus = 'error';
+      this.onStyleLoad?.();
       console.warn('CC0 hazır saç yüklenemedi:', error);
     });
   }
