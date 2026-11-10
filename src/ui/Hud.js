@@ -4,7 +4,8 @@ import { AVATAR_DEFAULTS, AVATAR_FIELDS, AVATAR_RANGES, SKIN_TONES, EYE_COLORS, 
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
-  outfit: [['neon', 'Modern / taş ve keten'], ['stealth', 'Minimal / koyu'], ['chrome', 'Soft / gül tonları']],
+  baseModel: [['quaternius', 'Quaternius • 3D Male (deneme)'], ['procedural', 'Önceki geometrik karakter']],
+  outfit: [['none', 'Yok • sadece beden'], ['neon', 'Modern / taş ve keten'], ['stealth', 'Minimal / koyu'], ['chrome', 'Soft / gül tonları']],
   hair: [['bob', 'Bob / katlı'], ['short', 'Kısa'], ['long', 'Uzun'], ['ponytail', 'At kuyruğu'], ['mohawk', 'Dik'], ['none', 'Saçsız']],
   skinTone: Object.keys(SKIN_TONES).map((id,i) => [id, ['Açık', 'Sıcak ten', 'Buğday', 'Esmer', 'Koyu'][i]]),
   eyeColor: Object.keys(EYE_COLORS).map((id,i) => [id, ['Kahverengi', 'Ela', 'Mavi', 'Yeşil'][i]]),
@@ -128,7 +129,9 @@ export class Hud {
     });
     $('#avatar-model-reset').addEventListener('click', () => {
       this.options.resetModel();
-      status.textContent = 'Varsayılan: kemikli anime karakter';
+      status.textContent = this.profile.baseModel === 'quaternius'
+        ? 'Quaternius Superhero Male (CC0) • kıyafet uyumu henüz eklenmedi'
+        : 'Geometrik karakter • kıyafet katmanları denenebilir';
     });
   }
   buildAvatarFields() {
@@ -148,7 +151,7 @@ export class Hud {
       });
       head.append(caption, output); wrap.append(head, input); parent.append(wrap);
     }
-    for (const [key, label] of [['outfit', 'Kıyafet stili'], ['hair', 'Saç modeli'], ['skinTone', 'Ten rengi'], ['eyeColor', 'Göz rengi']]) {
+    for (const [key, label] of [['baseModel', 'Temel karakter (test)'], ['outfit', 'Kıyafet stili'], ['hair', 'Saç modeli'], ['skinTone', 'Ten rengi'], ['eyeColor', 'Göz rengi']]) {
       const wrap = document.createElement('div'); wrap.className = 'field';
       const head = document.createElement('div');
       const caption = document.createElement('label'); caption.htmlFor = `avatar-${key}`; caption.textContent = label;
@@ -165,6 +168,20 @@ export class Hud {
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = 'avatar-visor';
     checkbox.addEventListener('change', () => { this.profile.visor = checkbox.checked; this.preview(); });
     wrap.append(label, checkbox); parent.append(wrap);
+    const garmentNote = document.createElement('p');
+    garmentNote.className = 'small';
+    garmentNote.textContent = 'Katman testi şimdilik geometrik karakterde çalışır. Quaternius gerçek 3D gövdesine kıyafetler henüz uyarlanmadı.';
+    parent.append(garmentNote);
+    for (const [key, name] of [
+      ['shirtVisible', 'Tişört katmanı'], ['jacketVisible', 'Ceket katmanı'],
+      ['pantsVisible', 'Pantolon katmanı'], ['shoesVisible', 'Ayakkabı katmanı'],
+    ]) {
+      const layerWrap = document.createElement('div'); layerWrap.className = 'field';
+      const layerLabel = document.createElement('label'); layerLabel.htmlFor = `avatar-${key}`; layerLabel.textContent = name;
+      const layerCheck = document.createElement('input'); layerCheck.type = 'checkbox'; layerCheck.id = `avatar-${key}`;
+      layerCheck.addEventListener('change', () => { this.profile[key] = layerCheck.checked; this.preview(); });
+      layerWrap.append(layerLabel, layerCheck); parent.append(layerWrap);
+    }
     this.syncAvatarControls();
   }
   syncAvatarControls() {
@@ -172,13 +189,23 @@ export class Hud {
       $(`#avatar-${key}`).value = String(this.profile[key]);
       $(`#avatar-${key}`).parentElement.querySelector('output').textContent = `${this.profile[key].toFixed(step === .005 ? 3 : 2)} ${unit}`;
     }
+    $('#avatar-baseModel').value = this.profile.baseModel;
     $('#avatar-outfit').value = this.profile.outfit;
     $('#avatar-hair').value = this.profile.hair;
     $('#avatar-skinTone').value = this.profile.skinTone;
     $('#avatar-eyeColor').value = this.profile.eyeColor;
     $('#avatar-visor').checked = this.profile.visor;
+    for (const key of ['shirtVisible', 'jacketVisible', 'pantsVisible', 'shoesVisible']) {
+      $(`#avatar-${key}`).checked = this.profile[key];
+    }
   }
-  preview() { this.profile = normalizeAvatar(this.profile); this.options.previewProfile(this.profile); }
+  preview() {
+    this.profile = normalizeAvatar(this.profile);
+    this.options.previewProfile(this.profile);
+    $('#avatar-model-status').textContent = this.profile.baseModel === 'quaternius'
+      ? 'Quaternius Superhero Male (CC0) • dış kıyafetler henüz uyarlanmadı'
+      : 'Geometrik avatar • katmanları ayrı ayrı açıp kapatabilirsiniz';
+  }
   isCustomizerOpen() { return !this.customizer.classList.contains('hidden'); }
   isElevatorOpen() { return !this.elevator.classList.contains('hidden'); }
   isModalOpen() { return this.isCustomizerOpen() || this.isElevatorOpen() || this.isSettingsOpen(); }
