@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://localhost:5173`). WebGL2 destekleyen güncel Android Chrome veya iOS/iPadOS Safari üzerinde dokunmatik; masaüstünde klavye/fare ile kullanın. `npm run build` üretim derlemesi, `npm test` otomatik testler içindir.
+Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://localhost:5173`). WebGL2 ve fiziksel klavye/fare ile kullanın. `npm run build` üretim derlemesi, `npm test` otomatik testler içindir.
 
 ## Alpha 0.6 özellikleri
 
@@ -27,30 +27,6 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 - **İki simüle karakter:** Mira (resepsiyon) ve Nova (misafir). `E` ile konuşulur, uygun açıdan elleri tutulabilir ve kısıtlı biçimde çekilebilir. **Diğer gerçek oyuncularla ağ bağlantısı henüz yoktur.**
 - **Avatar özelleştirme:** `K` ile bedensel ölçüler (metre), kıyafet, saç, ten tonu, göz rengi ve gözlük; JSON profil localStorage'da saklanır. Prosedürel modellerde yüz ve ayrık kıyafet katmanları bulunur ve kol/bacak skinned mesh iskeleti kullanılır. Harici VRM/GLB yüklenebilir, ancak bu dosyaların beden ölçüleri varsayılan karakter kadar özelleştirilemez.
 - **Optimizasyon:** InstancedMesh geometri gruplama, paylaşımlı malzemeler, gölge haritası kapalı, harici font yok, adaptif çözünürlük ve 10 Hz HUD.
-
-## Mobil sürüm (Alpha 0.6)
-
-- **Ek yazılım veya sunucu gerektirmez:** Mobilde `pointer lock` kullanılmaz. `DÜNYAYA GİR` sonrasında dokunmatik HUD otomatik görünür; normal masaüstünde klavye/fare girişleri korunur. Test için masaüstünden `?touch=1` eklenebilir.
-- **Sol joystick:** Sürekli ve diyagonal yürüyüş; parmak kalkınca hareket hemen sıfırlanır. Sağ boş oyun alanını kaydırarak kamera yönlendirilir; böylece hareket ederken bakılabilir.
-- **Eylemler:** Zıpla, koş (aç/kapat), çömel (aç/kapat), yere otur/kalk, diz çök/kalk, üçüncü kişi kamera, karakter düzenleyici, kapı/NPC/mobilya kullan, bırak. Sol ve sağ el ayrı basılı tutulur; **İT / ÇEK** tutulan nesnenin veya NPC elinin uzaklığını değiştirir.
-- **Ekranlar:** Kat seçici, karakter özelleştirici, model yükleme alanı, başlangıç ve ayar modalları dokunulabilir boyutlarda, güvenli ekran kenar boşluklarıyla ve küçük ekranlarda kaydırılabilir. Portre ve yatay kullanım desteklenir.
-- **Performans:** Mobil varsayılanında maksimum piksel oranı 1.05 (veya daha düşük cihaz oranı); dinamik çözünürlük yavaşlamada 0.55'e kadar azalır. Ayarlarda otomatik/düşük/dengeli/yüksek kalite ve dokunmatik kamera hassasiyeti bulunur. Ayarlar `localStorage` üzerinde cihazda tutulur.
-- **Güvenilirlik:** Menü açılınca joystick ve tüm kavramalar bırakılır. Arka plana geçişte girişler sıfırlanır. Birden çok parmakla hareket, bakış ve iki farklı eli kullanmak için Pointer Events + pointer capture kullanılır. Mobil Safari/Chrome'da bazı sistem jestleri veya cihaz GPU sınırlamaları oyundan bağımsız kalır.
-- **Kısıt:** Bu sürümde fiziksel cihazda otomatik ekran görüntüsü karşılaştırması ve geniş cihaz matrisi QA yapılmadı. WebGL2 şarttır; eski cihazlarda düşük kare hızı veya destek yokluğu olabilir. Harici GLB/VRM dosyaları mobilde de 25 MB ile sınırlıdır ve cihaz belleği nedeniyle büyük modeller başarısız olabilir.
-
-### Mobil kontrol tablosu
-
-| Dokunma | Davranış |
-|---|---|
-| Sol alttaki joystick | Yürü / geri git / yana kay |
-| Sağ boş 3D görüntüde sürükle | Kamera yönünü değiştir |
-| SOL EL / SAĞ EL (basılı) | Ayrı elini uzat, yakın nesneyi/eli kavra |
-| − ÇEK / + İT | Kavrama mesafesini değiştir |
-| KULLAN | Yakındaki kapı, asansör, yatak, sandalye veya NPC ile etkileş |
-| ZIPLA / KOŞ | Zıpla / koşma modunu aç-kapat |
-| ÇÖMEL / OTUR / DİZ ÇÖK | Çömelme, yerde oturma, diz çökme ve ayağa kalkma |
-| KAMERA / KARAKTER / BIRAK | FPS-TPS, avatar editörü, kavramayı bırak |
-| ⚙ AYAR | Grafik kalitesi ve dokunmatik hassasiyet |
 
 ## Kontroller
 
@@ -101,9 +77,6 @@ src/
     Orientation.js        # Kamera + avatar + hareket ortak yönü
     PostureControls.js    # Ctrl/Space kombinasyonları ve gecikmeli zıplama
     HandRig.js            # FPS kamera kol/elleri
-  mobile/
-    TouchControls.js      # Joystick, kamera dokunuşu, iki el ve eylem butonları
-    TouchMath.js          # Joystick deadzone, kalite sınırları, hassasiyet
   avatar/
     Avatar.js             # Anatomik temel, yüz, katmanlı kıyafet, skinned mesh ve hareket
     SkinnedLimb.js        # Kemik ağırlıklı kol/bacak cilt ve giyim yüzeyi
@@ -111,7 +84,7 @@ src/
     ModelImporter.js      # Lokal VRM/GLB, dinamik VRM modülü
     AvatarConfig.js       # Profil şeması, sınırlandırma
   ui/
-    Hud.js                # HUD, avatar ayarları, asansör ve mobil grafik ayarları
+    Hud.js                # HUD, avatar ayarları, asansör
 ```
 
 ## Sınırlar ve öncelikler
@@ -127,3 +100,19 @@ Vite proje yolu `base: /games/` olarak `vite.config.js` ile üretilir. GitHub Ac
 ## Model lisansları ve gelecek aktarım
 
 Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoid Hub ve diğer topluluk kaynakları her model için farklı kullanım ve yeniden dağıtım şartları koyabilir. Lisans doğrulanmadan dosya repoya yüklenmemelidir. Rigged GLB/VRM dosya içe aktarımı mevcut; tüm modellerin iskeletini ve yüz ifadelerini eksiksiz retarget etmek, el IK ve kıyafet fiziği ayrı ilerleme aşamalarıdır. Pixiv three-vrm (MIT) yalnızca VRM dosyası seçilince dinamik yüklenir.
+
+
+## Mobil ve tablet desteği (Alpha 0.6)
+
+- **Başlangıç:** Dokunmatik ekran algılandığında **DOKUN VE OYNA** düğmesiyle açılır. `Pointer Lock` veya fare gerekmez. Masaüstü klavye/fare kontrolleri korunur.
+- **Sol joystick:** Analog yürüme ve yön değiştirme (joystick hızın şiddetini de belirler).
+- **Sağ ekran:** Parmağı sürükleyerek kamera açısını değiştir. Kamera hassasiyeti **⚙ Ayarlar** içinden 0.45–2.00× olarak değiştirilebilir.
+- **Temel düğmeler:** Koş (basılı tut), Kullan, Zıpla, Sol El/Sağ El (basılı tut), Çömel (basılı tut), Çek/İt (basılı tut veya kısa dokun), Daha.
+- **Daha menüsü:** Yere otur/kalk, diz çök/kalk, FPS/TPS kamera, tutuşu bırak, karakter düzenleyicisi. Asansör ve diğer mobilyalar için **Kullan** düğmesi.
+- **Menüler:** Karakter düzenleyicisi, GLB/VRM dosya seçme, asansör ve grafik ayarları mobil kaydırmaya uygundur. Ekran dönerse veya uygulama arka plana alınırsa basılı düğmeler serbest bırakılır.
+- **Performans:** Mobil cihazlarda başlangıç piksel oranı (DPR) 1.15 ile sınırlıdır. Otomatik modda düşük kare hızında dinamik çözünürlük azaltılır; minimum 0.55 DPR. Grafik ayarı: Otomatik / Düşük / Orta / Yüksek. Tercihler yalnızca cihazdaki `localStorage` alanına kaydedilir.
+- **Yerleşim:** Dikey/yatay ekran, iOS/Android çentik/safe-area ve dinamik görünür yükseklik (`100dvh`) desteklenir. Yatay kullanım daha geniş görüş sağlar.
+
+### Sınırlar ve beklentiler
+
+Telefonun WebGL2 ve yeterli GPU belleği desteklemesi gerekir. Özellikle çok büyük kullanıcı GLB/VRM dosyaları düşük bellekli cihazlarda yavaş olabilir. Fizik ve karakter etkileşimleri hâlâ tek oyunculu prototiptir, gerçek çok oyunculu sistem değildir. Mobilde gerçek cihaz üzerinde etkileşim ve performans testlerinin yapılması önerilir; GitHub Actions otomatik test ve derleme yapar, bir cihaz çiftliği değildir.

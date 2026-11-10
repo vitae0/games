@@ -10,44 +10,40 @@
 <body>
   <div id="app">
     <canvas id="world" aria-label="VitaeWorld 3D dünyası"></canvas>
-    <div class="topbar"><div class="brand"><span class="signal"></span> VITAE<span>WORLD</span><small> / VITAE HOTEL · ALPHA 0.6</small></div><div class="top-controls"><span id="floor-status">47. KAT</span><span id="hand-status">LMB / RMB · ELLER</span><span id="fps">-- FPS</span><button id="mobile-settings-toggle" type="button" aria-label="Mobil ayarlar">⚙ AYAR</button><button id="avatar-toggle">KARAKTER [K]</button></div></div>
+    <div class="topbar"><div class="brand"><span class="signal"></span> VITAE<span>WORLD</span><small> / VITAE HOTEL · ALPHA 0.6</small></div><div class="top-controls"><span id="floor-status">47. KAT</span><span id="hand-status">LMB / RMB · ELLER</span><span id="fps">-- FPS</span><button id="settings-toggle" type="button" aria-label="Ayarlar">⚙ <span>AYARLAR</span></button><button id="avatar-toggle" type="button">KARAKTER [K]</button></div></div>
     <div id="crosshair" aria-hidden="true"></div>
     <div id="interact-prompt" class="prompt hidden"></div>
     <div class="bottom-left"><div id="movement-status">YÜRÜYÜŞ</div><div id="position-status">0.0, 0.0</div></div>
     <div class="controls-help">WASD hareket · Shift koş · Space zıpla · Ctrl çömel · Çift Ctrl yere otur · Ctrl+Space diz çök (alternatif N) · E kullan · Sol/Sağ tık: tut · Tekerlek: it/çek · F bırak · O kamera · K karakter</div>
-    <section id="start-screen" class="overlay"><div class="hero"><div class="eyebrow">VITAEWORLD / 001</div><h1>VITAE<br><em>HOTEL</em></h1><p>Neon City üzerinde, gökdelenin yalnızca 47–50. katları erişilebilir. Gerçek merdivenlerle yüksel, şehir ışıklarını izle, ellerinle eşyaları ve NPC ellerini tut. İç mekânda modern tasarım, dışarıda gece şehri. Otel dışına çıkılamaz.</p><button id="start-button" class="primary">DÜNYAYA GİR <span>↗</span></button><p class="hint">Telefon ve tablette: sol joystick ile yürü, sağ tarafta kaydırarak bak. Dokunmatik tuşları kullan. WebGL2 gereklidir.</p></div></section>
+    <section id="start-screen" class="overlay"><div class="hero"><div class="eyebrow">VITAEWORLD / 001</div><h1>VITAE<br><em>HOTEL</em></h1><p>Neon City üzerinde, gökdelenin yalnızca 47–50. katları erişilebilir. Gerçek merdivenlerle yüksel, şehir ışıklarını izle, ellerinle eşyaları ve NPC ellerini tut. İç mekânda modern tasarım, dışarıda gece şehri. Otel dışına çıkılamaz.</p><button id="start-button" class="primary">DÜNYAYA GİR <span>↗</span></button><p id="start-hint" class="hint">Masaüstü: WASD + fare. Telefon/tablet: joystick, dokunmatik kamera ve ekrandaki düğmeler. WebGL2 gerekir.</p></div></section>
     <aside id="customizer" class="sidepanel hidden" aria-label="Karakter özelleştirme"><div class="panel-heading"><div><span class="eyebrow">CHARACTER STUDIO / V3</span><h2>Karakter</h2></div><button id="close-customizer" class="icon-button" aria-label="Kapat">×</button></div><p class="panel-intro">Ölçüler metre cinsindendir. Oranları dilediğin gibi ayarlayıp yerel olarak kaydedebilirsin.</p><div id="avatar-fields"></div><div class="asset-import"><h3>Rigged 3D karakter</h3><p>GLB / VRM modeli seç. İskeletli modeller animasyona katılır; dosya cihazından çıkmaz. Varsayılan anime karakterleri zaten skinned mesh kullanır.</p><label for="avatar-model" class="upload-label">GLB / VRM YÜKLE</label><input id="avatar-model" type="file" accept=".vrm,.glb,model/gltf-binary" /><button id="avatar-model-reset" type="button">VARSAYILAN KARAKTER</button><p id="avatar-model-status" class="small" aria-live="polite">Varsayılan: kemikli anime karakter</p></div><div class="panel-actions"><button id="avatar-reset">SIFIRLA</button><button id="avatar-save" class="primary">KAYDET</button></div><p id="save-message" class="small"></p></aside>
     <section id="elevator" class="modal-overlay hidden"><div class="modal"><div class="eyebrow">VITAE HOTEL / LIFT</div><h2>Kat seç</h2><div class="floor-grid"><button data-floor="0">47 <small>RESEPSİYON</small></button><button data-floor="1">48 <small>ODALAR</small></button><button data-floor="2">49 <small>ODALAR</small></button><button data-floor="3">50 <small>SUİTLER</small></button></div><button id="close-elevator" class="secondary">KAPAT [ESC]</button></div></section>
-    <section id="mobile-settings" class="modal-overlay hidden" aria-label="Mobil oyun ayarları">
-      <div class="modal mobile-settings-panel">
-        <div class="panel-heading"><h2>Mobil ayarlar</h2><button id="close-mobile-settings" class="icon-button" aria-label="Ayarları kapat">×</button></div>
-        <label for="touch-quality">Görüntü kalitesi</label>
-        <select id="touch-quality"><option value="auto">Otomatik (önerilen)</option><option value="low">Düşük / pil dostu</option><option value="balanced">Dengeli</option><option value="high">Yüksek</option></select>
-        <label for="touch-sensitivity">Kamera hassasiyeti <output id="touch-sensitivity-value">1.0×</output></label>
-        <input id="touch-sensitivity" type="range" min="0.5" max="2" step="0.1" value="1" />
-        <p class="panel-intro">Sol joystick: hareket · Sağda kaydır: bakış · Sol/Sağ el: basılı tut · İT/ÇEK: tutuş mesafesi. Yatay ekran daha geniş görüş sağlar; dikey ekran da desteklenir.</p>
-        <button id="mobile-settings-done" class="primary">OYUNA DÖN</button>
+    <section id="settings" class="modal-overlay hidden" aria-label="Oyun ayarları"><div class="modal settings-modal"><div class="eyebrow">VITAEWORLD / SETTINGS</div><h2>Ayarlar</h2><label class="settings-field" for="touch-sensitivity">Dokunmatik kamera hassasiyeti <output id="sensitivity-value">1.00×</output></label><input id="touch-sensitivity" type="range" min="0.45" max="2" step="0.05" value="1"/><label class="settings-field" for="quality-mode">Grafik kalitesi</label><select id="quality-mode"><option value="auto">Otomatik (önerilen)</option><option value="low">Düşük / batarya dostu</option><option value="medium">Orta</option><option value="high">Yüksek</option></select><p class="settings-note">Mobil cihazlarda çözünürlük otomatik olarak FPS'e göre ayarlanır. Uzun süreli oyun telefonun ısınmasına neden olabilir.</p><button id="close-settings" class="secondary" type="button">KAPAT</button></div></section>
+  <div id="mobile-ui" class="mobile-ui hidden" aria-label="Dokunmatik oyun kontrolleri" aria-hidden="true">
+    <div id="touch-look" class="touch-look" aria-label="Sağa sola sürükleyerek kamerayı döndür"></div>
+    <div id="touch-joystick" class="touch-joystick" aria-label="Hareket joystick'i"><div class="touch-stick-ring"></div><div id="touch-knob" class="touch-stick-knob"></div><span>HAREKET</span></div>
+    <div class="touch-actions">
+      <div id="touch-extra" class="touch-extra hidden">
+        <button type="button" data-touch-action="sit" aria-label="Yere otur veya kalk">OTUR</button>
+        <button type="button" data-touch-action="kneel" aria-label="Diz çök veya kalk">DİZ ÇÖK</button>
+        <button type="button" data-touch-action="camera" aria-label="Kamerayı değiştir">KAMERA</button>
+        <button type="button" data-touch-action="release" aria-label="Tutulan her şeyi bırak">BIRAK</button>
+        <button type="button" data-touch-action="avatar" aria-label="Karakter düzenleyiciyi aç">KARAKTER</button>
       </div>
-    </section>
-    <div id="touch-controls" class="touch-controls" aria-label="Dokunmatik oyun kontrolleri">
-      <div class="touch-left"><div id="touch-joystick" class="touch-joystick" aria-label="Hareket joystick'i"><div class="touch-joystick-ring"></div><div id="touch-stick-thumb" class="touch-stick-thumb"></div></div><span class="touch-joystick-label">HAREKET</span></div>
-      <div class="touch-right">
-        <div class="touch-grabs"><button data-touch-hold="left" type="button" aria-label="Sol eli tut ve uzat">✋ SOL EL</button><button data-touch-hold="right" type="button" aria-label="Sağ eli tut ve uzat">SAĞ EL ✋</button></div>
-        <div class="touch-push-pull"><button data-touch-action="pull" type="button">− ÇEK</button><button data-touch-action="push" type="button">+ İT</button></div>
-        <div class="touch-action-grid">
-          <button data-touch-action="interact" id="touch-interact" type="button">KULLAN</button>
-          <button data-touch-action="jump" type="button">ZIPLA</button>
-          <button data-touch-action="sprint" type="button">KOŞ</button>
-          <button data-touch-action="crouch" type="button">ÇÖMEL</button>
-          <button data-touch-action="sit" type="button">OTUR</button>
-          <button data-touch-action="kneel" type="button">DİZ ÇÖK</button>
-          <button data-touch-action="camera" type="button">KAMERA</button>
-          <button data-touch-action="avatar" type="button">KARAKTER</button>
-          <button data-touch-action="release" type="button">BIRAK</button>
-        </div>
+      <div class="touch-grid">
+        <button type="button" data-touch-action="run" aria-label="Basılı tutarak koş">KOŞ</button>
+        <button type="button" data-touch-action="interact" aria-label="Eşyayla veya karakterle etkileş">KULLAN</button>
+        <button type="button" data-touch-action="jump" aria-label="Zıpla">ZIPLA</button>
+        <button type="button" data-touch-action="left-hand" aria-label="Sol elle tut, basılı tut">SOL EL</button>
+        <button type="button" data-touch-action="right-hand" aria-label="Sağ elle tut, basılı tut">SAĞ EL</button>
+        <button type="button" data-touch-action="crouch" aria-label="Basılı tutarak çömel">ÇÖMEL</button>
+        <button type="button" data-touch-action="pull" aria-label="Tutulan nesneyi kendine çek">ÇEK −</button>
+        <button type="button" data-touch-action="push" aria-label="Tutulan nesneyi ileri it">İT +</button>
+        <button type="button" data-touch-action="more" aria-label="Ek hareket kontrollerini aç" aria-expanded="false">DAHA ⋯</button>
       </div>
     </div>
-    <div id="toast" class="toast hidden" role="status"></div>
+  </div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </div>
   <script type="module" src="/src/main.js"></script>
 </body>

@@ -5,34 +5,19 @@ import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
 import { normalizeAvatar } from './avatar/AvatarConfig.js';
 import { importCharacterModel } from './avatar/ModelImporter.js';
-import { TouchControls } from './mobile/TouchControls.js';
-import { resolutionCap } from './mobile/TouchMath.js';
+import { isTouchCapable } from './input/TouchMath.js';
 
 const PROFILE_KEY = 'vitaeworld.avatar.v1';
-const SETTINGS_KEY = 'vitaeworld.mobile.v1';
-const touchMode = window.matchMedia?.('(pointer: coarse)').matches || (navigator.maxTouchPoints || 0) > 0 || new URLSearchParams(location.search).has('touch');
-function readSettings() {
-  try {
-    const value = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    const quality = ['auto', 'low', 'balanced', 'high'].includes(value.quality) ? value.quality : 'auto';
-    const sensitivity = Math.max(.5, Math.min(2, Number(value.sensitivity) || 1));
-    return { quality, sensitivity };
-  } catch { return { quality: 'auto', sensitivity: 1 }; }
-}
-const settings = readSettings();
-function saveSettings() {
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* private browsing */ }
-}
-
 const canvas = document.querySelector('#world');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(74, 1, .08, 650);
 scene.add(camera);
 let renderer;
-try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: touchMode ? 'low-power' : 'high-performance', alpha: false }); }
-catch (error) {
-  const start = document.querySelector('#start-screen .hero');
-  if (start) start.innerHTML = '<h2>3D görüntüleme açılamadı</h2><p>Bu cihazda WebGL2 desteklenmiyor veya tarayıcıda kapatılmış. Tarayıcıyı güncelleyip donanım hızlandırmasını etkinleştirin.</p>';
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
+} catch (error) {
+  document.querySelector('#start-button').disabled = true;
+  document.querySelector('#start-hint').textContent = 'Bu cihazda WebGL başlatılamadı. Güncel bir tarayıcı, WebGL2 destekli ekran kartı ve yeterli bellek gerekiyor.';
   throw error;
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -40,17 +25,33 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
 renderer.shadowMap.enabled = false;
 
-let maxDpr = resolutionCap(settings.quality, window.devicePixelRatio || 1, touchMode);
+const touchDevice = isTouchCapable(window);
+const hardwareDpr = window.devicePixelRatio || 1;
+let qualityMode = 'auto';
+let maxDpr = Math.min(hardwareDpr, touchDevice ? 1.15 : 1.5);
 let currentDpr = maxDpr;
+let lowFpsSamples = 0;
+let highFpsSamples = 0;
+function setQuality(mode) {
+  qualityMode = ['auto','low','medium','high'].includes(mode) ? mode : 'auto';
+  const requested = { low: .7, medium: 1, high: touchDevice ? 1.35 : 1.65 }[qualityMode];
+  maxDpr = Math.min(hardwareDpr, requested ?? (touchDevice ? 1.15 : 1.5));
+  currentDpr = maxDpr;
+  lowFpsSamples = 0; highFpsSamples = 0;
+  resize();
+}
 function resize() {
-  const w = Math.max(1, window.innerWidth), h = Math.max(1, window.innerHeight);
+  const w = Math.max(1, canvas.clientWidth || window.innerWidth);
+  const h = Math.max(1, canvas.clientHeight || window.innerHeight);
   renderer.setPixelRatio(currentDpr);
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
+  camera.fov = touchDevice && w < h ? 78 : 74;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
 window.visualViewport?.addEventListener('resize', resize);
+window.addEventListener('orientationchange', resize);
 resize();
 
 function loadProfile() {
@@ -59,7 +60,6 @@ function loadProfile() {
 }
 let hud;
 let player;
-let touchControls;
 const events = {
   toast: (message) => hud?.toast(message),
   openElevator: () => hud?.openElevator(),
@@ -76,6 +76,8 @@ const events = {
 const hotel = new Hotel(scene, events);
 player = new Player(canvas, camera, scene, hotel, loadProfile(), events);
 hud = new Hud(canvas, {
+  player,
+  setQuality,
   getProfile: () => player.avatar.profile,
   loadModel: async (file) => { const model = await importCharacterModel(file); player.avatar.applyExternal(model); },
   resetModel: () => player.avatar.clearExternal(),
@@ -86,35 +88,17 @@ hud = new Hud(canvas, {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); }
     catch { events.toast('Tarayıcı yerel depolamaya erişemedi.'); }
   },
-  touchMode,
-  quality: settings.quality,
-  touchSensitivity: settings.sensitivity,
-  onTouchStart: () => player.setTouchEnabled(true),
-  onMenuOpen: () => touchControls?.reset(),
-  onQualityChange: quality => {
-    settings.quality = quality;
-    saveSettings();
-    maxDpr = resolutionCap(quality, window.devicePixelRatio || 1, touchMode);
-    currentDpr = Math.min(maxDpr, currentDpr);
-    if (quality === 'high') currentDpr = maxDpr;
-    lowFpsSamples = 0; highFpsSamples = 0;
-    resize();
-  },
-  onSensitivityChange: sensitivity => { settings.sensitivity = sensitivity; saveSettings(); },
   selectFloor: (floor) => {
     player.teleport(floor);
     events.toast(`${floor + 47}. kat · Hoş geldin`);
   },
 });
-if (touchMode) touchControls = new TouchControls(canvas, player, hud);
 
 let prev = performance.now();
 let frameCounter = 0;
 let lastHudUpdate = 0;
 let sampleStart = prev;
 let displayedFps = 60;
-let lowFpsSamples = 0;
-let highFpsSamples = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - prev) / 1000, .05);
@@ -133,13 +117,14 @@ function frame(now) {
     frameCounter = 0;
     sampleStart = now;
     if (document.visibilityState === 'visible') {
-      lowFpsSamples = displayedFps < (touchMode ? 28 : 42) ? lowFpsSamples + 1 : 0;
-      highFpsSamples = displayedFps > (touchMode ? 49 : 58) ? highFpsSamples + 1 : 0;
-      const minimumDpr = touchMode ? .55 : .7;
-      if (lowFpsSamples >= 3 && currentDpr > minimumDpr) {
-        currentDpr = Math.max(minimumDpr, +(currentDpr - .12).toFixed(2));
+      lowFpsSamples = displayedFps < (touchDevice ? 29 : 42) ? lowFpsSamples + 1 : 0;
+      highFpsSamples = displayedFps > (touchDevice ? 52 : 58) ? highFpsSamples + 1 : 0;
+      if (qualityMode !== 'auto') { lowFpsSamples = 0; highFpsSamples = 0; }
+      const minDpr = touchDevice ? .55 : .7;
+      if (qualityMode === 'auto' && lowFpsSamples >= 3 && currentDpr > minDpr) {
+        currentDpr = Math.max(minDpr, +(currentDpr - .12).toFixed(2));
         lowFpsSamples = 0; highFpsSamples = 0; resize();
-      } else if (highFpsSamples >= 8 && currentDpr < maxDpr) {
+      } else if (qualityMode === 'auto' && highFpsSamples >= 8 && currentDpr < maxDpr) {
         currentDpr = Math.min(maxDpr, +(currentDpr + .1).toFixed(2));
         highFpsSamples = 0; lowFpsSamples = 0; resize();
       }
@@ -149,5 +134,5 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 window.addEventListener('beforeunload', () => {
-  touchControls?.dispose(); player.dispose(); hotel.dispose(); renderer.dispose();
+  hud?.dispose(); player.dispose(); hotel.dispose(); renderer.dispose();
 });

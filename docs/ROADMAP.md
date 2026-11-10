@@ -49,3 +49,14 @@ Teknik kural: regressions + fps maliyetleri ölçülmeden yeni içerik büyük k
 - Add: Two-bone Three.js SkinnedMesh sleeves, skin and pants on baseline avatars; physically articulated knees/hips, posture blend, visible blinking.
 - Add: Lazy local-only GLB/VRM import via GLTFLoader + three-vrm. No bundled restricted 3rd-party characters.
 - Next: Skeleton retargeting with motion library; VRM expression + eye tracking; cloth skinning; benchmark low-powered browser; playwright gameplay regression.
+
+
+### Alpha 0.6 · Mobile-first controls
+
+- [x] Multitouch joystick, camera drag, two-hand grab/release, push/pull, run, crouch, jump
+- [x] On-screen sit, kneel, interact, camera toggle and avatar controls
+- [x] Responsive panels, dynamic viewport and safe-area insets
+- [x] Pixel-ratio scaling and user-selectable graphics/sensitivity
+- [x] Node unit tests for touch state and integration test for Player touch locomotion
+- [ ] Manual verification on Android Chrome, iOS Safari and low-memory hardware
+- [ ] Cross-device orientation, battery and thermal profiling

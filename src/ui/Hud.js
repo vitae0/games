@@ -1,3 +1,5 @@
+import { TouchControls } from '../input/TouchControls.js';
+import { isTouchCapable, clampTouchSensitivity } from '../input/TouchMath.js';
 import { AVATAR_DEFAULTS, AVATAR_FIELDS, AVATAR_RANGES, SKIN_TONES, EYE_COLORS, normalizeAvatar } from '../avatar/AvatarConfig.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -13,41 +15,42 @@ export class Hud {
     this.canvas = canvas; this.options = options;
     this.customizer = $('#customizer');
     this.elevator = $('#elevator');
+    this.settings = $('#settings');
     this.startScreen = $('#start-screen');
-    this.settings = $('#mobile-settings');
-    this.touchMode = !!options.touchMode;
-    this.touchSensitivity = options.touchSensitivity || 1;
-    this.playing = false;
     this.toastNode = $('#toast');
     this.prompt = $('#interact-prompt');
     this.lastToastTimeout = 0;
     this.profile = normalizeAvatar(options.getProfile());
+    this.touchMode = isTouchCapable(window);
+    this.touchControls = this.touchMode ? new TouchControls($('#mobile-ui'), options.player, {
+      toast: (message) => this.toast(message),
+      onCustomizer: () => this.toggleCustomizer(),
+    }) : null;
+    this.initSettings();
+    if (this.touchMode) {
+      $('#start-button').textContent = 'DOKUN VE OYNA';
+      $('#start-hint').textContent = 'Sol joystick hareket, sağ tarafta parmağını sürükle: kamera. Kontrolleri ekrandan kullan; yatay ekran daha geniş görüş sağlar.';
+      document.documentElement.classList.add('touch-capable');
+    }
     this.bind();
     this.buildAvatarFields();
     this.bindModelImport();
   }
   bind() {
-    $('#start-button').addEventListener('click', () => this.start());
-    this.canvas.addEventListener('click', () => {
-      if (!this.touchMode && !this.isModalOpen()) this.requestLock();
+    $('#start-button').addEventListener('click', () => {
+      if (this.touchControls) {
+        this.touchControls.setEnabled(true);
+        this.startScreen.classList.add('hidden');
+      } else {
+        this.canvas.requestPointerLock?.();
+      }
     });
-    document.addEventListener('pointerlockchange', () => this.updateOverlay());
-    if (this.touchMode) {
-      document.body.classList.add('touch-device');
-      $('#touch-quality').value = this.options.quality || 'auto';
-      $('#touch-sensitivity').value = String(this.touchSensitivity);
-      $('#touch-sensitivity-value').textContent = `${this.touchSensitivity.toFixed(1)}×`;
-      $('#touch-quality').addEventListener('change', e => this.options.onQualityChange(e.target.value));
-      $('#touch-sensitivity').addEventListener('input', e => {
-        this.touchSensitivity = Number(e.target.value);
-        $('#touch-sensitivity-value').textContent = `${this.touchSensitivity.toFixed(1)}×`;
-        this.options.onSensitivityChange(this.touchSensitivity);
-      });
-      $('#mobile-settings-toggle').addEventListener('click', () => this.openSettings());
-      $('#close-mobile-settings').addEventListener('click', () => this.closeSettings());
-      $('#mobile-settings-done').addEventListener('click', () => this.closeSettings());
-    }
-
+    this.canvas.addEventListener('click', () => {
+      if (!this.touchMode && !this.isModalOpen()) this.canvas.requestPointerLock?.();
+    });
+    document.addEventListener('pointerlockchange', () => this.refreshStartScreen());
+    $('#settings-toggle').addEventListener('click', () => this.openSettings());
+    $('#close-settings').addEventListener('click', () => this.closeSettings());
     $('#avatar-toggle').addEventListener('click', () => this.toggleCustomizer());
     $('#close-customizer').addEventListener('click', () => this.closeCustomizer());
     $('#avatar-reset').addEventListener('click', () => { this.profile = normalizeAvatar(AVATAR_DEFAULTS); this.syncAvatarControls(); this.preview(); });
@@ -59,16 +62,50 @@ export class Hud {
       const floor = Number(btn.dataset.floor);
       this.options.selectFloor(floor);
       this.closeElevator();
-      if (!this.touchMode) this.requestLock();
+      if (!this.touchMode) this.canvas.requestPointerLock?.();
     }));
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Escape') {
-        if (this.isSettingsOpen()) this.closeSettings();
-        else if (this.isElevatorOpen()) this.closeElevator();
+        if (this.isElevatorOpen()) this.closeElevator();
         else if (this.isCustomizerOpen()) this.closeCustomizer();
+        else if (this.isSettingsOpen()) this.closeSettings();
       }
     });
   }
+  initSettings() {
+    const read = (key, fallback) => {
+      try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+    };
+    const sensitivity = clampTouchSensitivity(read('vitaeworld.touchSensitivity', '1'));
+    $('#touch-sensitivity').value = String(sensitivity);
+    $('#sensitivity-value').textContent = `${sensitivity.toFixed(2)}×`;
+    this.touchControls?.setSensitivity(sensitivity);
+    $('#touch-sensitivity').addEventListener('input', event => {
+      const value = clampTouchSensitivity(event.target.value);
+      $('#sensitivity-value').textContent = `${value.toFixed(2)}×`;
+      this.touchControls?.setSensitivity(value);
+      try { localStorage.setItem('vitaeworld.touchSensitivity', String(value)); } catch { /* private mode */ }
+    });
+    const mode = read('vitaeworld.quality', 'auto');
+    $('#quality-mode').value = ['auto', 'low', 'medium', 'high'].includes(mode) ? mode : 'auto';
+    this.options.setQuality?.($('#quality-mode').value);
+    $('#quality-mode').addEventListener('change', event => {
+      this.options.setQuality?.(event.target.value);
+      try { localStorage.setItem('vitaeworld.quality', event.target.value); } catch { /* private mode */ }
+      this.toast('Grafik ayarı güncellendi');
+    });
+  }
+  refreshStartScreen() {
+    this.startScreen.classList.toggle('hidden', !!document.pointerLockElement || !!this.touchControls?.enabled || this.isModalOpen());
+  }
+  isSettingsOpen() { return !this.settings.classList.contains('hidden'); }
+  openSettings() {
+    this.touchControls?.suspend();
+    this.settings.classList.remove('hidden');
+    document.exitPointerLock?.();
+    this.startScreen.classList.add('hidden');
+  }
+  closeSettings() { this.settings.classList.add('hidden'); this.refreshStartScreen(); }
   bindModelImport() {
     const input = $('#avatar-model');
     const status = $('#avatar-model-status');
@@ -142,55 +179,29 @@ export class Hud {
     $('#avatar-visor').checked = this.profile.visor;
   }
   preview() { this.profile = normalizeAvatar(this.profile); this.options.previewProfile(this.profile); }
-  requestLock() { this.canvas.requestPointerLock?.()?.catch?.(() => this.toast('Fare kilidi desteklenmedi.')); }
-  start() {
-    if (this.touchMode) {
-      this.playing = true;
-      this.options.onTouchStart?.();
-      this.updateOverlay();
-    } else this.requestLock();
-  }
-  updateOverlay() {
-    const gameActive = this.touchMode ? this.playing : !!document.pointerLockElement;
-    this.startScreen.classList.toggle('hidden', gameActive || this.isModalOpen());
-    document.body.classList.toggle('touch-active', this.touchMode && this.playing);
-    document.body.classList.toggle('touch-menu', this.isModalOpen());
-    if (this.isModalOpen()) this.options.onMenuOpen?.();
-  }
   isCustomizerOpen() { return !this.customizer.classList.contains('hidden'); }
   isElevatorOpen() { return !this.elevator.classList.contains('hidden'); }
-  isSettingsOpen() { return !this.settings.classList.contains('hidden'); }
   isModalOpen() { return this.isCustomizerOpen() || this.isElevatorOpen() || this.isSettingsOpen(); }
   toggleCustomizer() { this.isCustomizerOpen() ? this.closeCustomizer() : this.openCustomizer(); }
-  openCustomizer() {
-    this.profile = normalizeAvatar(this.options.getProfile()); this.syncAvatarControls();
-    this.customizer.classList.remove('hidden'); $('#save-message').textContent = '';
-    document.exitPointerLock?.(); this.updateOverlay();
-  }
-  closeCustomizer() { this.customizer.classList.add('hidden'); this.updateOverlay(); }
-  openElevator() { this.elevator.classList.remove('hidden'); document.exitPointerLock?.(); this.updateOverlay(); }
-  closeElevator() { this.elevator.classList.add('hidden'); this.updateOverlay(); }
-  openSettings() { this.settings.classList.remove('hidden'); document.exitPointerLock?.(); this.updateOverlay(); }
-  closeSettings() { this.settings.classList.add('hidden'); this.updateOverlay(); }
+  openCustomizer() { this.touchControls?.suspend(); this.profile = normalizeAvatar(this.options.getProfile()); this.syncAvatarControls(); this.customizer.classList.remove('hidden'); $('#save-message').textContent = ''; document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
+  closeCustomizer() { this.customizer.classList.add('hidden'); this.refreshStartScreen(); }
+  openElevator() { this.touchControls?.suspend(); this.elevator.classList.remove('hidden'); document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
+  closeElevator() { this.elevator.classList.add('hidden'); this.refreshStartScreen(); }
   toast(text) {
     this.toastNode.textContent = text; this.toastNode.classList.remove('hidden');
     clearTimeout(this.lastToastTimeout);
     this.lastToastTimeout = setTimeout(() => this.toastNode.classList.add('hidden'), 2700);
   }
   update(target, player, speed, fps) {
-    this.prompt.classList.toggle('hidden', !target || !player.active || this.touchMode);
-    if (target && player.active) this.prompt.innerHTML = `<kbd>E</kbd><span></span>`;
+    this.prompt.classList.toggle('hidden', !target || !player.active);
+    if (target && player.active) this.prompt.innerHTML = `<kbd>${this.touchMode ? 'KULLAN' : 'E'}</kbd><span></span>`;
     if (target && player.active) this.prompt.querySelector('span').textContent = target.getLabel();
-    if (this.touchMode) {
-      const interact = $('#touch-interact');
-      interact.disabled = !target || !player.active;
-      interact.title = target?.getLabel() ?? 'Yakında kullanılabilir eşya yok';
-    }
     $('#floor-status').textContent = `${player.floor + 47}. KAT`;
     const held = ['left', 'right'].filter(side => player.hands[side].grip);
     $('#hand-status').textContent = held.length ? `TUTUŞ: ${held.join(' + ').toUpperCase()}` : 'LMB / RMB · ELLER';
-    $('#movement-status').textContent = player.posture === 'stand' && (player.postureControls.crouching || player.touch.crouch) ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'DİZ ÇÖKMÜŞ' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
+    $('#movement-status').textContent = player.posture === 'stand' && (player.postureControls.crouching || player.touchCrouch) ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'DİZ ÇÖKMÜŞ' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
     $('#position-status').textContent = `${player.position.x.toFixed(1)} / ${player.position.z.toFixed(1)} m`;
     $('#fps').textContent = `${fps} FPS`;
   }
+  dispose() { this.touchControls?.dispose(); clearTimeout(this.lastToastTimeout); }
 }

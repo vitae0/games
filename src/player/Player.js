@@ -16,6 +16,8 @@ export class Player {
     this.floor = 0; this.yaw = Math.PI; this.pitch = -.04;
     this.keys = new Set(); this.verticalSpeed = 0; this.jumpOffset = 0;
     this.posture = 'stand'; this.thirdPerson = false; this.walkSpeed = 0;
+    this.touchActive = false; this.touchMove = { x: 0, forward: 0 };
+    this.touchRun = false; this.touchCrouch = false; this.touchGripAdjustment = 0;
     this.avatar = new Avatar(scene, profile);
     this.handRig = new HandRig(camera, profile);
     this.hands = {
@@ -24,77 +26,59 @@ export class Player {
     };
     this.savedStanding = null;
     this.postureControls = new PostureControls();
-    this.touchEnabled = false;
-    this.touch = { forward: 0, strafe: 0, crouch: false, sprint: false };
     this.bindEvents();
   }
-  get active() { return (this.touchEnabled || document.pointerLockElement === this.canvas) && !this.events.isModalOpen(); }
+  get active() { return (document.pointerLockElement === this.canvas || this.touchActive) && !this.events.isModalOpen(); }
   get direction() { const v = forwardFromYaw(this.yaw); return new THREE.Vector3(v.x, 0, v.z); }
   get viewDirection() { const v = viewFromYawPitch(this.yaw, this.pitch); return new THREE.Vector3(v.x, v.y, v.z); }
-  releaseHand(side) {
-    const hand = this.hands[side];
-    hand.pressed = false; hand.grip = null;
-    this.hotel.releaseGrip(side);
+  /** CSS pixel deltas, shared by mouse and mobile swipe gestures. */
+  lookBy(dx, dy, multiplier = 1) {
+    this.yaw -= dx * .0021 * multiplier;
+    this.pitch = clamp(this.pitch - dy * .0019 * multiplier, -1.43, 1.43);
   }
-  releaseHands() { this.releaseHand('left'); this.releaseHand('right'); }
-  setTouchEnabled(enabled) {
-    this.touchEnabled = !!enabled;
-    if (!enabled) this.setTouchMovement(0, 0);
+  setTouchMove(right, forward) {
+    this.touchMove.x = clamp(right, -1, 1);
+    this.touchMove.forward = clamp(forward, -1, 1);
   }
-  setTouchMovement(forward, strafe) {
-    this.touch.forward = clamp(Number(forward) || 0, -1, 1);
-    this.touch.strafe = clamp(Number(strafe) || 0, -1, 1);
-  }
-  lookDelta(dx, dy, factor = 0.0021) {
-    if (!this.active) return;
-    this.yaw -= dx * factor;
-    this.pitch = clamp(this.pitch - dy * factor * .9, -1.43, 1.43);
+  jump() {
+    if (!this.active || this.posture !== 'stand' || this.postureControls.crouching || this.touchCrouch || this.jumpOffset > .0001) return;
+    this.postureControls.cancelJump();
+    this.verticalSpeed = PLAYER.jumpSpeed;
   }
   toggleCamera() {
+    if (!this.active) return;
     this.thirdPerson = !this.thirdPerson;
     this.events.toast(this.thirdPerson ? 'Üçüncü şahıs kamerası' : 'Birinci şahıs kamerası');
   }
-  toggleTouchCrouch() {
-    if (this.posture !== 'stand') { this.standUp(); return; }
-    this.touch.crouch = !this.touch.crouch;
-    if (this.touch.crouch) this.touch.sprint = false;
+  adjustGripDistance(delta) {
+    if (!this.active) return;
+    for (const hand of Object.values(this.hands)) {
+      if (hand.grip) hand.distance = clamp(hand.distance + delta, .6, 3.3);
+    }
   }
-  toggleTouchSprint() {
-    if (this.posture !== 'stand') return;
-    this.touch.sprint = !this.touch.sprint;
-    if (this.touch.sprint) this.touch.crouch = false;
-  }
-  touchJump() {
-    if (!this.active || this.posture !== 'stand' || this.jumpOffset > .001) return;
-    this.touch.crouch = false;
-    this.verticalSpeed = PLAYER.jumpSpeed;
-  }
-  grabHand(side) {
-    if (!this.active || this.posture !== 'stand' || !this.hands[side]) return;
+  pressHand(side) {
+    if (!this.active || this.posture !== 'stand') return;
     this.releaseHand(side);
     const hand = this.hands[side];
     hand.pressed = true;
     const result = this.hotel.tryGrab(side, this.eyePosition(), this.viewDirection, this.floor);
     if (result) {
       hand.grip = result;
-      hand.distance = clamp(result.distance, .65, 3);
-      this.events.toast(`${side === 'left' ? 'Sol' : 'Sağ'} el: ${result.label}`);
+      hand.distance = clamp(result.distance, .65, 3.0);
+      this.events.toast(`${side === 'left' ? 'Sol' : 'Sağ'} el: ${result.label} · it / çek`);
     }
   }
-  shiftGrip(direction) {
-    let changed = false;
-    for (const hand of Object.values(this.hands)) if (hand.grip) {
-      hand.distance = clamp(hand.distance + Math.sign(direction) * .19, .6, 3.3);
-      changed = true;
-    }
-    return changed;
+  releaseHand(side) {
+    const hand = this.hands[side];
+    hand.pressed = false; hand.grip = null;
+    this.hotel.releaseGrip(side);
   }
-
+  releaseHands() { this.releaseHand('left'); this.releaseHand('right'); }
   eyePosition() {
     const eye = this.posture === 'sit' ? .99 : this.posture === 'rest' ? .55 :
       this.posture === 'floorSit' ? this.avatar.profile.height * .43 :
       this.posture === 'kneel' ? this.avatar.profile.height * .57 :
-      (this.postureControls.crouching || this.touch.crouch) ? this.avatar.profile.height * .69 : this.avatar.profile.height - .12;
+      (this.postureControls.crouching || this.touchCrouch) ? this.avatar.profile.height * .69 : this.avatar.profile.height - .12;
     return new THREE.Vector3(this.position.x, this.position.y + eye, this.position.z);
   }
   rightVector() { const v = rightFromYaw(this.yaw); return new THREE.Vector3(v.x, 0, v.z); }
@@ -107,13 +91,13 @@ export class Player {
   bindEvents() {
     this.mouseMove = (event) => {
       if (!this.active) return;
-      if (document.pointerLockElement === this.canvas) this.lookDelta(event.movementX, event.movementY);
+      this.lookBy(event.movementX, event.movementY);
     };
     this.mouseDown = (event) => {
-      if (!this.active || this.posture !== 'stand' || (this.touchEnabled && document.pointerLockElement !== this.canvas)) return;
+      if (!this.active || this.posture !== 'stand') return;
       if (event.button !== 0 && event.button !== 2) return;
       event.preventDefault();
-      this.grabHand(event.button === 0 ? 'left' : 'right');
+      this.pressHand(event.button === 0 ? 'left' : 'right');
     };
     this.mouseUp = (event) => {
       if (event.button === 0 || event.button === 2) this.releaseHand(event.button === 0 ? 'left' : 'right');
@@ -122,7 +106,7 @@ export class Player {
     this.wheel = (event) => {
       if (!this.active || !Object.values(this.hands).some(h => h.grip)) return;
       event.preventDefault();
-      this.shiftGrip(event.deltaY);
+      this.adjustGripDistance(Math.sign(event.deltaY) * .19);
     };
     this.keyDown = (event) => {
       if (!this.active) {
@@ -156,7 +140,7 @@ export class Player {
       this.postureControls.release(event.code);
     };
     this.blur = () => {
-      this.keys.clear(); this.postureControls.reset(); this.setTouchMovement(0, 0); this.releaseHands();
+      this.keys.clear(); this.postureControls.reset(); this.setTouchMove(0, 0); this.releaseHands();
     };
     this.onUnlock = () => { if (!this.active) this.blur(); };
     document.addEventListener('mousemove', this.mouseMove);
@@ -176,7 +160,6 @@ export class Player {
     if (next === 'stand') { this.standUp(); return; }
     this.releaseHands();
     this.postureControls.cancelJump();
-    this.touch.crouch = false; this.touch.sprint = false;
     this.posture = next;
     this.walkSpeed = 0;
     this.verticalSpeed = 0;
@@ -189,7 +172,7 @@ export class Player {
     this.position.set(0, floor * HOTEL.floorHeight, 12.1);
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
     this.postureControls.reset();
-    this.keys.clear(); this.setTouchMovement(0, 0);
+    this.keys.clear(); this.setTouchMove(0, 0);
     this.yaw = Math.PI; this.walkSpeed = 0;
   }
   useFurniture(mode, x, z, yaw) {
@@ -217,17 +200,19 @@ export class Player {
     const active = this.active;
     const forward = this.direction;
     let mx = 0, mz = 0;
-    const crouching = this.postureControls.crouching || this.touch.crouch;
+    const crouching = this.postureControls.crouching || this.touchCrouch;
     if (this.postureControls.consumeJump(performance.now()) &&
       this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching) {
       this.verticalSpeed = PLAYER.jumpSpeed;
     }
     if (active && this.posture === 'stand') {
-      const f = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown')) + this.touch.forward;
-      const r = Number(this.keys.has('KeyD')) - Number(this.keys.has('KeyA')) + this.touch.strafe;
+      const f = clamp(Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown')) + this.touchMove.forward, -1, 1);
+      const r = clamp(Number(this.keys.has('KeyD')) - Number(this.keys.has('KeyA')) + this.touchMove.x, -1, 1);
       const movement = movementFromYaw(this.yaw, f, r);
-      mx = movement.x; mz = movement.z;
-      const speed = crouching ? PLAYER.crouchSpeed : this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || this.touch.sprint ? PLAYER.sprintSpeed : PLAYER.walkingSpeed;
+      const intensity = Math.min(1, Math.hypot(f, r));
+      mx = movement.x * intensity; mz = movement.z * intensity;
+      const sprinting = this.touchRun || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+      const speed = crouching ? PLAYER.crouchSpeed : sprinting ? PLAYER.sprintSpeed : PLAYER.walkingSpeed;
       const traveled = this.hotel.collisions.move(this.floor, this.position.x, this.position.z,
         mx * speed * dt, mz * speed * dt, PLAYER.radius);
       // No stepping sideways off a staircase mid-air. Only the two landings
@@ -257,6 +242,8 @@ export class Player {
       this.position.y = ground + this.jumpOffset;
       this.floor = groundFloor(ground);
     } else this.position.y = this.floor * HOTEL.floorHeight;
+    // A held touch control adjusts the grip continuously; short taps nudge it.
+    if (active && this.touchGripAdjustment) this.adjustGripDistance(this.touchGripAdjustment * dt * 1.05);
     // Pulling on a wall/railing moves the player, not the static world.
     // Re-apply hotel collision to avoid dragging through the facade.
     for (const side of ['left', 'right']) {
