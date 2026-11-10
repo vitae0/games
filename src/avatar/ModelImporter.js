@@ -1,8 +1,13 @@
-/** Lazy-loaded local GLB/VRM import. No network transfer or model CDN dependency. */
+/** Lazy-loaded local GLB/VRM/FBX import. No upload to a remote service. */
 export const MAX_AVATAR_BYTES = 25 * 1024 * 1024;
+export const MAX_FBX_BYTES = 75 * 1024 * 1024;
+export function isFbxFile(file) { return Boolean(file && /\.fbx$/i.test(file.name)); }
 export function validateModelFile(file) {
-  if (!file || !/\.(glb|vrm)$/i.test(file.name)) throw new Error('Sadece .glb veya .vrm destekleniyor.');
-  if (file.size <= 0 || file.size > MAX_AVATAR_BYTES) throw new Error('Model 0–25 MB arasında olmalı.');
+  if (!file || !/\.(glb|vrm|fbx)$/i.test(file.name))
+    throw new Error('GLB, VRM veya çıkarılmış FBX dosyası seçin (.rar/.unitypackage doğrudan açılamaz).');
+  const limit = isFbxFile(file) ? MAX_FBX_BYTES : MAX_AVATAR_BYTES;
+  if (file.size <= 0 || file.size > limit)
+    throw new Error(`Model 0–${limit / (1024 * 1024)} MB arasında olmalı.`);
   return file.name.toLowerCase().endsWith('.vrm');
 }
 
@@ -27,6 +32,14 @@ export function findHumanoidBones(root) {
 
 export async function importCharacterModel(file) {
   const isVrm = validateModelFile(file);
+  if (isFbxFile(file)) {
+    const { FBXLoader } = await import('three/addons/loaders/FBXLoader.js');
+    const scene = new FBXLoader().parse(await file.arrayBuffer(), '');
+    const boneMap = findHumanoidBones(scene);
+    if (!Object.values(boneMap).some(Boolean) && !scene.animations?.length)
+      throw new Error('FBX dosyasında humanoid iskelet veya animasyon bulunamadı.');
+    return { scene, clips: scene.animations || [], vrm: null, boneMap };
+  }
   const [{ GLTFLoader }, vrmModule] = await Promise.all([
     import('three/addons/loaders/GLTFLoader.js'),
     isVrm ? import('@pixiv/three-vrm') : Promise.resolve(null),
