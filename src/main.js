@@ -4,7 +4,7 @@ import { Hotel } from './world/Hotel.js';
 import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
 import { normalizeAvatar } from './avatar/AvatarConfig.js';
-import { importCharacterModel } from './avatar/ModelImporter.js';
+import { importCharacterModel, loadBundledCharacterModel } from './avatar/ModelImporter.js';
 import { isTouchCapable } from './input/TouchMath.js';
 
 const PROFILE_KEY = 'vitaeworld.avatar.v1';
@@ -75,16 +75,51 @@ const events = {
 
 const hotel = new Hotel(scene, events);
 player = new Player(canvas, camera, scene, hotel, loadProfile(), events);
+let modelRequest = 0;
+async function syncBaseModel({ force = false } = {}) {
+  const request = ++modelRequest;
+  if (player.avatar.profile.baseModel === 'procedural') {
+    // Uploaded models remain until reset, unless the user explicitly changes bases.
+    if (player.avatar.external && (force || player.avatar.external.source !== 'upload')) {
+      player.avatar.clearExternal();
+    }
+    return;
+  }
+  if (player.avatar.external?.source === 'bundled') return;
+  if (player.avatar.external?.source === 'upload' && !force) return;
+  try {
+    const model = await loadBundledCharacterModel();
+    if (request !== modelRequest || player.avatar.profile.baseModel !== 'quaternius') {
+      model.scene.traverse(obj => {
+        if (!obj.isMesh) return;
+        obj.geometry?.dispose();
+        for (const mat of Array.isArray(obj.material) ? obj.material : [obj.material]) mat?.dispose();
+      });
+      return;
+    }
+    player.avatar.applyExternal(model, 'bundled');
+  } catch (error) {
+    if (request !== modelRequest) return;
+    events.toast('Quaternius modeli yüklenemedi; eski karakter kullanılıyor');
+    console.warn('Bundled avatar load failed:', error);
+  }
+}
+function updateAvatarProfile(profile) {
+  const changedBase = player.avatar.profile.baseModel !== profile.baseModel;
+  player.avatar.rebuild(profile);
+  player.handRig.setProfile(profile);
+  void syncBaseModel({ force: changedBase });
+}
+void syncBaseModel();
 hud = new Hud(canvas, {
   player,
   setQuality,
   getProfile: () => player.avatar.profile,
-  loadModel: async (file) => { const model = await importCharacterModel(file); player.avatar.applyExternal(model); },
-  resetModel: () => player.avatar.clearExternal(),
-  previewProfile: (profile) => { player.avatar.rebuild(profile); player.handRig.setProfile(profile); },
+  loadModel: async (file) => { ++modelRequest; const model = await importCharacterModel(file); player.avatar.applyExternal(model, 'upload'); },
+  resetModel: () => { player.avatar.clearExternal(); void syncBaseModel({ force: true }); },
+  previewProfile: (profile) => updateAvatarProfile(profile),
   saveProfile: (profile) => {
-    player.avatar.rebuild(profile);
-    player.handRig.setProfile(profile);
+    updateAvatarProfile(profile);
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); }
     catch { events.toast('Tarayıcı yerel depolamaya erişemedi.'); }
   },

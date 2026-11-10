@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { normalizeAvatar, SKIN_TONES, EYE_COLORS } from './AvatarConfig.js';
 import { createSkinnedLimb } from './SkinnedLimb.js';
 import { poseFor } from './PoseMath.js';
+import { visibleGarmentLayers } from './ClothingLayers.js';
 
 /**
  * Stylised human with exposed skin anatomy and detachable visual clothing layers.
@@ -33,6 +34,7 @@ export class Avatar {
     mesh.scale.set(sx, sy, sz);
     mesh.rotation.set(rx, ry, rz);
     group.add(mesh);
+    this.registerGarmentMesh(mesh, material);
     return mesh;
   }
   limb(group, material, fromY, toY, radiusTop, radiusBottom, z = 0) {
@@ -54,7 +56,7 @@ export class Avatar {
   }
   rebuild(profile = this.profile) {
     this.profile = normalizeAvatar(profile);
-    this.clearExternal();
+    // Preserve imported rig when customizing the procedural wardrobe.
     this.root.clear();
     this.geometry.forEach(g => g.dispose());
     this.materials.forEach(m => m.dispose());
@@ -65,7 +67,7 @@ export class Avatar {
       neon: { jacket: 0xd6d1c9, shirt: 0xf9f7f1, pants: 0x626c78, shoes: 0xe7e1d7, accent: 0xa48f75, hair: 0x46352f },
       stealth: { jacket: 0x37404b, shirt: 0xd8d8d2, pants: 0x242c35, shoes: 0x1e2229, accent: 0xaab0ac, hair: 0x29252b },
       chrome: { jacket: 0x947b83, shirt: 0xf4dedb, pants: 0x55515b, shoes: 0xebdfda, accent: 0xcaa799, hair: 0x82504c },
-    }[p.outfit];
+    }[p.outfit === 'none' ? 'neon' : p.outfit];
     this.material = {
       skin: this.mat(SKIN_TONES[p.skinTone], .93),
       lip: this.mat(new THREE.Color(SKIN_TONES[p.skinTone]).lerp(new THREE.Color(0xa15263), .30), .92),
@@ -90,6 +92,7 @@ export class Avatar {
     const armLength = p.height * p.armRatio;
     this.body = new THREE.Group(); this.root.add(this.body);
     this.skinnedLayers = [];
+    this.layerMeshes = { shirt: [], jacket: [], pants: [], shoes: [] };
     this.eyeParts = [];
     this.body.name = 'anatomy';
     this.buildAnatomy(p, legLength, torsoHeight, shoulderY);
@@ -99,6 +102,12 @@ export class Avatar {
     this.rightArm = this.buildArm(1, shoulderY, p.shoulders, armLength);
     this.leftLeg = this.buildLeg(-1, legLength, p.hips);
     this.rightLeg = this.buildLeg(1, legLength, p.hips);
+    this.updateGarmentVisibility();
+    if (this.external) {
+      this.root.add(this.external.wrapper);
+      this.body.visible = false;
+      this.refreshExternalScale();
+    }
     this.root.userData.height = p.height;
   }
   buildAnatomy(p, legs, torsoH, shoulderY) {
@@ -221,6 +230,7 @@ export class Avatar {
     const layer = createSkinnedLimb(this.body, upper, lower, material, options);
     this.geometry.push(layer.geometry);
     this.skinnedLayers.push(layer.mesh);
+    this.registerGarmentMesh(layer.mesh, material);
     return layer.mesh;
   }
   buildArm(sign, y, shoulder, length) {
@@ -266,6 +276,27 @@ export class Avatar {
     upper.userData.knee = lower;
     return upper;
   }
+  registerGarmentMesh(mesh, material) {
+    if (!this.layerMeshes || !this.material) return;
+    const key = Object.entries({
+      shirt: this.material.shirt, jacket: this.material.jacket,
+      pants: this.material.pants, shoes: this.material.shoes,
+    }).find(([, value]) => material === value)?.[0];
+    if (key) this.layerMeshes[key].push(mesh);
+    if (material === this.material.seam) this.layerMeshes.jacket.push(mesh);
+  }
+  updateGarmentVisibility() {
+    const layers = visibleGarmentLayers(this.profile);
+    for (const [key, meshes] of Object.entries(this.layerMeshes)) {
+      for (const mesh of meshes) mesh.visible = layers[key];
+    }
+  }
+  refreshExternalScale() {
+    if (!this.external) return;
+    const factor = this.profile.height / this.external.sourceHeight;
+    this.external.group.scale.setScalar(factor);
+    this.external.group.position.y = -this.external.sourceMinY * factor;
+  }
   headWorldHeight() {
     return this.profile.height + this.body.position.y - this.profile.height * .08;
   }
@@ -304,7 +335,7 @@ export class Avatar {
     this.external = null;
     if (this.body) this.body.visible = true;
   }
-  applyExternal(model) {
+  applyExternal(model, source = 'upload') {
     this.clearExternal();
     // File is attached only to this avatar and never uploaded to a server.
     const wrapper = new THREE.Group();
@@ -323,8 +354,10 @@ export class Avatar {
       const action = mixer.clipAction(clip);
       actions.set(clip.name.toLowerCase(), action);
     }
-    this.external = { wrapper, group: visual, vrm: model.vrm, mixer, actions,
+    this.external = { wrapper, group: visual, vrm: model.vrm, mixer, actions, source,
+      sourceHeight: height, sourceMinY: bounds.min.y,
       boneMap: model.boneMap || {}, baseRotations: new Map() };
+    this.refreshExternalScale();
   }
   updateExternal(dt, speed, posture, pose) {
     const ext = this.external;

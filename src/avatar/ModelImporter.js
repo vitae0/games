@@ -48,3 +48,17 @@ export async function importCharacterModel(file) {
     URL.revokeObjectURL(url);
   }
 }
+
+/** Bundled CC0 Quaternius test base, lazy loaded only when selected. */
+export async function loadBundledCharacterModel() {
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const gltf = await new GLTFLoader().loadAsync(
+    `${import.meta.env.BASE_URL}assets/characters/quaternius-superhero-male.glb`
+  );
+  return {
+    scene: gltf.scene,
+    clips: gltf.animations,
+    vrm: null,
+    boneMap: findHumanoidBones(gltf.scene),
+  };
+}
