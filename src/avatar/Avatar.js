@@ -4,6 +4,7 @@ import { createSkinnedLimb } from './SkinnedLimb.js';
 import { poseFor } from './PoseMath.js';
 import { visibleGarmentLayers } from './ClothingLayers.js';
 import { applyVRoidWardrobe } from './VRoidLayers.js';
+import { applyVRoidColors, buildVRoidHair, buildVRoidUnderwear, disposeVRoidStyle } from './VRoidStyle.js';
 
 /**
  * Stylised human with exposed skin anatomy and detachable visual clothing layers.
@@ -108,7 +109,7 @@ export class Avatar {
       this.root.add(this.external.wrapper);
       this.body.visible = false;
       this.refreshExternalScale();
-      if (this.external.vrm) this.external.wardrobeState = applyVRoidWardrobe(this.external.group, this.profile);
+      if (this.external.vrm) this.updateVRoidStyle();
     }
     this.root.userData.height = p.height;
   }
@@ -299,6 +300,24 @@ export class Avatar {
     this.external.group.scale.setScalar(factor);
     this.external.group.position.y = -this.external.sourceMinY * factor;
   }
+  updateStyle(profile) {
+    // Changing eyes, hair or underwear must not rebuild the rig or re-download the VRM.
+    this.profile = normalizeAvatar(profile);
+    if (this.external?.vrm) this.updateVRoidStyle();
+    else this.updateGarmentVisibility();
+  }
+  updateVRoidStyle() {
+    const ext = this.external;
+    if (!ext?.vrm) return;
+    ext.style ||= { materialCache: new Map(), hairRoot: null, underwearMeshes: [] };
+    // These meshes are the only player-owned stylistic geometry; the humanoid
+    // skeleton and CC0 source body meshes stay intact between changes.
+    disposeVRoidStyle(ext.style);
+    applyVRoidColors(ext.vrm, this.profile, ext.style);
+    ext.wardrobeState = applyVRoidWardrobe(ext.group, this.profile);
+    ext.style.hairRoot = buildVRoidHair(ext.vrm, this.profile);
+    ext.style.underwearMeshes = buildVRoidUnderwear(ext.vrm, this.profile);
+  }
   headWorldHeight() {
     return this.profile.height + this.body.position.y - this.profile.height * .08;
   }
@@ -327,7 +346,8 @@ export class Avatar {
   clearExternal() {
     if (!this.external) return;
     this.root.remove(this.external.wrapper);
-    // Uploaded file owns its own geometries; dispose them on replacement.
+    disposeVRoidStyle(this.external.style);
+    // Imported or bundled file owns its own geometries; dispose on replacement.
     this.external.group.traverse(obj => {
       if (!obj.isMesh) return;
       obj.geometry?.dispose();
@@ -366,7 +386,7 @@ export class Avatar {
       sourceHeight: height, sourceMinY: bounds.min.y,
       boneMap: model.boneMap || {}, baseRotations: new Map() };
     this.refreshExternalScale();
-    if (model.vrm) this.external.wardrobeState = applyVRoidWardrobe(visual, this.profile);
+    if (model.vrm) this.updateVRoidStyle();
   }
   listExternalParts() {
     return (this.external?.parts || []).map(({ mesh, name }, index) => ({

@@ -203,3 +203,18 @@ kıyafet altında bulunmayan deri geometrisini kendiliğinden oluşturamayız.
 Özel kullanıcı FBX/GLB/VRM yükleme ve bağımsız mesh görünürlük testleri korunur.
 
 Kaynaklar, lisans ve eksikler: [VRoid base denemesi](docs/VROID_CC0_BASES.md).
+
+## Character Studio V4 — VRoid erkek/kadın, saç, göz ve iç giyim
+
+Karakter menüsü artık sadece **CC0 VRoid Beta Erkek/Kadın** temel karakterlerini
+gösterir. Önceki ölçü kaydırıcıları, prosedürel/Quaternius seçimi, yerel 3D
+dosya yükleyici ve mesh debug paneli karakter menüsünden kaldırıldı.
+
+Yeni seçenekler: saç modeli ve rengi, göz rengi, ten tonu, iç giyim
+(**Yok / Standart / Spor**) ve iç giyim rengi, orijinal örnek dış kıyafet
+(**Yok / Göster**). İç giyim orijinal iskelete bağlanan ayrı bir skinned
+geometri katmanıdır. Örnek kıyafetler gizlendiğinde gövde dokusu nötr ten
+malzemesine çevrilir; kaynak VRM modellerindeki eksik ten yüzeyleri
+kendiliğinden oluşmaz.
+
+Ayrıntılı sınırlar ve testler: [Character Studio V4](docs/VROID_CHARACTER_STUDIO_V4.md).

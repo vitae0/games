@@ -135,3 +135,11 @@ html,body,#app{width:100%;height:100%;height:100dvh;overscroll-behavior:none}
 .avatar-mesh-switch{display:flex;align-items:center;gap:10px;margin:7px 0;padding:4px;font-size:11px;overflow-wrap:anywhere;cursor:pointer}
 .avatar-mesh-switch input{accent-color:#78efed;flex:none}
 .avatar-mesh-switch span{flex:1}
+
+/* VRoid-only character studio (mobile and mouse). */
+.character-section-title{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#9debe1;border-bottom:1px solid rgba(255,255,255,.16);padding:17px 0 8px;margin:12px 0 0}
+#avatar-fields>.field{margin:11px 0}
+#avatar-fields>.field>label{display:block;color:#e2ecf1;font-size:12px;font-weight:650;margin-bottom:7px}
+#avatar-fields>.field>select{display:block;width:100%;min-height:42px;padding:9px 12px;border:1px solid #4a6572;border-radius:6px;background:#172838;color:#e9f4f2}
+.character-info{margin-top:19px;line-height:1.7;color:#afc7ce}
+#avatar-load-status{display:block;margin-top:14px;line-height:1.6}
