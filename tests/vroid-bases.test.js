@@ -4,11 +4,11 @@ import { normalizeAvatar } from '../src/avatar/AvatarConfig.js';
 import { classifyVRoidMaterial, vroidMaterialVisibility, applyVRoidWardrobe } from '../src/avatar/VRoidLayers.js';
 import { SOURCES, gitBlobSha, inspectVrm } from '../scripts/fetch-vroid-bases.mjs';
 
-test('both CC0 beta base genders and legacy fallback are accepted', () => {
+test('both CC0 beta base genders are accepted but outdated sources are rejected', () => {
   assert.equal(normalizeAvatar().baseModel, 'vroidMale');
   assert.equal(normalizeAvatar({baseModel:'vroidFemale'}).baseModel, 'vroidFemale');
-  assert.equal(normalizeAvatar({baseModel:'quaternius'}).baseModel, 'quaternius');
-  assert.equal(normalizeAvatar({baseModel:'procedural'}).baseModel, 'procedural');
+  assert.equal(normalizeAvatar({baseModel:'quaternius'}).baseModel, 'vroidMale');
+  assert.equal(normalizeAvatar({baseModel:'procedural'}).baseModel, 'vroidMale');
   assert.equal(normalizeAvatar({baseModel:'unlicensed'}).baseModel, 'vroidMale');
 });
 test('VRoid garment classification leaves body, face, eyes and hair untouched', () => {
@@ -26,7 +26,7 @@ test('Yok removes garment materials without affecting skin materials', () => {
   assert.equal(vroidMaterialVisibility('M00_Shoes_01_CLOTH',profile),false);
 });
 test('specific garment toggles are independent of each other', () => {
-  const profile = normalizeAvatar({shirtVisible:false,pantsVisible:true,shoesVisible:false});
+  const profile = normalizeAvatar({outfit:'neon',shirtVisible:false,pantsVisible:true,shoesVisible:false});
   assert.equal(vroidMaterialVisibility('Shirt',profile),false);
   assert.equal(vroidMaterialVisibility('Pants',profile),true);
   assert.equal(vroidMaterialVisibility('Shoes',profile),false);
