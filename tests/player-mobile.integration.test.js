@@ -76,8 +76,8 @@ test('third-person camera orbit never rotates stationary avatar, movement rotate
     p.setTouchMove(0,1);
     for(let i=0;i<20;i++) p.update(.05);
     const movementFacing=p.avatar.root.rotation.y;
-    assert.ok(Math.abs(Math.atan2(Math.sin(movementFacing-p.yaw),Math.cos(movementFacing-p.y)))<.02,
-      'walking forward turns avatar to actual heading');
+    assert.ok(Math.abs(Math.atan2(Math.sin(movementFacing-p.yaw),Math.cos(movementFacing-p.yaw)))<.02,
+      `walking forward turns avatar to actual heading: avatar=${movementFacing}, camera=${p.yaw}, speed=${p.walkSpeed}, pos=${p.position.x}/${p.position.z}`);
     p.setTouchMove(0,0);
     p.lookBy(-350,0);
     p.update(.05);
@@ -94,6 +94,7 @@ test('third-person blocked movement does not rotate avatar', () => {
     p.touchActive=true;
     p.toggleCamera();
     p.hotel.collisions.move=(_floor,x,z)=>({x,z});
+    p.update(.05);
     const initial=p.avatar.root.rotation.y;
     p.lookBy(500,0);
     p.setTouchMove(0,1);
