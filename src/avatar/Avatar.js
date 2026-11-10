@@ -4,7 +4,8 @@ import { createSkinnedLimb } from './SkinnedLimb.js';
 import { poseFor } from './PoseMath.js';
 import { visibleGarmentLayers } from './ClothingLayers.js';
 import { applyVRoidWardrobe } from './VRoidLayers.js';
-import { applyVRoidColors, buildVRoidHair, buildVRoidUnderwear, disposeVRoidStyle } from './VRoidStyle.js';
+import { applyVRoidColors, disposeVRoidStyle } from './VRoidStyle.js';
+import { loadPremadeHair, clonePremadeHair, discardPremadeHair } from './VRoidPremadeHair.js';
 
 /**
  * Stylised human with exposed skin anatomy and detachable visual clothing layers.
@@ -301,7 +302,7 @@ export class Avatar {
     this.external.group.position.y = -this.external.sourceMinY * factor;
   }
   updateStyle(profile) {
-    // Changing eyes, hair or underwear must not rebuild the rig or re-download the VRM.
+    // Recolor and layer existing CC0 source assets without rebuilding the rig.
     this.profile = normalizeAvatar(profile);
     if (this.external?.vrm) this.updateVRoidStyle();
     else this.updateGarmentVisibility();
@@ -309,14 +310,34 @@ export class Avatar {
   updateVRoidStyle() {
     const ext = this.external;
     if (!ext?.vrm) return;
-    ext.style ||= { materialCache: new Map(), hairRoot: null, underwearMeshes: [] };
-    // These meshes are the only player-owned stylistic geometry; the humanoid
-    // skeleton and CC0 source body meshes stay intact between changes.
-    disposeVRoidStyle(ext.style);
-    applyVRoidColors(ext.vrm, this.profile, ext.style);
+    ext.style ||= { materialCache: new Map(), hairRoot: null, hairKey: null, hairRequest: 0 };
+    const style = ext.style;
+    applyVRoidColors(ext.vrm, this.profile, style);
     ext.wardrobeState = applyVRoidWardrobe(ext.group, this.profile);
-    ext.style.hairRoot = buildVRoidHair(ext.vrm, this.profile);
-    ext.style.underwearMeshes = buildVRoidUnderwear(ext.vrm, this.profile);
+
+    // Changing clothing, eyes or skin must not reload a hairstyle.
+    const key = `${this.profile.baseModel}:${this.profile.hair}:${this.profile.hairColor}`;
+    if (style.hairKey === key) return;
+    style.hairKey = key;
+    const ticket = ++style.hairRequest;
+    discardPremadeHair(style.hairRoot);
+    style.hairRoot = null;
+    style.hairStatus = this.profile.hair === 'none' ? 'hidden' : 'loading';
+    if (this.profile.hair === 'none') return;
+
+    void loadPremadeHair(this.profile.baseModel).then(template => {
+      if (this.external !== ext || style.hairRequest !== ticket || style.hairKey !== key) return;
+      const head = ext.vrm.humanoid?.getNormalizedBoneNode('head');
+      if (!head) throw new Error('VRoid hedef modelinde kafa kemiği bulunamadı.');
+      const hair = clonePremadeHair(template, this.profile.hairColor);
+      head.add(hair);
+      style.hairRoot = hair;
+      style.hairStatus = 'ready';
+    }).catch(error => {
+      if (this.external !== ext || style.hairRequest !== ticket) return;
+      style.hairStatus = 'error';
+      console.warn('CC0 hazır saç yüklenemedi:', error);
+    });
   }
   headWorldHeight() {
     return this.profile.height + this.body.position.y - this.profile.height * .08;
