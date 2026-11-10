@@ -218,3 +218,20 @@ malzemesine çevrilir; kaynak VRM modellerindeki eksik ten yüzeyleri
 kendiliğinden oluşmaz.
 
 Ayrıntılı sınırlar ve testler: [Character Studio V4](docs/VROID_CHARACTER_STUDIO_V4.md).
+
+## Character Studio V5 — hazır lisanslı saç ve kıyafet
+
+Karakter menüsünde **VRoid beta CC0 hazır saç** (erkek ve kadın için ayrı
+`HairSample` modeli) veya **Saçsız** seçenekleri vardır. Saç geometrisi
+kendimiz tarafından modellenmiyor; resmî CC0 örneklerden alınıp kafa kemiğine
+bağlanıyor. Dış giyside de VRoid'un **orijinal hazır üst, pantolon ve
+ayakkabı mesh'leri** bağımsız açılıp kapatılabilir.
+
+Önceki sürümde kodla üretilen saç tutamları ve iç giyim geometrileri
+**kaldırıldı**. İç giyim alanı artık yalnızca **hazır VRoid gövde dokusu**
+ile **düz ten** arasında geçiş yapar. Orijinal doku, ayrı bir iç giyim
+mesh'i değildir; başka hiçbir hazır giysi bulunmadan "gerçek kıyafet
+katmanı" olduğu iddia edilmiyor.
+
+Kaynakların CC0 lisansları, Git hash'leri ve sınırlamalar:
+[`docs/VROID_PREMADE_ASSETS.md`](docs/VROID_PREMADE_ASSETS.md).
