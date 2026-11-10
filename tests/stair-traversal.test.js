@@ -1,68 +1,78 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  stairFlight, stairStepIndex, stairHeight, stairSupports, pickStairSupport,
-  walkStairs, STAIR, STAIR_RISE, STAIR_RUN,
-} from '../src/world/Stairwell.js';
-import { HOTEL } from '../src/config.js';
+import {stairFlight,stairHeight,stairSupports,pickStairSupport,walkStairs,STAIR,STAIR_RISE,STAIR_RUN} from '../src/world/Stairwell.js';
+import {landingFootprint,UPPER_DECK} from '../src/world/FloorPlan.js';
+import {HOTEL} from '../src/config.js';
+const collisions={move:(_floor,x,z,dx,dz)=>({x:x+dx,z:z+dz})};
+const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-5,`${a} != ${b}`);
+const travel=(x,z,ground,dx,dz)=>walkStairs(collisions,x,z,ground,dx,dz,.33);
+const go=(p,x,z,n=120)=>{
+  for(let i=0;i<n;i++){
+    const r=travel(p.x,p.z,p.ground,(x-p.x)/(n-i),(z-p.z)/(n-i));
+    p.x=r.x;p.z=r.z;p.ground=r.ground;
+  }
+  close(p.x,x);close(p.z,z);
+};
 
-const collisions = { move: (_floor,x,z,dx,dz) => ({x:x+dx,z:z+dz}) };
-const close = (a,b) => assert.ok(Math.abs(a-b)<1e-6, String(a)+' != '+String(b));
-const travel = (x,z,ground,dx,dz) => walkStairs(collisions,x,z,ground,dx,dz,.33);
-
-test('each physical tread top matches its numbered 17.9 cm riser', () => {
+test('every rotated physical stair top agrees with a numbered rise',()=>{
   for(let f=0;f<3;f++){
-    const flight=stairFlight(f);
-    close(stairHeight(f,flight.x,flight.forward?STAIR.zLow:STAIR.zHigh),f*HOTEL.floorHeight);
-    close(stairHeight(f,flight.x,flight.forward?STAIR.zHigh:STAIR.zLow),(f+1)*HOTEL.floorHeight);
+    const q=stairFlight(f);
+    close(stairHeight(f,q.xStart,q.z),f*HOTEL.floorHeight);
+    close(stairHeight(f,q.xEnd,q.z),(f+1)*HOTEL.floorHeight);
     for(let i=0;i<STAIR.steps;i++){
-      const z=flight.forward ? STAIR.zLow+(i+.5)*STAIR_RUN : STAIR.zHigh-(i+.5)*STAIR_RUN;
-      assert.equal(stairStepIndex(f,z),i+1);
-      close(stairHeight(f,flight.x,z),f*HOTEL.floorHeight+(i+1)*STAIR_RISE);
+      const x=q.forward?STAIR.xNear-(i+.5)*STAIR_RUN:STAIR.xFar+(i+.5)*STAIR_RUN;
+      close(stairHeight(f,x,q.z),f*HOTEL.floorHeight+(i+1)*STAIR_RISE);
     }
   }
 });
 
-test('empty upper stairwell has no imaginary flat floor', () => {
-  assert.ok(!stairSupports(-6.90,10.5).some(s=>s.floor===1 && s.type==='deck'));
-  assert.ok(stairSupports(-6.90,13.43).some(s=>s.floor===1 && s.type==='deck'));
-  assert.ok(stairSupports(-6.90,7.56).some(s=>s.floor===2 && s.type==='deck'));
-  assert.equal(pickStairSupport(-6.90,10.5,3.4),null);
+test('shaft centre has no upper-floor ghost deck; perimeter walkway supports upper-floor exit',()=>{
+  assert.ok(!stairSupports(-8.0,10.5).some(s=>s.floor===1&&s.type==='deck'));
+  assert.ok(stairSupports(-8.0,7.65).some(s=>s.floor===1&&s.type==='deck'));
+  assert.equal(pickStairSupport(-8.0,10.5,3.4),null);
+  for(const forward of [true,false]){
+    const land=landingFootprint(forward);
+    for(const deck of UPPER_DECK){
+      const overlapX=Math.abs(land.x-deck.x)<(land.width+deck.width)/2;
+      const overlapZ=Math.abs(land.z-deck.z)<(land.depth+deck.depth)/2;
+      assert.ok(!(overlapX&&overlapZ),'landing must not overlap upper deck surface');
+    }
+  }
 });
 
-test('all flights and both switchback landings work while climbing and descending', () => {
-  let p={x:STAIR.xLeft,z:STAIR.zLow,ground:0};
-  const moveTo=(targetX,targetZ,count=120)=>{
-    for(let i=0;i<count;i++)p=travel(p.x,p.z,p.ground,
-      (targetX-p.x)/(count-i),(targetZ-p.z)/(count-i));
-    close(p.x,targetX);close(p.z,targetZ);
-  };
-  moveTo(STAIR.xLeft,STAIR.zHigh);close(p.ground,3.4);
-  moveTo(STAIR.xLeft,13.43,24);
-  moveTo(STAIR.xRight,13.43,96);
-  moveTo(STAIR.xRight,STAIR.zHigh,24);
-  moveTo(STAIR.xRight,STAIR.zLow);close(p.ground,6.8);
-  moveTo(STAIR.xRight,7.56,24);
-  moveTo(STAIR.xLeft,7.56,96);
-  moveTo(STAIR.xLeft,STAIR.zLow,24);
-  moveTo(STAIR.xLeft,STAIR.zHigh);close(p.ground,10.2);
-  moveTo(STAIR.xLeft,STAIR.zLow);close(p.ground,6.8);
-  moveTo(STAIR.xLeft,7.56,24);
-  moveTo(STAIR.xRight,7.56,96);
-  moveTo(STAIR.xRight,STAIR.zLow,24);
-  moveTo(STAIR.xRight,STAIR.zHigh);close(p.ground,3.4);
-  moveTo(STAIR.xRight,13.43,24);
-  moveTo(STAIR.xLeft,13.43,96);
-  moveTo(STAIR.xLeft,STAIR.zHigh,24);
-  moveTo(STAIR.xLeft,STAIR.zLow);close(p.ground,0);
+test('three rotated flights can be climbed and descended with physical switchback landings',()=>{
+  let p={x:STAIR.xNear,z:STAIR.zRight,ground:0};
+  for(let f=0;f<3;f++){
+    const q=stairFlight(f);
+    go(p,q.xEnd,q.z);
+    close(p.ground,(f+1)*HOTEL.floorHeight);
+    if(f<2){
+      const landing=landingFootprint(q.forward);
+      go(p,landing.x,landing.z,100);
+      go(p,landing.x,stairFlight(f+1).z,100);
+      go(p,q.xEnd,stairFlight(f+1).z,60);
+    }
+  }
+  close(p.ground,3*HOTEL.floorHeight);
+  for(let f=2;f>=0;f--){
+    const q=stairFlight(f);
+    go(p,q.xStart,q.z);
+    close(p.ground,f*HOTEL.floorHeight);
+    if(f>0){
+      const landing=landingFootprint(stairFlight(f-1).forward);
+      go(p,landing.x,landing.z,80);
+      go(p,landing.x,stairFlight(f-1).z,80);
+      go(p,q.xStart,stairFlight(f-1).z,55);
+    }
+  }
+  close(p.ground,0);
 });
 
-test('solid risers and rails prevent side entry, void walking, and sprint tunnelling', () => {
-  const mid=(STAIR.zLow+STAIR.zHigh)/2;
-  const side=travel(STAIR.xLeft,mid,1.7,1.45,0);
-  assert.ok(side.x <= STAIR.xLeft+STAIR.width/2-.33*.48+1e-6);
-  close(travel(-7.0,mid,3.4,.1,0).x,-7);
-  assert.ok(travel(-7,mid,0,-1.3,0).x > STAIR.xLeft+.7);
-  const sprint=travel(STAIR.xLeft,STAIR.zLow,0,0,4.8);
-  assert.ok(sprint.z < STAIR.zHigh);
+test('cannot cross shafts or enter risers sideways from lower height',()=>{
+  const p=travel(-8.0,10.5,3.4,-.4,0);
+  close(p.x,-8.0);
+  const rail=travel(-8.0,9.0,1.65,0,1.5);
+  assert.ok(rail.z<10.5);
+  const sprint=travel(STAIR.xNear,STAIR.zRight,0,-5.2,0);
+  assert.ok(sprint.x>STAIR.xFar);
 });

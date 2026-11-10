@@ -349,36 +349,33 @@ export class Hotel {
     body.label = label;
     this.props.push(mesh);
   }
-  /** Stair meshes are filled physical risers, with actual tread heights matching
-   * Stairwell.stairHeight. Rails sit outside the capsule's walking clearance. */
+  /** East-west physical risers, from corridor-facing near apron towards the
+   * back landing and vice versa on the alternating floors.
+   * A slim approach floor is deliberately kept clear of the entrance.
+   */
   buildStairs() {
-    for (let floor = 0; floor < HOTEL.floors - 1; floor++) {
-      const flight = stairFlight(floor);
-      const base = Y(floor);
-      for (let i = 0; i < STAIR.steps; i++) {
-        const rise = (i + 1) * STAIR_RISE;
-        const z = flight.forward ? STAIR.zLow + (i + .5) * STAIR_RUN
-          : STAIR.zHigh - (i + .5) * STAIR_RUN;
-        // The riser extends from the floor below to the top of the tread.
-        this.box('slab', flight.x, base + rise / 2, z, STAIR.width, rise, STAIR_RUN);
-        this.box('wood', flight.x, base + rise + .010, z,
-          STAIR.width - .16, .020, STAIR_RUN - .035);
-        for (const side of [-1, 1]) {
-          const railX = flight.x + side * (STAIR.width / 2 + .08);
-          this.box('trim', railX, base + rise + .95, z, .105, .10, STAIR_RUN - .025);
-          if (i % 3 === 0 || i === STAIR.steps - 1)
-            this.box('trim', railX, base + rise + .52, z, .095, 1.04, .095);
+    for(let floor=0;floor<HOTEL.floors-1;floor++){
+      const flight=stairFlight(floor),base=Y(floor);
+      for(let i=0;i<STAIR.steps;i++){
+        const rise=(i+1)*STAIR_RISE;
+        const x=flight.forward
+          ? STAIR.xNear-(i+.5)*STAIR_RUN
+          : STAIR.xFar+(i+.5)*STAIR_RUN;
+        this.box('slab',x,base+rise/2,flight.z,STAIR_RUN,rise,STAIR.width);
+        this.box('wood',x,base+rise+.011,flight.z,STAIR_RUN-.025,.022,STAIR.width-.11);
+        for(const sign of [-1,1]){
+          const railZ=flight.z+sign*(STAIR.width/2+.055);
+          this.box('trim',x,base+rise+.91,railZ,STAIR_RUN-.025,.08,.095);
+          if(i%3===0||i===STAIR.steps-1)
+            this.box('trim',x,base+rise+.50,railZ,.09,1.00,.09);
         }
       }
-      // Landing occupies only the true open well; it does not intersect the
-      // upper-floor deck or the final stair tread at the same height.
-      const landing = landingFootprint(flight.forward);
-      this.box('slab', landing.x, Y(floor + 1) - .09, landing.z,
-        landing.width, .18, landing.depth);
+      const landing=landingFootprint(flight.forward);
+      this.box('slab',landing.x,Y(floor+1)-.086,landing.z,
+        landing.width,.172,landing.depth);
     }
-    // Ground floor already has one structural slab. This threshold does not
-    // duplicate the deck surface or overlap the first tread.
-    this.box('trim', -6.85, .011, STAIR.zLow - .18, 5.1, .022, .34);
+    // No extra coplanar slab is drawn on the ground-floor entrance deck.
+    this.box('trim',-3.95,.014,10.5,.25,.028,1.8);
   }
   nearestStaticSurface(origin, direction) {
     this.gripRaycaster.set(origin, direction);
