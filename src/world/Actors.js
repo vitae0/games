@@ -98,10 +98,11 @@ export class Actors {
   getNearby(player) {
     if (player.floor !== 0) return null;
     const forward = player.direction;
-    return this.people.find(actor => actor.ready && (() => {
+    return this.people.find(actor => {
+      if (!actor.ready) return false;
       const d = actor.position.clone().sub(player.position);
       return d.length() < 2.75 && d.dot(forward) > -.1;
-    })()) || null;
+    }) || null;
   }
   update(dt, player = null) {
     for (const actor of this.people) {
