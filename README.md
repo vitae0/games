@@ -1,6 +1,17 @@
-# VitaeWorld · Alpha 0.6 (Vitae Hotel)
+# VitaeWorld · Alpha 0.10 (Vitae Hotel)
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
+
+## Alpha 0.10: yaşanabilir otel, farklı süitler ve büyük şehir
+
+- **Gerçek ayna:** `MirrorPool.js` en yakındaki tek aynaya 256×256 çözünürlüklü planar yansıma uygular; FPS'deki karakteri de geçici olarak yalnız yansıma sırasında gösterir. Uzak aynalar dekoratif kalır. Çoklu ayna efektleri mobil GPU'da paralel işlenmez.
+- **Dört süit düzeni:** `studio`, `panorama`, `executive` ve `wellness`; `SuitePlan.js` oda ve mobilya sınırlarını doğrular. Koltuk TV'ye (+Z), masa sandalyesi çalışma masasına (±X) bakar.
+- **Etkileşimli mobilya:** E ile yatağa/koltuğa otur, küvete gir, suyu doldur/boşalt, alçak masa/koltuk/sehpa/minibar üstüne çık. Fiziksel tavan boşluğu olmayan yüksek dolapların tepesine çıkma güvenli değildir.
+- **Oda ışıkları:** Ayrı panel durumları ve sadece oyuncuya en yakın açık oda için bir adet yerel PointLight; duvar düğmesiyle aç/kapat.
+- **Ortak alanlar:** Birinci kat doğu girişinde bar, arkasında ayrı iki kabinli ortak tuvalet ve lavabolar; batı tarafında modern resepsiyon. Ayrı kapı ve ışık kontrolleri, oturulabilir tabureler, servis tezgâhı.
+- **Genişletilmiş şehir:** ±7 blokluk, yakın/yakın olmayan bölgelere farklı yoğunlukta detay veren instanced kent çevresi; kamera uzaklık sınırı artırıldı. Dış şehir hâlâ dekoratif, yürüme alanı değil.
+- **Kontroller:** Klavye veya mobilde etkileşim düğmesiyle tırman/otur/ışık/su/kapı işlemleri. Yürüyerek alçak mobilyaya çıkılabilir; yüksek yüzeylerde etkileşim gerekir.
+- **Performans:** Yuvarlatılmış mobilya `InstancedMesh`, tek aktif gerçek ayna, tek aktif oda noktasal ışığı, uzak şehir detay seyrekleştirme. Tam fizik motoru ve fotogerçekçi su simülasyonu henüz yok.
 
 ## Oyunu çalıştırma
 

@@ -125,3 +125,18 @@ test('raised bed and sofa interactions keep their surface height until standing 
     assert.equal(p.furnitureHeight, 0);
   } finally {p.dispose();}
 });
+
+
+test('Player climbs a low furnishing, remains on its surface, and exits safely',()=>{
+  const p=playerFixture();
+  try{
+    p.touchActive=true;
+    p.hotel.groundHeight=(x,z,h,floor)=> Math.abs(x-4)<.65&&Math.abs(z-2)<.65?.72:floor*3.4;
+    assert.equal(p.climbFurniture(4,2,.72,0),true);
+    p.update(.05);
+    assert.equal(p.position.y,.72);
+    assert.equal(p.jumpOffset,0);
+    assert.equal(p.posture,'stand');
+    assert.equal(p.climbFurniture(4,2,2.9,0),false,'cannot stand through room ceiling');
+  }finally{p.dispose();}
+});

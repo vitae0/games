@@ -43,3 +43,17 @@ test('bathtubs are contained in bathroom enclosure without obstructing the room 
     assert.equal(overlaps2D(p.desk,p.bath),false);
   }
 });
+
+
+test('suite themes rearrange furniture while keeping entry and bathroom clear',()=>{
+  const themes=['studio','panorama','executive','wellness'];
+  for(const type of themes)for(const side of [-1,1]){
+    const p=suitePlan(side,-3.5,type);
+    const keys=['bed','bath','desk','chair','sofa','table','tv','wardrobe','minibar'];
+    for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++)
+      assert.equal(overlaps2D(p[keys[i]],p[keys[j]]),false,`${type} ${side}: ${keys[i]} intersects ${keys[j]}`);
+    for(const key of keys)assert.equal(overlaps2D(p.entry,p[key]),false,`${type} entrance obstructed by ${key}`);
+    assert.ok(p.sofa.z<p.tv.z,'sofa faces north-facing TV');
+    assert.ok(Math.abs(p.chair.x)<Math.abs(p.desk.x),'desk chair faces toward desk on x axis');
+  }
+});

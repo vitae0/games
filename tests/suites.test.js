@@ -74,7 +74,7 @@ test('minibar and bath doors, shower and water each toggle their state',()=>{
     bath.activate(); assert.ok([...s.doors.values()].some(active=>!active));
     s.fake.animations.forEach(fn=>fn(1/60));
     bath.activate(); assert.ok([...s.doors.values()].every(Boolean));
-    const tub=get('Küvet');
+    const tub=s.fake.interactables.find(o=>o.getLabel().startsWith('Küvet · Suyu'));
     const water=s.fake.suiteMeshes.find(mesh=>mesh.material.isShaderMaterial);
     assert.ok(water && water.visible===false);
     tub.activate(); assert.ok(tub.getLabel().includes('boşalt'));
@@ -110,6 +110,34 @@ test('bath is a full-height room with continuous wall segments, a door, and a no
       assert.ok(s.fake.suiteMeshes.some(mesh=>mesh.geometry===s.fake.bathAssets.tubGeometry),'oval tub exists');
       const tile=s.geometry.find(b=>b.name==='slab'&&Math.abs(b.x-q.bath.x)<1e-5);
       assert.ok(tile&&Math.abs((tile.y+tile.height/2)-(3.4+.0735))<1e-5,'tile raised above wood floor');
+    }finally{s.cleanup()}
+  }
+});
+
+
+test('tub offers a separate enter action with a seated posture inside its basin',()=>{
+  const s=suite(1,3.5);
+  try{
+    const tub=s.fake.interactables.find(o=>o.getLabel().startsWith('Küvet · İçine gir'));
+    assert.ok(tub);
+    const args=[];
+    tub.activate({useFurniture:(...x)=>args.push(x)});
+    assert.equal(args[0][0],'sit');
+    assert.equal(args[0][4],.17);
+  }finally{s.cleanup()}
+});
+
+
+test('sofa faces the TV and desk chair faces the workstation in both mirrored suites',()=>{
+  for(const side of [-1,1]){
+    const s=suite(side,3.5);
+    try{
+      const commands=[];
+      const actor={useFurniture:(...args)=>commands.push(args)};
+      s.fake.interactables.find(i=>i.getLabel()==='Koltuk · Otur').activate(actor);
+      s.fake.interactables.find(i=>i.getLabel()==='Çalışma sandalyesi · Otur').activate(actor);
+      assert.equal(commands[0][3],Math.PI,'sofa must point toward north-facing TV');
+      assert.equal(commands[1][3],-side*Math.PI/2,'chair must point toward its workstation');
     }finally{s.cleanup()}
   }
 });

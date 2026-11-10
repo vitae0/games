@@ -13,9 +13,9 @@ export function buildBar(hotel) {
   box('wood',6.8,y+.018,-10.68,9.8,.035,6.45);
   box('darkWall',8.55,y+1.38,-14.73,6.1,2.65,.09);
   for(let i=0;i<8;i++)box('wood',5.9+i*.72,y+1.32,-14.63,.08,2.35,.075);
-  round('black',8.40,y+.62,-12.75,5.7,1.20,.82,0,true);
+  round('black',8.40,y+.62,-12.75,5.7,1.20,.82);
   round('wood',8.40,y+1.28,-12.75,5.86,.14,1.00);
-  hotel.addWalkSurface(0,8.40,-12.75,5.86,.96,1.35);
+  hotel.climbable?.(0,8.40,-12.75,5.7,.8,1.35,'Bar tezgâhı');
   box('glass',8.40,y+1.81,-14.53,4.6,.05,.42);
   box('glass',8.40,y+2.29,-14.53,4.6,.05,.42);
   for(let i=0;i<7;i++){
@@ -56,27 +56,34 @@ export function buildPublicRestrooms(hotel) {
   box('darkWall',10.99,1.47,-6.70,.12,2.9,.16);
   // Sink bank is against the north wall; access lane remains clear.
   for(const z of [-5.25,-3.55,-1.85]){
-    round('ceramic',9.85,.69,z,.90,.23,.58,0,true);
-    round('glass',9.85,.86,z,.70,.045,.38);
-    box('warm',9.84,2.49,z,.75,.04,.11);
+    round('ceramic',5.38,.69,z,.88,.23,.52);
+    round('glass',5.38,.86,z,.66,.045,.35);
+    box('warm',5.37,2.49,z,.71,.04,.10);
+    hotel.climbable?.(0,5.38,z,.74,.44,.84,'Lavabo bankosu');
+    // Individual wall-mounted mirrors use the same nearby Reflector as suites.
+    box('trim',6.04,1.73,z,.032,1.06,.80);
+    box('black',6.00,1.73,z,.017,.98,.73);
+    hotel.mirrors?.register(0,5.983,1.73,z,-Math.PI/2);
   }
-  const stalls=[-5.12,-1.82];
+  const stalls=[-5.20,-1.80];
   for(const z of stalls){
-    // Two independent cubicles with front-side access and doors.
-    box('innerWall',7.78,1.48,z+(.60),.10,2.95,.57,0,true);
-    box('innerWall',7.78,1.48,z-(.60),.10,2.95,.57,0,true);
-    box('innerWall',9.05,1.48,z,2.46,2.95,.10,0,true);
-    round('ceramic',8.57,.35,z,.57,.46,.56,0,true);
+    // Two private cubicles to the east; central aisle x=2..7.7 stays clear.
+    for(const edgeZ of [z-1.02,z+1.02])
+      box('innerWall',9.83,1.48,edgeZ,3.30,2.95,.10,0,true);
+    box('innerWall',11.50,1.48,z,.10,2.95,1.98,0,true);
+    box('innerWall',8.16,1.48,z-.77,.10,2.95,.47,0,true);
+    box('innerWall',8.16,1.48,z+.77,.10,2.95,.47,0,true);
+    round('ceramic',10.53,.35,z,.57,.46,.56,0,true);
     const door=new THREE.Mesh(hotel.suiteBathroomDoorGeometry,hotel.materials.black);
-    door.position.set(7.78,1.19,z);
+    door.position.set(8.16,1.19,z);
     hotel.scene.add(door);hotel.suiteMeshes.push(door);
-    const collider=hotel.collisions.add(0,7.78,z,.12,.67);
+    const collider=hotel.collisions.add(0,8.16,z,.12,1.06);
     let open=false;
-    put(6.95,z,()=>`Ortak tuvalet · Kapıyı ${open?'kapat':'aç'}`,()=>{
+    put(7.15,z,()=>`Ortak tuvalet · Kapıyı ${open?'kapat':'aç'}`,()=>{
       open=!open;hotel.collisions.setActive(collider,!open);
       hotel.events.toast(open?'Tuvalet kabini açıldı':'Tuvalet kabini kapandı');
     });
-    hotel.animations.push(dt=>{door.position.z=THREE.MathUtils.damp(door.position.z,z-(open?.63:0),8,dt)});
+    hotel.animations.push(dt=>{door.position.z=THREE.MathUtils.damp(door.position.z,z-(open ? 1.03 : 0),8,dt)});
   }
   let taps=false;
   put(9.3,-3.40,()=>`Lavabolar · Suyu ${taps?'kapat':'aç'}`,()=>{
