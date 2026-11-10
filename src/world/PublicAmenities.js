@@ -76,7 +76,7 @@ export function buildPublicRestrooms(hotel) {
       open=!open;hotel.collisions.setActive(collider,!open);
       hotel.events.toast(open?'Tuvalet kabini açıldı':'Tuvalet kabini kapandı');
     });
-    hotel.animations.push(dt=>{door.position.z=THREE.MathUtils.damp(door.position.z,z-(open?.63:0),8,dt)});
+    hotel.animations.push(dt=>{door.position.z=THREE.MathUtils.damp(door.position.z,z-(open ? .63 : 0),8,dt)});
   }
   let taps=false;
   put(9.3,-3.40,()=>`Lavabolar · Suyu ${taps?'kapat':'aç'}`,()=>{

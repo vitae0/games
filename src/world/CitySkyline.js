@@ -27,22 +27,22 @@ export class CitySkyline {
     const b = this.batch;
     const random = randomGenerator(50171);
     const base = -118;
-    b.add('road', 0, base - .3, 0, 1200, .5, 1200);
+    b.add('road', 0, base - .3, 0, 2000, .5, 2000);
     // Street grid. Roads are far below the playable hotel, not traversable.
-    for (let axis = -4; axis <= 4; axis++) {
+    for (let axis = -7; axis <= 7; axis++) {
       const p = axis * 68;
-      b.add('sidewalk', p, base + .01, 0, 55, .04, 1000);
-      b.add('road', p + 29, base + .04, 0, 12, .055, 1000);
-      b.add('sidewalk', 0, base + .01, p, 1000, .04, 55);
-      b.add('road', 0, base + .04, p + 29, 1000, .055, 12);
-      for (let q = -4; q <= 4; q++) {
+      b.add('sidewalk', p, base + .01, 0, 55, .04, 1900);
+      b.add('road', p + 29, base + .04, 0, 12, .055, 1900);
+      b.add('sidewalk', 0, base + .01, p, 1900, .04, 55);
+      b.add('road', 0, base + .04, p + 29, 1900, .055, 12);
+      for (let q = -7; q <= 7; q++) {
         // Road markings at intersections are cheap instances.
         b.add('yellow', p + 29, base + .075, q * 68 + 14, .13, .015, 4.4);
         b.add('yellow', q * 68 + 14, base + .075, p + 29, 4.4, .015, .13);
       }
     }
-    // 81 city blocks. No textures, no network transfers, mostly 9 instanced draw calls.
-    for (let ix = -4; ix <= 4; ix++) for (let iz = -4; iz <= 4; iz++) {
+    // 225 city blocks; distant districts use sparse window details. No textures, no network transfers, mostly 9 instanced draw calls.
+    for (let ix = -7; ix <= 7; ix++) for (let iz = -7; iz <= 7; iz++) {
       const x = ix * 68 + (random() - .5) * 12;
       const z = iz * 68 + (random() - .5) * 12;
       if (Math.abs(x) < 42 && Math.abs(z) < 43) continue;
@@ -51,8 +51,9 @@ export class CitySkyline {
       const m = random() > .5 ? 'facade' : 'tower';
       b.add(m, x, base + h / 2, z, w, h, d);
       b.add(random() > .5 ? 'pink' : 'cyan', x, base + h + .32, z, w + .25, .50, d + .25);
-      for (let level = 0; level < Math.floor(h / 6); level++) {
-        const y = base + level * 6 + 3.2;
+      const distant=Math.max(Math.abs(ix),Math.abs(iz))>=5;
+      for (let level = 0; level < Math.floor(h / (distant?12:6)); level++) {
+        const y = base + level * (distant?12:6) + 3.2;
         const lit = random() > .28;
         if (!lit) continue;
         const glow = random() < .45 ? 'cyan' : random() < .65 ? 'pink' : 'yellow';

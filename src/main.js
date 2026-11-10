@@ -11,7 +11,7 @@ const PROFILE_KEY = 'vitaeworld.avatar.v1';
 const canvas = document.querySelector('#world');
 const touchDevice = isTouchCapable(window);
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(74, 1, .08, 650);
+const camera = new THREE.PerspectiveCamera(74, 1, .08, 1250);
 scene.add(camera);
 let renderer;
 try {
@@ -152,8 +152,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - prev) / 1000, .05);
   prev = now;
-  hotel.update(dt);
   const speed = player.update(dt);
+  hotel.update(dt,player);
   const target = hotel.closestInteraction(player, player.direction);
   if (now - lastHudUpdate >= 100) {
     hud.update(target, player, speed, displayedFps);
