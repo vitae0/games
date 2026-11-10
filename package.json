@@ -1,6 +1,6 @@
 {
   "name": "vitaeworld",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "check": "node --test tests/*.test.js"
   },
   "dependencies": {
-    "three": "^0.187.0"
+    "three": "^0.187.0",
+    "@pixiv/three-vrm": "^3.5.5"
   },
   "devDependencies": {
     "vite": "^8.3.7"

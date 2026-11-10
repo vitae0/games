@@ -42,3 +42,10 @@
 - [ ] Oda ve şehir editörü; mod paketleri ve bağımlılık sınırları
 
 Teknik kural: regressions + fps maliyetleri ölçülmeden yeni içerik büyük kitlelere açılmaz.
+
+
+### Alpha 0.5 (2026-11-10)
+- Fix: Ctrl double-tap/Space input state machine and jump precedence; auto temporary third-person for floor sitting / kneeling; N fallback for OS-level Ctrl+Space intercept.
+- Add: Two-bone Three.js SkinnedMesh sleeves, skin and pants on baseline avatars; physically articulated knees/hips, posture blend, visible blinking.
+- Add: Lazy local-only GLB/VRM import via GLTFLoader + three-vrm. No bundled restricted 3rd-party characters.
+- Next: Skeleton retargeting with motion library; VRM expression + eye tracking; cloth skinning; benchmark low-powered browser; playwright gameplay regression.

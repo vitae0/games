@@ -26,3 +26,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline-color:#d9c
 .floor-grid button small{color:#c9b9a6}
 .toast{background:#2c3135f0;border-color:#ad9a83}
 #hand-status{color:#d4bda4}
+
+/* Local avatar model import; no global drag/drop and no external asset uploads. */
+.asset-import{padding:14px 0 18px;margin-top:12px;border-top:1px solid rgba(255,255,255,.15)}
+.asset-import h3{font-size:14px;margin:0 0 6px;font-weight:650}
+.asset-import p{font-size:11px;line-height:1.65;opacity:.75}
+.asset-import input[type=file]{position:absolute;left:-9999px;opacity:0}
+.asset-import .upload-label,.asset-import button{display:inline-block;padding:8px 10px;border:1px solid rgba(255,255,255,.25);border-radius:5px;font-size:10px;cursor:pointer;margin:5px 6px 7px 0;background:rgba(255,255,255,.07);color:inherit}
+.asset-import .upload-label:hover,.asset-import button:hover{background:rgba(255,255,255,.17)}

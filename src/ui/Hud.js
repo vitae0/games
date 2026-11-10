@@ -20,6 +20,7 @@ export class Hud {
     this.profile = normalizeAvatar(options.getProfile());
     this.bind();
     this.buildAvatarFields();
+    this.bindModelImport();
   }
   bind() {
     $('#start-button').addEventListener('click', () => this.canvas.requestPointerLock());
@@ -47,6 +48,31 @@ export class Hud {
         if (this.isElevatorOpen()) this.closeElevator();
         else if (this.isCustomizerOpen()) this.closeCustomizer();
       }
+    });
+  }
+  bindModelImport() {
+    const input = $('#avatar-model');
+    const status = $('#avatar-model-status');
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      input.disabled = true;
+      status.textContent = 'Model işleniyor...';
+      try {
+        await this.options.loadModel(file);
+        status.textContent = `${file.name} · geçici yerel model`;
+        this.toast('İskeletli karakter yüklendi');
+      } catch (error) {
+        status.textContent = `Hata: ${error?.message || 'Bilinmeyen'}`;
+        this.toast('Model yüklenemedi');
+      } finally {
+        input.disabled = false;
+        input.value = '';
+      }
+    });
+    $('#avatar-model-reset').addEventListener('click', () => {
+      this.options.resetModel();
+      status.textContent = 'Varsayılan: kemikli anime karakter';
     });
   }
   buildAvatarFields() {
@@ -117,7 +143,7 @@ export class Hud {
     $('#floor-status').textContent = `${player.floor + 47}. KAT`;
     const held = ['left', 'right'].filter(side => player.hands[side].grip);
     $('#hand-status').textContent = held.length ? `TUTUŞ: ${held.join(' + ').toUpperCase()}` : 'LMB / RMB · ELLER';
-    $('#movement-status').textContent = player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'DİZ ÇÖKMÜŞ' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
+    $('#movement-status').textContent = player.posture === 'stand' && player.postureControls.crouching ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'DİZ ÇÖKMÜŞ' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
     $('#position-status').textContent = `${player.position.x.toFixed(1)} / ${player.position.z.toFixed(1)} m`;
     $('#fps').textContent = `${fps} FPS`;
   }

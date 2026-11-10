@@ -4,6 +4,7 @@ import { Hotel } from './world/Hotel.js';
 import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
 import { normalizeAvatar } from './avatar/AvatarConfig.js';
+import { importCharacterModel } from './avatar/ModelImporter.js';
 
 const PROFILE_KEY = 'vitaeworld.avatar.v1';
 const canvas = document.querySelector('#world');
@@ -51,6 +52,8 @@ const hotel = new Hotel(scene, events);
 player = new Player(canvas, camera, scene, hotel, loadProfile(), events);
 hud = new Hud(canvas, {
   getProfile: () => player.avatar.profile,
+  loadModel: async (file) => { const model = await importCharacterModel(file); player.avatar.applyExternal(model); },
+  resetModel: () => player.avatar.clearExternal(),
   previewProfile: (profile) => { player.avatar.rebuild(profile); player.handRig.setProfile(profile); },
   saveProfile: (profile) => {
     player.avatar.rebuild(profile);

@@ -3,7 +3,8 @@ import { PLAYER, HOTEL } from '../config.js';
 import { Avatar } from '../avatar/Avatar.js';
 import { HandRig } from './HandRig.js';
 import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw } from './Orientation.js';
-import { controlTap, isFloorPosture, nextFloorPosture } from './Postures.js';
+import { isFloorPosture, nextFloorPosture } from './Postures.js';
+import { PostureControls } from './PostureControls.js';
 import { resolveGround, groundFloor, stairHeight, inStairLane } from '../world/Stairwell.js';
 
 const clamp = THREE.MathUtils.clamp;
@@ -22,7 +23,7 @@ export class Player {
       right: { pressed: false, grip: null, distance: 1.55 },
     };
     this.savedStanding = null;
-    this.lastControlTapAt = null;
+    this.postureControls = new PostureControls();
     this.bindEvents();
   }
   get active() { return document.pointerLockElement === this.canvas && !this.events.isModalOpen(); }
@@ -38,7 +39,7 @@ export class Player {
     const eye = this.posture === 'sit' ? .99 : this.posture === 'rest' ? .55 :
       this.posture === 'floorSit' ? this.avatar.profile.height * .43 :
       this.posture === 'kneel' ? this.avatar.profile.height * .57 :
-      this.keys.has('ControlLeft') || this.keys.has('ControlRight') ? 1.08 : this.avatar.profile.height - .12;
+      this.postureControls.crouching ? this.avatar.profile.height * .69 : this.avatar.profile.height - .12;
     return new THREE.Vector3(this.position.x, this.position.y + eye, this.position.z);
   }
   rightVector() { const v = rightFromYaw(this.yaw); return new THREE.Vector3(v.x, 0, v.z); }
@@ -81,44 +82,41 @@ export class Player {
       }
     };
     this.keyDown = (event) => {
-      if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(event.code) && this.active) event.preventDefault();
-      if (event.repeat && ['KeyE', 'KeyO', 'KeyV', 'KeyK', 'Space', 'ControlLeft', 'ControlRight'].includes(event.code)) return;
-      if (event.code === 'KeyK' && !this.events.isElevatorOpen()) {
-        this.releaseHands(); this.events.toggleCustomizer(); return;
+      if (!this.active) {
+        if (event.code === 'KeyK' && !event.repeat && !this.events.isElevatorOpen()) {
+          this.releaseHands(); this.events.toggleCustomizer();
+        }
+        return;
       }
-      if (!this.active) return;
+      // Prevent native browser shortcuts from hijacking combinations while in pointer lock.
+      if (['Space', 'ControlLeft', 'ControlRight', 'ArrowUp', 'ArrowDown', 'Tab'].includes(event.code)) event.preventDefault();
+      if (event.repeat || this.keys.has(event.code)) return;
       this.keys.add(event.code);
-      const controlHeld = this.keys.has('ControlLeft') || this.keys.has('ControlRight');
-      if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
-        if (this.keys.has('Space')) {
-          this.lastControlTapAt = null;
-          this.setFloorPosture('kneel');
-        } else {
-          const tap = controlTap(this.lastControlTapAt, performance.now());
-          this.lastControlTapAt = tap.nextTapAt;
-          if (tap.double) this.setFloorPosture('floorSit');
-        }
+      const action = this.postureControls.press(event.code, performance.now());
+      if (action === 'floorSit' || action === 'kneel') {
+        this.setFloorPosture(action);
         return;
       }
-      if (event.code === 'Space') {
-        if (controlHeld) {
-          this.lastControlTapAt = null;
-          this.setFloorPosture('kneel');
-        } else if (this.jumpOffset <= .0001 && this.posture === 'stand') {
-          this.verticalSpeed = PLAYER.jumpSpeed;
-        }
-        return;
-      }
+      // Some desktop IMEs reserve Ctrl+Space. N is an always-available fallback.
+      if (event.code === 'KeyN') { this.setFloorPosture('kneel'); return; }
       if (event.code === 'KeyO' || event.code === 'KeyV') {
         this.thirdPerson = !this.thirdPerson;
         this.events.toast(this.thirdPerson ? 'Üçüncü şahıs kamerası [O]' : 'Birinci şahıs kamerası [O]');
       }
+      if (event.code === 'KeyK' && !this.events.isElevatorOpen()) {
+        this.releaseHands(); this.events.toggleCustomizer();
+      }
       if (event.code === 'KeyE') this.events.interact();
       if (event.code === 'KeyF') this.releaseHands();
     };
-    this.keyUp = (event) => this.keys.delete(event.code);
-    this.blur = () => { this.keys.clear(); this.lastControlTapAt = null; this.releaseHands(); };
-    this.onUnlock = () => { if (!this.active) this.releaseHands(); };
+    this.keyUp = (event) => {
+      this.keys.delete(event.code);
+      this.postureControls.release(event.code);
+    };
+    this.blur = () => {
+      this.keys.clear(); this.postureControls.reset(); this.releaseHands();
+    };
+    this.onUnlock = () => { if (!this.active) this.blur(); };
     document.addEventListener('mousemove', this.mouseMove);
     document.addEventListener('pointerlockchange', this.onUnlock);
     this.canvas.addEventListener('mousedown', this.mouseDown);
@@ -135,6 +133,7 @@ export class Player {
     const next = nextFloorPosture(this.posture, requested);
     if (next === 'stand') { this.standUp(); return; }
     this.releaseHands();
+    this.postureControls.cancelJump();
     this.posture = next;
     this.walkSpeed = 0;
     this.verticalSpeed = 0;
@@ -146,7 +145,8 @@ export class Player {
     this.floor = floor;
     this.position.set(0, floor * HOTEL.floorHeight, 12.1);
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
-    this.lastControlTapAt = null;
+    this.postureControls.reset();
+    this.keys.clear();
     this.yaw = Math.PI; this.walkSpeed = 0;
   }
   useFurniture(mode, x, z, yaw) {
@@ -174,7 +174,11 @@ export class Player {
     const active = this.active;
     const forward = this.direction;
     let mx = 0, mz = 0;
-    const crouching = this.keys.has('ControlLeft') || this.keys.has('ControlRight');
+    const crouching = this.postureControls.crouching;
+    if (this.postureControls.consumeJump(performance.now()) &&
+      this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching) {
+      this.verticalSpeed = PLAYER.jumpSpeed;
+    }
     if (active && this.posture === 'stand') {
       const f = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
       const r = Number(this.keys.has('KeyD')) - Number(this.keys.has('KeyA'));
@@ -225,19 +229,22 @@ export class Player {
     }
     this.avatar.root.position.copy(this.position);
     this.avatar.root.rotation.y = this.yaw;
-    this.avatar.update(dt, this.walkSpeed, this.posture);
+    this.avatar.update(dt, this.walkSpeed, this.posture === 'stand' && crouching ? 'crouch' : this.posture);
     for (const side of ['left', 'right']) {
       const hand = this.hands[side];
       if (hand.grip) this.hotel.moveGrip(side, this.anchor(side, hand.distance));
       const arm = side === 'left' ? this.avatar.leftArm : this.avatar.rightArm;
       if (hand.pressed) arm.rotation.x = THREE.MathUtils.damp(arm.rotation.x, 1.28, 13, dt);
     }
-    this.avatar.root.visible = this.thirdPerson || this.events.isCustomizerOpen();
+    // Floor postures need a visible character even when the user normally plays in FPS.
+    const showingCharacter = this.thirdPerson || this.events.isCustomizerOpen() || isFloorPosture(this.posture);
+    this.avatar.root.visible = showingCharacter;
     this.handRig.update(dt, this.hands.left, this.hands.right,
-      !this.thirdPerson && !this.events.isCustomizerOpen() && this.posture === 'stand');
-    if (this.thirdPerson || this.events.isCustomizerOpen()) {
+      !showingCharacter && this.posture === 'stand');
+    if (showingCharacter) {
       const distance = this.events.isCustomizerOpen() ? 3.1 : 3.8;
-      const target = new THREE.Vector3(this.position.x, this.position.y + this.avatar.profile.height * .6, this.position.z);
+      const head = this.avatar.headWorldHeight?.() ?? this.avatar.profile.height * .82;
+      const target = new THREE.Vector3(this.position.x, this.position.y + (isFloorPosture(this.posture) ? Math.max(.57, head - .20) : this.avatar.profile.height * .6), this.position.z);
       const behind = this.events.isCustomizerOpen() ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
       const camPos = target.clone();
       for (let d = .2; d < distance; d += .2) {
@@ -245,7 +252,7 @@ export class Player {
         if (this.hotel.collisions.blocked(this.floor, test.x, test.z, .19)) break;
         camPos.copy(test);
       }
-      camPos.y += 1.0 - this.pitch * 1.3;
+      camPos.y += (isFloorPosture(this.posture) ? .54 : 1.0) - this.pitch * 1.3;
       const ceiling = (this.floor + 1) * HOTEL.floorHeight - .32;
       camPos.y = Math.min(camPos.y, ceiling);
       this.camera.position.copy(camPos);

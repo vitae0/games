@@ -1,4 +1,4 @@
-# VitaeWorld · Alpha 0.4 (Vitae Hotel)
+# VitaeWorld · Alpha 0.5 (Vitae Hotel)
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
 
@@ -11,21 +11,21 @@ npm run dev
 
 Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://localhost:5173`). WebGL2 ve fiziksel klavye/fare ile kullanın. `npm run build` üretim derlemesi, `npm test` otomatik testler içindir.
 
-## Alpha 0.4 özellikleri
+## Alpha 0.5 özellikleri
 
 - **Tutarlı yönler:** FPS kamerası, karakterin -Z ön ekseni, WASD hareketi, yan adım ve üçüncü şahıs kamera aynı yaw dönüşünü kullanır. `src/player/Orientation.js` için eksen ve çapraz hareket testleri var.
 - **Modern iç mekân:** Sıcak nötr duvarlar, dokulu sıva/taş/ahşap/kumaş yüzeyler, sade bir lobi ve yumuşak beyaz-amber ışık. Neon estetik yalnızca şehir manzarasında. Dokular 256×256 CanvasTexture ile istemci içinde üretilir, uzak HTTP bağımlılığı yoktur.
 - **Kat döşemesi düzeltmesi:** Çakışan merdiven giriş slabı kaldırıldı; üst kat panelleri artık çakışmıyor. Üst kat zemini ve alt kat tavanının ayrı, aralıklı yüzeyleri var. Merdiven boşlukları korunuyor.
-- **Anime etkili organik avatar:** Yuvarlatılmış anatomi, ayrı iç tişört/ceket/pantolon/ayakkabı katmanları, el parmakları, baş, burun, ağız, kulak, kaş, göz kapakları, iris ve göz bebeği. Beş ten tonu, dört göz rengi ve yeni saç modelleri. FPS elleri de seçilen ten ve kıyafetle eşleşir. Bu bir özel skinned mesh veya tam yüz rig yerine düşük maliyetli prosedürel görselleştirmedir.
+- **Anime etkili organik avatar:** Yuvarlatılmış anatomi, ayrı iç tişört/ceket/pantolon/ayakkabı katmanları, el parmakları, baş, burun, ağız, kulak, kaş, göz kapakları, iris ve göz bebeği. Beş ten tonu, dört göz rengi ve yeni saç modelleri. FPS elleri de seçilen ten ve kıyafetle eşleşir. Kol ve bacaklarda artık **iki kemikli gerçek Three.js SkinnedMesh** kullanılır. Ten ve kıyafet katmanları aynı iskelete bağlanır; yüz, göz kırpma ve saç düşük maliyetli prosedüreldir. Bu varsayılan sistem tam VRM yüz rig veya profesyonel motion capture kalitesinde değildir.
 
 
 - **47–50. katlar:** Kule dışına/şehir zeminine erişim yok. Dört iç kat birbirine fiziksel, zıt yönlü merdivenlerle bağlı. Asansör alternatif hızlı geçiştir.
 - **Gece Neon City (yalnızca dışarıda):** Şehir zemini 118 metre aşağıda; statik placeholder binalar, aydınlık pencereler, yollar, trafik ışıkları, yıldızlı gece göğü ve neon cephe. Şehir tamamen prosedüreldir, dışarıdan model/doku indirilmez.
-- **FPS/TPS:** Pointer-lock birinci şahıs, `O` ile üçüncü şahıs, WASD hareket, Shift koşma, Space zıplama, Ctrl çömelme, çift Ctrl yerde oturma, Ctrl+Space diz çökme, oda kapıları/yatak/sandalye.
+- **FPS/TPS:** Pointer-lock birinci şahıs, `O` ile üçüncü şahıs, WASD hareket, Shift koşma, Space zıplama, Ctrl ile kemik tabanlı çömelme, çift Ctrl ile yerde oturma, Ctrl+Space veya N ile diz çökme, oda kapıları/yatak/sandalye.
 - **Ayrı el kontrolü:** Sol fare sol eli, sağ fare sağ eli uzatır. Yakındaki küçük nesneyi NPC elini veya duvar/korkuluk gibi sabit yüzeyi hedefleyip tutmaya çalışır. Sabit yüzeye tutununca çekme oyuncuyu hareket ettirir. Basılı tutarken fare tekerleği itme/çekme mesafesini değiştirir. Bırakma: fare tuşunu bırakma veya `F`.
 - **Yerel fizik:** Sabit zaman adımlı, kütleli, sönümlü yay tabanlı taşınabilir nesneler, yerçekimi ve basit statik çarpışmalar. Çok oyunculu, dönme/tam hacim temasları, kinematik ağ tahmini veya genel amaçlı Rapier motoru yoktur.
 - **İki simüle karakter:** Mira (resepsiyon) ve Nova (misafir). `E` ile konuşulur, uygun açıdan elleri tutulabilir ve kısıtlı biçimde çekilebilir. **Diğer gerçek oyuncularla ağ bağlantısı henüz yoktur.**
-- **Avatar özelleştirme:** `K` ile bedensel ölçüler (metre), kıyafet, saç, ten tonu, göz rengi ve gözlük; JSON profil localStorage'da saklanır. Prosedürel modellerde yüz ve ayrık kıyafet katmanları bulunur ancak skinned mesh / yüz mimikleri ve hareket yakalama kalitesinde animasyonlar yoktur.
+- **Avatar özelleştirme:** `K` ile bedensel ölçüler (metre), kıyafet, saç, ten tonu, göz rengi ve gözlük; JSON profil localStorage'da saklanır. Prosedürel modellerde yüz ve ayrık kıyafet katmanları bulunur ve kol/bacak skinned mesh iskeleti kullanılır. Harici VRM/GLB yüklenebilir, ancak bu dosyaların beden ölçüleri varsayılan karakter kadar özelleştirilemez.
 - **Optimizasyon:** InstancedMesh geometri gruplama, paylaşımlı malzemeler, gölge haritası kapalı, harici font yok, adaptif çözünürlük ve 10 Hz HUD.
 
 ## Kontroller
@@ -35,7 +35,7 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 | WASD, Fare | Yürü, bakış açısını değiştir |
 | Shift / Space / Ctrl | Koş / zıpla / basılıyken çömel |
 | Çift Ctrl | Bulunduğu yerde yere otur / kalk |
-| Ctrl + Space | Bulunduğu yerde diz çök / kalk |
+| Ctrl + Space (veya N) | Bulunduğu yerde diz çök / kalk. Bazı işletim sistemlerinde Ctrl+Space IME kısayoludur. |
 | E | Kapı, mobilya, asansör veya NPC ile etkileşim |
 | Sol fare basılı | Sol eli uzat / hedefi kavra |
 | Sağ fare basılı | Sağ eli uzat / hedefi kavra |
@@ -44,6 +44,16 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 | O | FPS / TPS kamera geçişi |
 | K | Karakter özelleştirici |
 | Esc | Fare kilidinden çık |
+
+## Yeni postür ve iskelet sistemi
+
+- `Ctrl` basılı: dizler ve kalça kademeli biçimde bükülür, göz hizası alçalır ve hareket yavaşlar. `O` ile üçüncü kişi görünümünde iskelet animasyonu izlenebilir.
+- `Ctrl` iki ayrı basış: yerde oturmaya geçer. Aynı kombinasyon yeniden basıldığında ayağa kalkar. İlk bakışta animasyonun görülmesi için yerdeki duruşlar kamerayı **geçici olarak** üçüncü kişiye alır.
+- `Ctrl + Space` veya `N`: diz çökme/ayağa kalkma. Zıplama 95 ms bekletilerek tuş sırası çatışması giderilmiştir.
+- Durum geçişleri `src/player/PostureControls.js` içindeki saf girdi durum makinesiyle yönetilir.
+- Varsayılan karakter: 8 ayrı skinned mesh yüzeyi, ayrı giyim parçaları, yumuşak kemik ağırlıkları ve göz kırpma.
+- Karakter stüdyosundaki **GLB / VRM yükle** denetimi kullanıcıya ait iskeletli bir dosyayı **yalnızca tarayıcıda** açar. Üçüncü parti dosyalar proje deposuna eklenmez, sunucuya yüklenmez ve yeniden açıldığında korunmaz. Yükleme esnasında Three.js GLTFLoader, VRM dosyaları için isteğe bağlı pixiv three-vrm kullanılır. İskelet adları uyumluluğu modelden modele değişebilir.
+- **Sınır:** İçe aktarılan GLB/VRM gövde oranlarını ayrı ayrı değiştirme henüz desteklenmez, sadece genel boyuna ölçeklenir. VRM/GLB animasyonlarının kalitesi seçilen dosyaya bağlıdır.
 
 ## Modüler dosya yapısı
 
@@ -65,9 +75,13 @@ src/
   player/
     Player.js             # Hareket, kamera, iki el input
     Orientation.js        # Kamera + avatar + hareket ortak yönü
+    PostureControls.js    # Ctrl/Space kombinasyonları ve gecikmeli zıplama
     HandRig.js            # FPS kamera kol/elleri
   avatar/
-    Avatar.js             # Anatomik temel, yüz, katmanlı kıyafet ve hareket
+    Avatar.js             # Anatomik temel, yüz, katmanlı kıyafet, skinned mesh ve hareket
+    SkinnedLimb.js        # Kemik ağırlıklı kol/bacak cilt ve giyim yüzeyi
+    PoseMath.js           # Çömelme/oturma/diz çökme kemik hedefleri
+    ModelImporter.js      # Lokal VRM/GLB, dinamik VRM modülü
     AvatarConfig.js       # Profil şeması, sınırlandırma
   ui/
     Hud.js                # HUD, avatar ayarları, asansör
@@ -75,7 +89,7 @@ src/
 
 ## Sınırlar ve öncelikler
 
-Bu bir **vertical slice prototipidir**. Tam 3D rigid-body solver, full-body inverse kinematics, oda editörü, gerçek oyuncular arası el tutma, multiplayer, anti-cheat ve yüksek kaliteli GLB/VRM animasyonları sonraki kilometre taşlarıdır. NPC tutuşu sınırlı kinematik yaklaşım kullanır; gerçek oyuncu için ağ ve otoriter eşzamanlama şarttır. Katlar 47-50 olarak etiketlenmiştir; alt kule ve uzak şehir **dekoratiftir**. Sadece iç mekân erişilebilir.
+Bu bir **vertical slice prototipidir**. Tam 3D rigid-body solver, full-body inverse kinematics, oda editörü, gerçek oyuncular arası el tutma, multiplayer, anti-cheat ve yüksek kaliteli profesyonel mocap animasyonları ve kapsamlı iskelet retargeting sonraki kilometre taşlarıdır. NPC tutuşu sınırlı kinematik yaklaşım kullanır; gerçek oyuncu için ağ ve otoriter eşzamanlama şarttır. Katlar 47-50 olarak etiketlenmiştir; alt kule ve uzak şehir **dekoratiftir**. Sadece iç mekân erişilebilir.
 
 Tarayıcı performansını korumak için uzak dekoratif binalar fizik hesaplamasına eklenmez ve aynı renkli kutular tek çizim çağrısında gruplanır. Yeni sistemler modül olarak eklenmelidir; main.js içinde iş mantığı büyütülmemelidir.
 
@@ -85,4 +99,4 @@ Vite proje yolu `base: /games/` olarak `vite.config.js` ile üretilir. GitHub Ac
 
 ## Model lisansları ve gelecek aktarım
 
-Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoid Hub ve diğer topluluk kaynakları her model için farklı kullanım ve yeniden dağıtım şartları koyabilir. Lisans doğrulanmadan dosya repoya yüklenmemelidir. Daha iyi yüz, el IK ve giyim simülasyonu için gelecekte rigged GLB/VRM pipeline hedefleniyor.
+Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoid Hub ve diğer topluluk kaynakları her model için farklı kullanım ve yeniden dağıtım şartları koyabilir. Lisans doğrulanmadan dosya repoya yüklenmemelidir. Rigged GLB/VRM dosya içe aktarımı mevcut; tüm modellerin iskeletini ve yüz ifadelerini eksiksiz retarget etmek, el IK ve kıyafet fiziği ayrı ilerleme aşamalarıdır. Pixiv three-vrm (MIT) yalnızca VRM dosyası seçilince dinamik yüklenir.

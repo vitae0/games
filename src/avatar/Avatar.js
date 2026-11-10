@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { normalizeAvatar, SKIN_TONES, EYE_COLORS } from './AvatarConfig.js';
+import { createSkinnedLimb } from './SkinnedLimb.js';
+import { poseFor } from './PoseMath.js';
 
 /**
  * Stylised human with exposed skin anatomy and detachable visual clothing layers.
@@ -15,6 +17,7 @@ export class Avatar {
     scene.add(this.root);
     this.clock = 0;
     this.profile = normalizeAvatar(profile);
+    this.external = null;
     this.materials = [];
     this.geometry = [];
     this.rebuild();
@@ -51,6 +54,7 @@ export class Avatar {
   }
   rebuild(profile = this.profile) {
     this.profile = normalizeAvatar(profile);
+    this.clearExternal();
     this.root.clear();
     this.geometry.forEach(g => g.dispose());
     this.materials.forEach(m => m.dispose());
@@ -85,6 +89,8 @@ export class Avatar {
     const torsoHeight = shoulderY - legLength;
     const armLength = p.height * p.armRatio;
     this.body = new THREE.Group(); this.root.add(this.body);
+    this.skinnedLayers = [];
+    this.eyeParts = [];
     this.body.name = 'anatomy';
     this.buildAnatomy(p, legLength, torsoHeight, shoulderY);
     this.buildGarments(p, legLength, torsoHeight, shoulderY);
@@ -145,12 +151,13 @@ export class Avatar {
       const ey = headH * .025;
       // Eye sockets follow the contour of the face. White sclera, iris, pupil,
       // upper eyelids and tiny catchlight are separate selectable meshes.
-      this.shape(this.head, 'sphere', M.eyeWhite, ex, ey, -depth * .96,
+      const sclera = this.shape(this.head, 'sphere', M.eyeWhite, ex, ey, -depth * .96,
         headH * .123, headH * .153, .020);
-      this.shape(this.head, 'sphere', M.iris, ex, ey - .004, -depth * 1.105,
+      const iris = this.shape(this.head, 'sphere', M.iris, ex, ey - .004, -depth * 1.105,
         headH * .074, headH * .105, .010);
-      this.shape(this.head, 'sphere', M.pupil, ex, ey - .004, -depth * 1.16,
+      const pupil = this.shape(this.head, 'sphere', M.pupil, ex, ey - .004, -depth * 1.16,
         headH * .042, headH * .075, .006);
+      this.eyeParts.push([sclera, iris, pupil].map(mesh => ({ mesh, y: mesh.scale.y })));
       this.shape(this.head, 'sphere', M.shine, ex - .009, ey + .014, -depth * 1.2,
         .007, .009, .004);
       this.shape(this.head, 'sphere', M.hair, ex, ey + headH * .15, -depth * 1.00,
@@ -210,81 +217,154 @@ export class Avatar {
         headH * .14, headH * .28, headH * .14);
     }
   }
+  skinned(upper, lower, material, options) {
+    const layer = createSkinnedLimb(this.body, upper, lower, material, options);
+    this.geometry.push(layer.geometry);
+    this.skinnedLayers.push(layer.mesh);
+    return layer.mesh;
+  }
   buildArm(sign, y, shoulder, length) {
-    const pivot = new THREE.Group();
-    pivot.position.set(sign * shoulder * .49, y, 0);
-    this.body.add(pivot);
-    pivot.name = sign < 0 ? 'leftArm' : 'rightArm';
-    const rad = Math.max(.058, shoulder * .148);
-    const sleeve = new THREE.Group(); pivot.add(sleeve);
-    this.shape(sleeve, 'sphere', this.material.skin, 0, -length * .27, 0,
-      rad * .92, length * .32, rad * .94); // anatomical upper arm
-    this.shape(sleeve, 'sphere', this.material.jacket, 0, -length * .24, .005,
-      rad * 1.21, length * .29, rad * 1.17); // detachable sleeve
-    const elbow = new THREE.Group(); elbow.position.y = -length * .47; pivot.add(elbow);
-    this.shape(elbow, 'sphere', this.material.skin, 0, -.045, 0, rad * .85, .09, rad * .85);
-    this.shape(elbow, 'sphere', this.material.jacket, 0, -length * .13, .01,
-      rad, length * .22, rad);
-    this.shape(elbow, 'sphere', this.material.skin, 0, -length * .35, -.005,
-      rad * .74, length * .14, rad * .80); // exposed wrist
-    const handY = -length * .48;
-    this.shape(elbow, 'sphere', this.material.skin, 0, handY, -.012, rad * .82, .075, rad * .45);
-    // Fingers are slightly separated, with a prominent opposable thumb.
-    for (let f = 0; f < 4; f++) {
-      this.shape(elbow, 'sphere', this.material.skin,
-        (f - 1.5) * .027, handY - .064, -.027,
-        .013, .058 - Math.abs(f - 1.5) * .006, .016);
-    }
-    this.shape(elbow, 'sphere', this.material.skin,
-      -sign * .071, handY - .01, -.048, .020, .048, .024, 0, 0, sign * .55);
-    pivot.userData.elbow = elbow;
-    return pivot;
+    const upper = new THREE.Bone(); upper.name = sign < 0 ? 'leftUpperArm' : 'rightUpperArm';
+    upper.position.set(sign * shoulder * .49, y, 0); this.body.add(upper);
+    const lower = new THREE.Bone(); lower.name = sign < 0 ? 'leftLowerArm' : 'rightLowerArm';
+    lower.position.y = -length * .47; upper.add(lower);
+    const rad = Math.max(.052, shoulder * .142);
+    const options = { x: upper.position.x, topY: y, length: length * .94,
+      radiusX: rad * .92, radiusZ: rad * .87, middle: .5 };
+    this.skinned(upper, lower, this.material.skin, options);
+    // Sleeves are actually separate skinned garments; under-layer remains skin.
+    this.skinned(upper, lower, this.material.jacket,
+      { ...options, length: length * .76, radiusX: rad, radiusZ: rad, layer: 1.13 });
+    const handY = -length * .47;
+    const hand = new THREE.Group(); hand.position.y = -length * .44; lower.add(hand);
+    this.shape(hand, 'sphere', this.material.skin, 0, -.015, -.016,
+      rad * .88, .073, rad * .49);
+    for (let f = 0; f < 4; f++) this.shape(hand, 'sphere', this.material.skin,
+      (f - 1.5) * .027, -.075, -.030, .014, .060 - Math.abs(f - 1.5) * .006, .015);
+    this.shape(hand, 'sphere', this.material.skin, -sign * .071, -.025, -.048,
+      .020, .050, .023, 0, 0, sign * .48);
+    upper.userData.elbow = lower;
+    upper.userData.hand = hand;
+    return upper;
   }
   buildLeg(sign, length, hips) {
-    const pivot = new THREE.Group();
-    pivot.position.set(sign * hips * .29, length, 0);
-    this.body.add(pivot);
-    pivot.name = sign < 0 ? 'leftLeg' : 'rightLeg';
-    const r = Math.max(.085, hips * .19);
-    this.shape(pivot, 'sphere', this.material.skin, 0, -length * .22, 0,
-      r * .89, length * .29, r * .94);
-    this.shape(pivot, 'sphere', this.material.pants, 0, -length * .22, -.003,
-      r * 1.07, length * .29, r * 1.09);
-    const knee = new THREE.Group(); knee.position.y = -length * .52; pivot.add(knee);
-    this.shape(knee, 'sphere', this.material.skin, 0, -.012, 0, r * .86, .076, r * .86);
-    this.shape(knee, 'sphere', this.material.pants, 0, -length * .22, 0,
-      r * .95, length * .26, r * .92);
-    this.shape(knee, 'sphere', this.material.seam, 0, -length * .43, .00,
-      r * .95, .024, r * .93);
-    this.shape(knee, 'sphere', this.material.shoes, 0, -length * .45, -.055,
-      r * 1.19, .063, r * 1.55);
-    pivot.userData.knee = knee;
-    return pivot;
+    const upper = new THREE.Bone(); upper.name = sign < 0 ? 'leftUpperLeg' : 'rightUpperLeg';
+    upper.position.set(sign * hips * .29, length, 0); this.body.add(upper);
+    const lower = new THREE.Bone(); lower.name = sign < 0 ? 'leftLowerLeg' : 'rightLowerLeg';
+    lower.position.y = -length * .52; upper.add(lower);
+    const rad = Math.max(.082, hips * .195);
+    const options = { x: upper.position.x, topY: length, length: length * .98,
+      radiusX: rad * .88, radiusZ: rad * .95, middle: .53 };
+    this.skinned(upper, lower, this.material.skin, options);
+    this.skinned(upper, lower, this.material.pants,
+      { ...options, radiusX: rad * .98, radiusZ: rad * 1.02, layer: 1.045 });
+    // Shoes are attached to the lower-leg bone and move with the ankle.
+    this.shape(lower, 'sphere', this.material.shoes, 0, -length * .44, -.050,
+      rad * 1.2, .063, rad * 1.53);
+    this.shape(lower, 'sphere', this.material.seam, 0, -length * .38, -.008,
+      rad * 1.02, .025, rad * .95);
+    upper.userData.knee = lower;
+    return upper;
+  }
+  headWorldHeight() {
+    return this.profile.height + this.body.position.y - this.profile.height * .08;
   }
   update(dt, locomotion, posture = 'stand') {
     this.clock += dt;
-    const moving = locomotion > .1 && posture === 'stand';
-    const speed = Math.min(1.6, locomotion / 4.2);
-    const wave = this.clock * (7 + speed * 2);
-    const swing = moving ? Math.sin(wave) * Math.min(.7, speed * .6) : 0;
-    const hip = posture === 'floorSit' ? 1.25 : posture === 'kneel' ? .65 : 0;
-    const knee = posture === 'floorSit' ? -1.65 : posture === 'kneel' ? -1.48 : 0;
-    for (const [leg, v] of [[this.leftLeg, 1], [this.rightLeg, -1]]) {
-      leg.rotation.x = THREE.MathUtils.damp(leg.rotation.x, hip + v * swing, 9, dt);
-      leg.userData.knee.rotation.x = THREE.MathUtils.damp(leg.userData.knee.rotation.x, knee, 9, dt);
+    const pose = poseFor(posture, locomotion, this.clock, this.profile.height);
+    const damp = (v, target, rate = 10) => THREE.MathUtils.damp(v, target, rate, dt);
+    // Translate the pelvis in metres. Crucially, don't shrink the entire person:
+    // actual thigh and knee joints bend to create crouch/kneel/sitting poses.
+    this.body.position.y = damp(this.body.position.y, -pose.drop + pose.bob, 11);
+    this.body.scale.y = 1;
+    const legs = [this.leftLeg, this.rightLeg];
+    for (let i = 0; i < legs.length; i++) {
+      legs[i].rotation.x = damp(legs[i].rotation.x, pose.hip[i], 11);
+      legs[i].userData.knee.rotation.x = damp(legs[i].userData.knee.rotation.x, pose.knee[i], 11);
     }
-    this.leftArm.rotation.x = THREE.MathUtils.damp(this.leftArm.rotation.x, -swing * .7, 9, dt);
-    this.rightArm.rotation.x = THREE.MathUtils.damp(this.rightArm.rotation.x, swing * .7, 9, dt);
-    const targetY = posture === 'sit' ? .68 : posture === 'rest' ? .32 :
-      posture === 'floorSit' ? .50 : posture === 'kneel' ? .71 : 1;
-    this.body.scale.y = THREE.MathUtils.damp(this.body.scale.y, targetY, 7, dt);
-    this.body.position.y = moving ? Math.abs(Math.sin(wave)) * .018 : Math.sin(this.clock * 1.4) * .006;
-    this.head.rotation.y = Math.sin(this.clock * .42) * .025;
-    this.head.rotation.x = Math.sin(this.clock * .66) * .014;
+    this.leftArm.rotation.x = damp(this.leftArm.rotation.x, pose.arms[0], 9);
+    this.rightArm.rotation.x = damp(this.rightArm.rotation.x, pose.arms[1], 9);
+    this.head.rotation.y = Math.sin(this.clock * .42) * .028;
+    this.head.rotation.x = pose.spine * .25 + Math.sin(this.clock * .66) * .012;
+    for (const eye of this.eyeParts) for (const part of eye) {
+      part.mesh.scale.y = part.y * (1 - pose.blink * .92);
+    }
+    this.updateExternal?.(dt, locomotion, posture, pose);
+  }
+  clearExternal() {
+    if (!this.external) return;
+    this.root.remove(this.external.wrapper);
+    // Uploaded file owns its own geometries; dispose them on replacement.
+    this.external.group.traverse(obj => {
+      if (!obj.isMesh) return;
+      obj.geometry?.dispose();
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const mat of materials) mat?.dispose();
+    });
+    this.external = null;
+    if (this.body) this.body.visible = true;
+  }
+  applyExternal(model) {
+    this.clearExternal();
+    // File is attached only to this avatar and never uploaded to a server.
+    const wrapper = new THREE.Group();
+    const visual = model.scene;
+    visual.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(visual);
+    const height = Math.max(bounds.max.y - bounds.min.y, .1);
+    visual.scale.setScalar(this.profile.height / height);
+    visual.position.y = -bounds.min.y * (this.profile.height / height);
+    wrapper.add(visual);
+    this.root.add(wrapper);
+    this.body.visible = false;
+    const mixer = model.clips?.length ? new THREE.AnimationMixer(visual) : null;
+    const actions = new Map();
+    for (const clip of model.clips || []) {
+      const action = mixer.clipAction(clip);
+      actions.set(clip.name.toLowerCase(), action);
+    }
+    this.external = { wrapper, group: visual, vrm: model.vrm, mixer, actions,
+      boneMap: model.boneMap || {}, baseRotations: new Map() };
+  }
+  updateExternal(dt, speed, posture, pose) {
+    const ext = this.external;
+    if (!ext) return;
+    if (ext.mixer && ext.actions.size) {
+      const motion = posture === 'stand' && speed > .1 ? 'walk' : posture;
+      let selected = [...ext.actions.entries()].find(([key]) => key.includes(motion));
+      if (!selected) selected = [...ext.actions.entries()].find(([key]) => key.includes('idle'));
+      for (const [name, action] of ext.actions) {
+        const weight = name === selected?.[0] ? 1 : 0;
+        if (weight && !action.isRunning()) action.reset().play();
+        action.setEffectiveWeight(weight);
+      }
+      ext.mixer.update(dt);
+    }
+    // Apply explicit posture to humanoid bones even when a model has only an idle clip.
+    const joint = (name, angle, axis = 'x') => {
+      const bone = ext.vrm?.humanoid?.getNormalizedBoneNode(name) || ext.boneMap[name];
+      if (!bone) return;
+      if (!ext.baseRotations.has(bone)) ext.baseRotations.set(bone, bone.rotation.clone());
+      const baseline = ext.baseRotations.get(bone);
+      bone.rotation[axis] = THREE.MathUtils.damp(bone.rotation[axis], baseline[axis] + angle, 10, dt);
+    };
+    joint('leftUpperLeg', pose.hip[0]); joint('rightUpperLeg', pose.hip[1]);
+    joint('leftLowerLeg', pose.knee[0]); joint('rightLowerLeg', pose.knee[1]);
+    joint('leftUpperArm', pose.arms[0] * .6); joint('rightUpperArm', pose.arms[1] * .6);
+    const pelvis = ext.vrm?.humanoid?.getNormalizedBoneNode('hips') || ext.boneMap.hips;
+    if (pelvis) {
+      if (!ext.baseRotations.has(pelvis)) ext.baseRotations.set(pelvis, pelvis.position.clone());
+      pelvis.position.y = dampPosition(pelvis.position.y,
+        ext.baseRotations.get(pelvis).y - pose.drop, dt);
+    }
+    ext.vrm?.update(dt);
   }
   dispose() {
+    this.clearExternal();
     this.scene.remove(this.root);
     this.geometry.forEach(g => g.dispose());
     this.materials.forEach(m => m.dispose());
   }
 }
+
+function dampPosition(current, target, dt) { return THREE.MathUtils.damp(current, target, 10, dt); }
