@@ -119,11 +119,13 @@ function updateAvatarProfile(profile) {
   if (changedBase) void syncBaseModel({ force: true });
 }
 void syncBaseModel();
+player.avatar.onStyleLoad = () => hud?.refreshModelStatus?.();
 hud = new Hud(canvas, {
   player,
   setQuality,
   getProfile: () => player.avatar.profile,
   isBaseReady: (baseModel) => player.avatar.external?.source === `bundled:${baseModel}`,
+  getHairStatus: () => player.avatar.external?.style?.hairStatus || 'loading',
   previewProfile: (profile) => updateAvatarProfile(profile),
   saveProfile: (profile) => {
     updateAvatarProfile(profile);
