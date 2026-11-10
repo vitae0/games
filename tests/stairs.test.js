@@ -85,7 +85,7 @@ test('rendered riser tops agree with physical support at every tread centre', ()
       const z=flight.forward
         ? STAIR.zLow+(i+.5)*(STAIR.zHigh-STAIR.zLow)/STAIR.steps
         : STAIR.zHigh-(i+.5)*(STAIR.zHigh-STAIR.zLow)/STAIR.steps;
-      const slab=boxes.find(b=>b.material==='slab' && Math.abs(b.x-flight.x)<1e-8 && Math.abs(b.z-z)<1e-8);
+      const slab=boxes.find(b=>b.material==='slab' && Math.abs(b.x-flight.x)<1e-8 && Math.abs(b.z-z)<1e-8 && Math.abs((b.y-b.h/2)-f*HOTEL.floorHeight)<1e-8);
       assert.ok(slab, 'stair step not rendered');
       assert.ok(Math.abs(slab.y+slab.h/2-stairHeight(f,flight.x,z))<1e-8);
     }
