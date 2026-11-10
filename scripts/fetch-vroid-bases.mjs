@@ -60,8 +60,19 @@ export function inspectVrm(bytes) {
   const gltf = JSON.parse(bytes.toString('utf8', 20, 20 + jsonLength).replace(/\0+$/g, '').trimEnd());
   const license = gltf.extensions?.VRM?.meta?.licenseName;
   const materials = (gltf.materials || []).map(m => m.name || '<unnamed>');
+  const hairMaterialIds = new Set(materials.flatMap((name,i) =>
+    /hair|fringe|bangs/i.test(name) ? [i] : []));
+  const hairPrimitives = (gltf.meshes || []).flatMap(m => m.primitives || [])
+    .filter(primitive => hairMaterialIds.has(primitive.material));
+  const hairTriangles = hairPrimitives.reduce((count, primitive) => {
+    const indices = gltf.accessors?.[primitive.indices];
+    const positions = gltf.accessors?.[primitive.attributes?.POSITION];
+    return count + Math.floor((indices?.count || positions?.count || 0) / 3);
+  }, 0);
   return {
     license: license || 'not-present',
+    hairPrimitives: hairPrimitives.length,
+    hairTriangles,
     meshCount: gltf.meshes?.length || 0,
     skinCount: gltf.skins?.length || 0,
     materialNames: materials,
@@ -102,12 +113,13 @@ async function main() {
     if (info.skinCount < 1 || !info.hasBody || info.license !== 'CC0')
       throw new Error(`Unexpected ${source.id} rig/body/license: ${JSON.stringify(info)}`);
     if (source.id.startsWith('vroidHair') &&
-        !info.materialNames.some(name => /hair|fringe|bangs/i.test(name))) {
-      throw new Error(`Source ${source.id} has no independent premade hair material`);
+        (!info.hairPrimitives || !info.hairTriangles)) {
+      throw new Error(`Source ${source.id} has no independently drawn premade hair triangles`);
     }
     await writeFile(path, bytes);
     console.log(`${source.id}: ${bytes.length} bytes, ${info.meshCount} meshes, ${info.skinCount} skins, ${info.license}`);
     console.log('  garment materials:', info.garmentMaterialNames.join(', ') || '(none)');
+    if (source.id.startsWith('vroidHair')) console.log('  actual hair geometry:', info.hairPrimitives, 'primitives,', info.hairTriangles, 'triangles');
   }
 }
 
