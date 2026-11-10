@@ -64,6 +64,8 @@ test('first-floor reception finish meets corridor carpet and is not laid on top 
   const fake = {
     box: (material,x,y,z,w,h,d)=>geometry.push({material,x,y,z,w,h,d}),
     addProp() {}, interactables:[], events:{toast(){}},
+    rounded(material,x,y,z,w,h,d){geometry.push({material,x,y,z,w,h,d})},
+    climbable(){},addWalkSurface(){},roomLighting:null,
   };
   Hotel.prototype.makeLobby.call(fake);
   const finish = geometry.filter(b => b.material === 'wood' && Math.abs(b.y-.015)<1e-8 && Math.abs(b.z+10.85)<1e-8 && Math.abs(b.d-7.5)<1e-8);

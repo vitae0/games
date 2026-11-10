@@ -128,7 +128,7 @@ export class Hotel {
       if(error<nearest){nearest=error;raised=surface.topY;}
     }
     if(raised!==null)return raised;
-    return this.inStairArea(x,z)
+    return Hotel.prototype.inStairArea.call(this,x,z)
       ? resolveGround(x,z,priorHeight,currentFloor) : currentFloor*HOTEL.floorHeight;
   }
   /** Physics surface sweep only near the shaft, preserving existing bed controls. */
