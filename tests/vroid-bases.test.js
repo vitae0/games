@@ -48,7 +48,9 @@ test('real material visibility toggles are reversible, preserving mesh', () => {
   assert.equal(pants.visible,true);
 });
 test('source integrity checks are fixed and a GLB manifest can be inspected', () => {
-  assert.equal(SOURCES.length,2);
+  assert.equal(SOURCES.length,4);
+  assert.ok(SOURCES.some(x=>x.id==='vroidHairMale'));
+  assert.ok(SOURCES.some(x=>x.id==='vroidHairFemale'));
   for(const x of SOURCES) assert.match(x.blob,/^[a-f0-9]{40}$/);
   assert.equal(gitBlobSha(Buffer.from('hi')),'32f95c0d1244a78b2be1bab8de17906fabb2c4a8');
   const json=Buffer.from(JSON.stringify({
