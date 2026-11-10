@@ -73,8 +73,10 @@ export function buildBathroom(hotel,floor,side,z) {
   round('ceramic',sinkX,y+.89,z-.98,.66,.13,.33);
   round('trim',sinkX,y+1.09,z-.98,.045,.27,.04);
   // Reflective *looking* panel: no expensive real-time planar reflection.
-  box('glass',sinkX,y+1.75,z-.692,.84,1.10,.024);
-  box('trim',sinkX,y+1.75,z-.71,.91,1.16,.035);
+  // Both decorative layers sit in FRONT of the wall's interior face (z-.71).
+  // A flush mirror/wall pair would flicker or disappear at grazing camera angles.
+  box('trim',sinkX,y+1.75,z-.742,.91,1.16,.028);
+  box('glass',sinkX,y+1.75,z-.780,.84,1.10,.016);
   round('ceramic',side*9.90,y+.35,z-.99,.50,.44,.51,floor,true);
   round('ceramic',side*9.90,y+.61,z-.79,.48,.11,.34);
   box('warm',side*10.46,y+2.65,z-.72,.56,.045,.10);
