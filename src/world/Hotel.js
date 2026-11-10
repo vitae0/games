@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { BoxBatch } from '../engine/BoxBatch.js';
 import { CollisionWorld } from '../engine/Collision.js';
 import { HOTEL, COLORS } from '../config.js';
-import { STAIR, stairFlight } from './Stairwell.js';
+import { STAIR, stairFlight, resolveGround } from './Stairwell.js';
 import { CitySkyline } from './CitySkyline.js';
 import { PhysicsWorld } from '../engine/PhysicsWorld.js';
 import { Actors } from './Actors.js';
 import { createSurfaceTextures, SURFACE_KIND } from './SurfaceTextures.js';
-import { UPPER_DECK } from './FloorPlan.js';
+import { UPPER_DECK, landingFootprint } from './FloorPlan.js';
 
 const HALF = HOTEL.corridorHalfWidth;
 const Y = (floor) => floor * HOTEL.floorHeight;
@@ -21,11 +21,17 @@ export class Hotel {
     this.animations = [];
     this.dynamic = [];
     this.materials = this.createMaterials();
+    this.media = makeSuiteMedia();
     this.batch = new BoxBatch(scene, this.materials);
     this.physics = new PhysicsWorld(this.collisions, HOTEL.floorHeight);
     this.propGeometry = new THREE.BoxGeometry(1, 1, 1);
     this.props = [];
     this.staticGrips = new Map();
+    this.walkSurfaces = [];
+    this.furnitureDynamics = [];
+    this.screenGeometry = new THREE.PlaneGeometry(1.76, 1.00);
+    this.minibarDoorGeometry = new THREE.BoxGeometry(.075, .75, .62);
+    this.bottleGeometry = new THREE.CylinderGeometry(.062, .062, .19, 8);
     this.gripRaycaster = new THREE.Raycaster();
     this.gripRaycaster.far = 3.3;
     this.gripObstacles = [];
@@ -51,6 +57,27 @@ export class Hotel {
       });
       result[name] = material;
     }
+    // One tiny procedurally drawn TV image shared by every suite. No remote downloads.
+    const canvas = document.createElement('canvas');
+    canvas.width = 384; canvas.height = 216;
+    const cx = canvas.getContext('2d');
+    const gradient = cx.createLinearGradient(0, 0, 384, 216);
+    gradient.addColorStop(0, '#162f45'); gradient.addColorStop(.6, '#326574'); gradient.addColorStop(1, '#c89d75');
+    cx.fillStyle = gradient; cx.fillRect(0, 0, 384, 216);
+    for (let i = 0; i < 30; i++) {
+      const x = i * 13; const h = 26 + ((i * 83) % 96);
+      cx.fillStyle = i % 3 === 0 ? '#273a51' : '#172d41';
+      cx.fillRect(x, 216 - h, 14, h);
+      cx.fillStyle = 'rgba(241,214,171,.8)';
+      for (let py = 224 - h; py < 208; py += 13) cx.fillRect(x + 4, py, 2, 3);
+    }
+    cx.font = 'bold 24px sans-serif'; cx.textAlign = 'center';
+    cx.fillStyle = '#f5e5ce'; cx.fillText('VITAE / CITY AT NIGHT', 192, 42);
+    this.tvTexture = new THREE.CanvasTexture(canvas);
+    this.tvTexture.colorSpace = THREE.SRGBColorSpace;
+    result.tvOn = new THREE.MeshBasicMaterial({ map: this.tvTexture, toneMapped: false, side: THREE.DoubleSide });
+    result.tvOff = new THREE.MeshBasicMaterial({ color: 0x14191e, side: THREE.DoubleSide });
+    result.mirror = new THREE.MeshStandardMaterial({ color: 0xb2c6c9, roughness: .18, metalness: .8 });
     return result;
   }
   /** A deck and its lower-level ceiling have distinct, non-coplanar surfaces.
@@ -68,6 +95,20 @@ export class Hotel {
   }
   wallZ(floor, x, z, width, mat = 'innerWall') {
     this.box(mat, x, Y(floor) + 1.6, z, width, 3.2, 0.17, floor, true);
+  }
+  addWalkSurface(floor, x, z, width, depth, topY) {
+    this.walkSurfaces.push({ floor, minX: x - width / 2, maxX: x + width / 2, minZ: z - depth / 2, maxZ: z + depth / 2, topY });
+  }
+  groundHeight(x, z, priorHeight, currentFloor) {
+    let height = resolveGround(x, z, priorHeight, currentFloor);
+    let bestError = Infinity;
+    for (const surface of this.walkSurfaces) {
+      if (surface.floor !== currentFloor) continue;
+      if (x < surface.minX || x > surface.maxX || z < surface.minZ || z > surface.maxZ) continue;
+      const error = Math.abs(priorHeight - surface.topY);
+      if (error < bestError && error < .82) { bestError = error; height = surface.topY; }
+    }
+    return height;
   }
   build() {
     const s = this.scene;
@@ -117,8 +158,7 @@ export class Hotel {
       for (const deck of UPPER_DECK) {
         this.deck(y, deck.x, deck.z, deck.width, deck.depth);
       }
-      // The former extra landing slab overlapped the neighbouring slab by over 1 m.
-      // The corridor's existing right-hand slab already reaches the stair entrance.
+      // Aperture remains open. Landing geometry belongs exclusively inside this gap.
     }
     this.box('carpet', 0, y + .012, 0, 3.1, .035, 28.8);
     this.box('cyan', -HALF + .12, y + .09, 0, .035, .12, 29.3);
@@ -155,7 +195,7 @@ export class Hotel {
         this.wallX(floor, side * HALF, (z + doorHalf + b) / 2, b - (z + doorHalf));
         const stairs = side === -1 && z === 10.5;
         this.makeDoor(floor, side, z, stairs);
-        if (!stairs) this.makeRoom(floor, side, z);
+        if (!stairs && !(floor === 0 && z === -10.5)) this.makeRoom(floor, side, z);
         // Window strips use the same material batch as the other facade lights.
       }
     }
@@ -202,41 +242,7 @@ export class Hotel {
     this.dynamic.push({ geometry: slab.geometry, material: null }, { geometry: strip.geometry, material: null }, { geometry: handle.geometry, material: null });
   }
   makeRoom(floor, side, z) {
-    const y = Y(floor);
-    const bedX = side * 8.6;
-    const bedZ = z + 1.15;
-    this.box('wood', bedX, y + .21, bedZ, 2.55, .4, 2.65, floor, true);
-    this.box('fabric', bedX, y + .45, bedZ, 2.32, .20, 2.40);
-    this.box('warm', bedX, y + .59, bedZ + .85, 2.02, .08, .42);
-    this.box('darkWall', bedX, y + .83, bedZ + 1.36, 2.65, .9, .18);
-    this.box('magenta', bedX, y + .65, bedZ - 1.3, 2.6, .055, .08);
-    // Desk and adjustable-looking office chair.
-    const deskX = side * 8.7;
-    const deskZ = z - 2.03;
-    this.box('wood', deskX, y + .83, deskZ, 2.25, .12, .70, floor, true);
-    for (const dx of [-.92, .92]) this.box('trim', deskX + dx, y + .42, deskZ, .10, .75, .63);
-    this.box('glass', deskX, y + 1.12, deskZ, .84, .52, .07);
-    this.box('cyan', deskX, y + 1.35, deskZ + .04, .71, .045, .03);
-    const chairX = side * 6.4;
-    const chairZ = z - 2.05;
-    this.box('black', chairX, y + .49, chairZ, .68, .17, .68);
-    this.box('fabric', chairX, y + .90, chairZ + .27, .69, .80, .13);
-    this.box('trim', chairX, y + .24, chairZ, .16, .40, .16);
-    this.box('warm', side * 3.9, y + 2.56, z + 2.55, .8, .06, .1);
-    this.box('magenta', side * 3.85, y + 1.4, z - 2.8, .09, .92, .08);
-    this.addProp(floor, side * 4.15, z + .30, 'Valiz', 'pink');
-    this.interactables.push({
-      floor,
-      position: new THREE.Vector3(side * 7.0, y + .8, bedZ - .5),
-      getLabel: () => 'Yatak · Uzan',
-      activate: (player) => player.useFurniture('rest', bedX, bedZ - .3, -Math.PI / 2),
-    });
-    this.interactables.push({
-      floor,
-      position: new THREE.Vector3(chairX, y + .8, chairZ),
-      getLabel: () => 'Sandalye · Otur',
-      activate: (player) => player.useFurniture('sit', chairX, chairZ, Math.PI),
-    });
+    buildSuite(this, floor, side, z);
   }
   makeElevator(floor) {
     const y = Y(floor);
@@ -255,18 +261,47 @@ export class Hotel {
   }
   makeLobby() {
     const y = Y(0);
-    this.box('wood', -6.6, y + .54, -11.8, 5, 1.08, 1.0, 0, true);
-    this.box('magenta', -6.6, y + 1.07, -11.27, 5.0, .08, .08);
-    this.box('cyan', -6.6, y + 1.22, -14.65, 4.2, .08, .06);
-    this.box('fabric', 7, y + .35, -11.8, 3.4, .70, 1.0, 0, true);
-    this.box('glass', 7, y + .25, -10.5, 1.5, .05, 1.0);
+    // The two front suites are intentionally replaced by a spacious reception and lounge.
+    this.box('slab', -6.65, y + .025, -10.85, 9.6, .045, 7.5);
+    this.box('slab', 6.65, y + .025, -10.85, 9.6, .045, 7.5);
+    this.box('wood', -6.9, y + .45, -12.35, 5.4, .90, 1.26, 0, true);
+    this.box('trim', -6.9, y + .95, -12.35, 5.58, .09, 1.32);
+    this.box('warm', -6.9, y + 1.25, -14.58, 4.5, .09, .045);
+    this.box('darkWall', -6.6, y + 1.65, -14.80, 5.9, 2.7, .08);
+    for (let i = 0; i < 7; i++) this.box('wood', -9.1 + i * .77, y + 1.65, -14.71, .12, 2.48, .04);
+    // Lounge seating, tables and lamps without blocking access doors.
+    for (const x of [4.5, 8.8]) {
+      this.box('fabric', x, y + .49, -11.65, 2.0, .70, .92, 0, true);
+      this.box('fabric', x, y + 1.04, -12.05, 2.0, .68, .20);
+      this.box('wood', x, y + .28, -10.3, 1.22, .14, .60, 0, true);
+      this.box('trim', x, y + .13, -10.3, .15, .22, .17);
+      this.interactables.push({floor:0,
+        position: new THREE.Vector3(x, 1, -10.88),
+        getLabel: () => 'Lobi koltuğu · Otur',
+        activate: player => player.useFurniture('sit', x, -11.62, Math.PI, .48),
+      });
+    }
+    // Coffee bar is intentionally open to the west lounge.
+    this.box('wood', -9.35, y + .52, -8.45, 2.2, 1.04, .65, 0, true);
+    this.box('black', -9.35, y + 1.12, -8.45, 1.1, .17, .40);
+    this.box('warm', -9.35, y + 1.52, -8.51, 1.36, .04, .12);
+    this.box('wood', 10.45, y + .48, -13.40, .75, .96, .75, 0, true);
+    this.box('fabric', 10.45, y + 1.30, -13.40, 1.08, .67, 1.08);
+    this.box('wood', 3.15, y + .42, -13.70, .62, .84, .62, 0, true);
+    this.box('fabric', 3.15, y + 1.18, -13.70, .91, .61, .91);
     this.addProp(0, 1.15, -9.5, 'Çanta', 'cyan');
     this.addProp(0, 2.5, -11.5, 'Kutu', 'pink');
     this.interactables.push({
       floor: 0,
       position: new THREE.Vector3(-4.1, 1, -11.8),
       getLabel: () => 'Resepsiyon · Bilgi al',
-      activate: () => this.events.toast('Vitae Hotel’e hoş geldiniz. Dört üst kat · Asansör koridorun sonunda.'),
+      activate: () => this.events.toast('Vitae Hotel: 47–50. katlar. Banyo, TV ve minibar odalarda kullanılabilir.'),
+    });
+    this.interactables.push({
+      floor: 0,
+      position: new THREE.Vector3(-9.1, 1, -7.8),
+      getLabel: () => 'Kahve barı · İçecek al',
+      activate: () => this.events.toast('Kahve hazır. Misafir salonuna hoş geldiniz.'),
     });
   }
   addProp(floor, x, z, label, color) {
@@ -294,8 +329,8 @@ export class Hotel {
         this.box('cyan', flight.x, y + .02, z + (flight.forward ? -.13 : .13), STAIR.width - .15, .04, .035);
       }
       // Landing, located at the next floor, bridges the two side-by-side flights.
-      const landingZ = flight.forward ? STAIR.zHigh : STAIR.zLow;
-      this.box('slab', -6.85, Y(floor + 1) - .09, landingZ, 5.7, .18, .82);
+      const landing = landingFootprint(flight.forward);
+      this.box('slab', landing.x, Y(floor + 1) - .09, landing.z, landing.width, .18, landing.depth);
       for (const x of [STAIR.xLeft - 1.2, STAIR.xRight + 1.2]) {
         this.box('magenta', x, Y(floor) + 1.8, (STAIR.zLow + STAIR.zHigh) / 2, .06, .09, 4.8);
       }
@@ -382,7 +417,10 @@ export class Hotel {
   dispose() {
     this.batch.dispose();
     this.city.dispose(); this.actors.dispose();
+    this.media.forEach(({ texture, material }) => { texture.dispose(); material.dispose(); });
     this.props.forEach(mesh => this.scene.remove(mesh));
+    this.furnitureDynamics.forEach(mesh => this.scene.remove(mesh));
+    this.screenGeometry.dispose(); this.minibarDoorGeometry.dispose(); this.bottleGeometry.dispose(); this.tvTexture.dispose();
     this.propGeometry.dispose();
     for (const obj of this.dynamic) { obj.geometry?.dispose(); obj.material?.dispose(); obj.texture?.dispose(); }
     Object.values(this.materials).forEach((m) => m.dispose());

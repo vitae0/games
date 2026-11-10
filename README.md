@@ -116,3 +116,15 @@ Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoi
 ### Sınırlar ve beklentiler
 
 Telefonun WebGL2 ve yeterli GPU belleği desteklemesi gerekir. Özellikle çok büyük kullanıcı GLB/VRM dosyaları düşük bellekli cihazlarda yavaş olabilir. Fizik ve karakter etkileşimleri hâlâ tek oyunculu prototiptir, gerçek çok oyunculu sistem değildir. Mobilde gerçek cihaz üzerinde etkileşim ve performans testlerinin yapılması önerilir; GitHub Actions otomatik test ve derleme yapar, bir cihaz çiftliği değildir.
+
+
+## Alpha 0.7 — Modern suitler, banyo ve etkileşimler
+
+- Otel odaları: platform yatak, lounge koltuğu, TV/medya ünitesi, gardırop, çalışma köşesi ve açılır minibar.
+- Kompakt banyo: lavabo, duş paneli, havluluk, dekoratif ayna (gerçek yansıma değildir).
+- TV: `E` / mobil **Kullan** ile statik şehir kanalı açılıp kapatılır; yayın akışı değildir.
+- Minibar: kapak açma, su alma ve kapağı kapatma durumları.
+- Yatak: üstüne çıkıp yürüme, uzanma ve kenarına oturma; koltuk ve lobi kanepesinde oturma.
+- Merdiven sahanlıkları üst döşemelere çakışmayan boşluklar içinde yeniden ölçülendirildi.
+- Fare kamera hassasiyeti yaklaşık %16 artırıldı; yeni mobil varsayılan 1.15×. Kayıtlı kullanıcı hassasiyetleri korunur.
+- Uygulama içi assetler prosedüreldir; ek ağ isteği ve sunucu gerekmez.

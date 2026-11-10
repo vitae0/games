@@ -76,7 +76,7 @@ export class Hud {
     const read = (key, fallback) => {
       try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
     };
-    const sensitivity = clampTouchSensitivity(read('vitaeworld.touchSensitivity', '1'));
+    const sensitivity = clampTouchSensitivity(read('vitaeworld.touchSensitivity', '1.15'));
     $('#touch-sensitivity').value = String(sensitivity);
     $('#sensitivity-value').textContent = `${sensitivity.toFixed(2)}×`;
     this.touchControls?.setSensitivity(sensitivity);

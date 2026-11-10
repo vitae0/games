@@ -33,8 +33,8 @@ export class Player {
   get viewDirection() { const v = viewFromYawPitch(this.yaw, this.pitch); return new THREE.Vector3(v.x, v.y, v.z); }
   /** CSS pixel deltas, shared by mouse and mobile swipe gestures. */
   lookBy(dx, dy, multiplier = 1) {
-    this.yaw -= dx * .0021 * multiplier;
-    this.pitch = clamp(this.pitch - dy * .0019 * multiplier, -1.43, 1.43);
+    this.yaw -= dx * .00245 * multiplier;
+    this.pitch = clamp(this.pitch - dy * .0022 * multiplier, -1.43, 1.43);
   }
   setTouchMove(right, forward) {
     this.touchMove.x = clamp(right, -1, 1);
@@ -241,8 +241,9 @@ export class Player {
       if (this.jumpOffset === 0) this.verticalSpeed = 0;
     }
     if (this.posture === 'stand') {
-      const ground = resolveGround(this.position.x, this.position.z,
-        this.position.y - this.jumpOffset, this.floor);
+      const ground = this.hotel.groundHeight
+        ? this.hotel.groundHeight(this.position.x, this.position.z, this.position.y - this.jumpOffset, this.floor)
+        : resolveGround(this.position.x, this.position.z, this.position.y - this.jumpOffset, this.floor);
       // On stairs, feet follow the actual rise. Colliders switch floor at landing.
       this.position.y = ground + this.jumpOffset;
       this.floor = groundFloor(ground);
