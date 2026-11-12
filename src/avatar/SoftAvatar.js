@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createHairMounts } from './HairMounts.js';
 
 /**
  * Vitaeworld's lightweight character family. Nothing here fetches an asset:
@@ -338,17 +339,55 @@ export function buildSoftAvatar(avatar, p) {
     softLoftGeometry(clavicular, S, torsoExponent, { bottom: false, top: true }),
     material, 'soft-clavicular');
 
-  // Shared perimeter vertices + averaged normals eliminate the hard seam.
+  // The legacy full-profile meshes remain as invisible topology references for
+  // morph/geometry consumers. Render anatomically named, open-ended regions
+  // instead. Adjacent ring positions and averaged normals are identical:
+  // no overlapping skins, exposed caps, or hard circumferential seams.
   stitchLoftSeam(abdomenMesh.geometry, chestMesh.geometry);
   stitchLoftSeam(chestMesh.geometry, clavicularMesh.geometry);
+  abdomenMesh.visible = false;
+  chestMesh.visible = false;
+  const splitAnatomy = (stations, ranges, names, capBottom = false) => {
+    const parts = ranges.map(([from, to], i) => add(root,
+      softLoftGeometry(stations.slice(from, to + 1), S, torsoExponent,
+        { bottom: capBottom && i === 0, top: false }), material, names[i]));
+    for (let i = 1; i < parts.length; i++)
+      stitchLoftSeam(parts[i - 1].geometry, parts[i].geometry);
+    return parts;
+  };
+  const abdominalParts = splitAnatomy(abdomen,
+    [[0, 2], [2, 4], [4, 5]],
+    ['pelvic-girdle', 'abdominal-wall', 'upper-abdomen'], true);
+  const chestRanges = female ? [[0, 3], [3, 7], [7, 10]]
+    : [[0, 2], [2, 5], [5, 7]];
+  const thoracicParts = splitAnatomy(chest, chestRanges,
+    ['lower-ribcage', 'pectoral-chest', 'upper-thorax']);
+  stitchLoftSeam(abdominalParts.at(-1).geometry, thoracicParts[0].geometry);
+  stitchLoftSeam(thoracicParts.at(-1).geometry, clavicularMesh.geometry);
 
-  // Exactly one true sphere for the head: no jaw, nose, cheek, ear or hair geometry.
+  // A lightly faceted, almost spherical cranium, subtly tapered near the jaw.
+  // Hair mounts remain empty until real hairstyle assets are supplied.
   const head = avatar.head = new THREE.Group();
   head.name = 'soft-head';
   head.position.y = headCenterY;
   root.add(head);
-  const headMesh = ball(head, sphere, 0, 0, 0, headRadius, headRadius, headRadius, 'sphere-head');
+  const cranium = new THREE.SphereGeometry(1, 14, 9);
+  const headPositions = cranium.getAttribute('position');
+  for (let i = 0; i < headPositions.count; i++) {
+    const x = headPositions.getX(i), y = headPositions.getY(i), z = headPositions.getZ(i);
+    const jaw = Math.max(0, -y);
+    const cheek = Math.exp(-Math.pow((y + .12) / .42, 2));
+    headPositions.setXYZ(i,
+      x * (1 - .095 * jaw + .026 * cheek),
+      y * .973,
+      z * (1 - .072 * jaw + .018 * cheek));
+  }
+  cranium.computeVertexNormals();
+  avatar.geometry.push(cranium);
+  const headMesh = ball(head, cranium, 0, 0, 0,
+    headRadius, headRadius, headRadius, 'sphere-head');
   head.userData.headMesh = headMesh;
+  head.userData.hairMounts = createHairMounts(head, headRadius);
   const eyeGeometry = new THREE.BoxGeometry(1, 1, 1);
   avatar.geometry.push(eyeGeometry);
   for (const sign of [-1, 1]) {
@@ -390,7 +429,35 @@ export function buildSoftAvatar(avatar, p) {
     hand.position.y = -lowerLength;
     elbow.add(hand);
     const handRadius = .064 * p.handSize;
-    ball(hand, sphere, 0, -.032, 0, handRadius, handRadius, handRadius, 'hand');
+    ball(hand, sphere, 0, -.027, 0,
+      handRadius * .89, handRadius * .76, handRadius * .48, 'palm');
+    // Five recognisable digits. Two stylised phalanges per finger, attached
+    // under named groups to support later grasp/finger animations.
+    const digits = ['index', 'middle', 'ring', 'little'];
+    hand.userData.fingers = [];
+    digits.forEach((name, i) => {
+      const finger = new THREE.Group();
+      finger.name = name + '-finger';
+      finger.position.set((i - 1.5) * handRadius * .41, -handRadius * .67,
+        -handRadius * .13);
+      hand.add(finger);
+      const length = handRadius * (i === 1 ? .57 : i === 3 ? .38 : .48);
+      ball(finger, sphere, 0, -length * .30, 0,
+        handRadius * .126, length * .44, handRadius * .13, 'proximal-phalanx');
+      ball(finger, sphere, 0, -length * .94, -.003,
+        handRadius * .112, length * .29, handRadius * .12, 'distal-phalanx');
+      hand.userData.fingers.push(finger);
+    });
+    const thumb = new THREE.Group();
+    thumb.name = 'thumb';
+    thumb.position.set(-handRadius * .77, -handRadius * .30, -handRadius * .20);
+    thumb.rotation.z = -.5;
+    hand.add(thumb);
+    ball(thumb, sphere, 0, -handRadius * .19, 0,
+      handRadius * .17, handRadius * .32, handRadius * .16, 'thumb-proximal');
+    ball(thumb, sphere, -handRadius * .08, -handRadius * .48, -.005,
+      handRadius * .16, handRadius * .22, handRadius * .15, 'thumb-distal');
+    hand.userData.fingers.push(thumb);
     upper.userData.elbow = elbow;
     upper.userData.hand = hand;
     return upper;
@@ -467,6 +534,17 @@ export function buildSoftAvatar(avatar, p) {
     sole.rotation.x = Math.PI / 2;
     sole.scale.set(radiusX, radiusZ, 1);
     sole.position.z = -.018;
+    // Heel / midfoot / three broad toe pads preserve the simple cartoony
+    // silhouette but make the foot read as an articulated anatomical unit.
+    ball(foot, sphere, 0, .026, radiusZ * .37,
+      radiusX * .77, .037 * p.footSize, radiusZ * .39, 'heel-pad');
+    ball(foot, sphere, 0, .055, -.008,
+      radiusX * .69, .044 * p.footSize, radiusZ * .63, 'instep');
+    for (let toe = -1; toe <= 1; toe++) {
+      ball(foot, sphere, toe * radiusX * .52, .019, -radiusZ * .79,
+        radiusX * (toe === 0 ? .32 : .27), .020 * p.footSize,
+        radiusZ * .29, toe === -1 ? 'medial-toes' : toe === 0 ? 'central-toes' : 'lateral-toes');
+    }
     upper.userData.knee = knee;
     return upper;
   }
@@ -484,10 +562,12 @@ export function buildSoftAvatar(avatar, p) {
     const thighRadius = .111 * p.thighSize;
     const thighLength = legs * p.thighRatio;
     const x = sign * p.hips * .285 * p.legSpacing;
-    const width = thighRadius * (female ? 1.08 : 1.00) * Math.sqrt(p.hipSize);
-    const rearDepth = thighRadius * (female ? 1.30 : 1.08) *
+    // Reduced for both bodies: posterior volume should read as pelvis rather
+    // than a pair of conspicuous spherical attachments.
+    const width = thighRadius * (female ? .91 : .86) * Math.sqrt(p.hipSize);
+    const rearDepth = thighRadius * (female ? 1.08 : .90) *
       (.34 + .66 * p.gluteSize);
-    const rearBias = thighRadius * (female ? .51 : .43);
+    const rearBias = thighRadius * (female ? .40 : .34);
     const gluteStation = (y, rx, rz, z) =>
       Object.assign(station(y, rx, rz, z, 1, .48), { x });
     const rings = [
