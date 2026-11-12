@@ -465,17 +465,31 @@ export function buildSoftAvatar(avatar, p) {
   head.name = 'soft-head';
   head.position.y = headCenterY;
   root.add(head);
-  const cranium = new THREE.SphereGeometry(1, 14, 9);
+  const shape = p.headShape;
+  // The unmodified sphere remains a real option. Soft has gentle cheek/jaw
+  // taper; Classic uses a mild rounded-cuboid superellipse, never a square.
+  // All three modes share the same root, eyes, clothing and hair mounts.
+  const headPoint = (x,y,z) => {
+    if (shape === 'sphere') return new THREE.Vector3(x,y,z);
+    const pow = shape === 'classic' ? .89 : 1;
+    const rounded = n => Math.sign(n)*Math.pow(Math.abs(n),pow);
+    const jaw = Math.max(0,-y);
+    const cheek = Math.exp(-Math.pow((y + .13) / .40, 2));
+    const jawTaper = 1 + anatomy.jawBias * jaw - .043*jaw;
+    const cheekPad = (.023 + anatomy.cheekBias + (p.cheekFullness-1)*.042)*cheek;
+    return new THREE.Vector3(
+      rounded(x)*(jawTaper+cheekPad),
+      rounded(y)*p.headAspect,
+      rounded(z)*(1-.045*jaw+.012*cheek)
+    );
+  };
+  const cranium = new THREE.SphereGeometry(1, 20, 14);
   const headPositions = cranium.getAttribute('position');
   for (let i = 0; i < headPositions.count; i++) {
-    const x = headPositions.getX(i), y = headPositions.getY(i), z = headPositions.getZ(i);
-    const jaw = Math.max(0, -y);
-    const cheek = Math.exp(-Math.pow((y + .12) / .42, 2));
-    headPositions.setXYZ(i,
-      x * (1 - .095 * jaw + .026 * cheek),
-      y * .973,
-      z * (1 - .072 * jaw + .018 * cheek));
+    const q = headPoint(headPositions.getX(i),headPositions.getY(i),headPositions.getZ(i));
+    headPositions.setXYZ(i,q.x,q.y,q.z);
   }
+  headPositions.needsUpdate = true;
   cranium.computeVertexNormals();
   avatar.geometry.push(cranium);
   const headMesh = ball(head, cranium, 0, 0, 0,
@@ -488,13 +502,49 @@ export function buildSoftAvatar(avatar, p) {
     const x = sign * headRadius * .37 * p.eyeSpacing;
     const y = headRadius * .055;
     const halfHeight = headRadius * .235 * p.eyeLength;
-    const z = -Math.sqrt(headRadius ** 2 - x ** 2 - (y + halfHeight) ** 2) - .006;
+    const q = headPoint(x/headRadius,y/headRadius,
+      -Math.sqrt(Math.max(.05, 1-(x/headRadius)**2-((y+halfHeight)/headRadius)**2)));
+    const z = q.z * headRadius - .007;
     const mark = new THREE.Mesh(eyeGeometry, eye);
     mark.name = sign < 0 ? 'left-eye-line' : 'right-eye-line';
-    mark.position.set(x, y, z);
+    mark.position.set(q.x * headRadius, q.y * headRadius, z);
     mark.scale.set(headRadius * .07, halfHeight * 2, headRadius * .032);
     head.add(mark);
+    avatar.eyeParts.push([{mesh:mark,y:mark.scale.y}]);
   }
+  // Low-cost optional line expressions, invisible for the signature neutral
+  // two-line face. Mouth curves follow the same head morph.
+  head.userData.mouths = {};
+  const mouthPoint = (x,y) => {
+    const z=-Math.sqrt(Math.max(.10,1-x*x-y*y));
+    const q=headPoint(x,y,z);
+    return new THREE.Vector3(q.x*headRadius,q.y*headRadius,
+      q.z*headRadius-.0045);
+  };
+  for(const expression of ['happy','sad','surprised']) {
+    const points=[];
+    const count=12;
+    for(let i=0;i<=count;i++){
+      const t=i/count;
+      if(expression==='surprised'){
+        const angle=t*Math.PI*2;
+        points.push(mouthPoint(.026*Math.cos(angle),
+          -.36+.038*Math.sin(angle)));
+      } else {
+        const x=(t-.5)*.19;
+        const ends=Math.pow(Math.abs(t-.5)*2,2);
+        const y=-.355+(expression==='happy'?.036:-.026)*ends;
+        points.push(mouthPoint(x,y));
+      }
+    }
+    const path=new THREE.CatmullRomCurve3(points,expression==='surprised');
+    const geometry=new THREE.TubeGeometry(path,16,headRadius*.008,4,
+      expression==='surprised');
+    const mouth=add(head,geometry,eye,'mouth-'+expression);
+    mouth.visible=p.faceExpression===expression;
+    head.userData.mouths[expression]=mouth;
+  }
+  head.userData.faceExpression=p.faceExpression;
 
   // Both arms use real parent-child joints so the old pose system remains valid.
   function arm(sign) {
