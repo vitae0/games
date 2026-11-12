@@ -184,19 +184,20 @@ export function buildSoftAvatar(avatar, p) {
   const joinRz = depth * .90 * p.abdomenDepth;
   const join = station(splitY, joinRx, joinRz, .002);
   const torsoExponent = female ? 2.83 : 3.03;
-  const S = 20;
+  // A small topology increase keeps the silhouette smooth in close-up.
+  const S = 24;
   const hipRadius = p.hips * p.hipSize;
 
   const abdomen = [
     station(legs + .008, hipRadius * .36, depth * p.abdomenDepth * .74,
-      .002, female ? 1 : .90 + .12 * p.gluteSize),
+      .002, female ? 1 : .90),
     station(legs + abdomenHeight * .16, hipRadius * .49 * p.abdomenWidth,
-      depth * p.abdomenDepth * .98, .004, female ? 1 : p.gluteSize),
+      depth * p.abdomenDepth * .98, .004),
     station(legs + abdomenHeight * .44,
       (p.hips * (female ? .44 : .41) + p.waist * .08) *
         p.abdomenWidth * p.abdomenFullness,
       depth * p.abdomenDepth * p.abdomenFullness * (female ? 1.04 : 1),
-      .010, female ? 1 : 1 + (p.gluteSize - 1) * .26),
+      .010),
     station(legs + abdomenHeight * .73, p.waist * .52 * p.abdomenWidth,
       depth * p.abdomenDepth * .93, .007),
     station(splitY - bridge, joinRx * 1.025, joinRz * 1.015, .003),
@@ -395,6 +396,9 @@ export function buildSoftAvatar(avatar, p) {
     return upper;
   }
 
+  // Soft knees use matched joint radii, extra taper stations and a thin
+  // articulation cover. Upper and lower legs remain independent bones.
+  // Glutes are modeled below as pelvis-bound forms, not thigh deformation.
   // Hip, knee and ankle remain distinct; rounded feet end on y=0.
   function leg(sign) {
     const upper = new THREE.Bone();
@@ -405,38 +409,46 @@ export function buildSoftAvatar(avatar, p) {
     const calfLength = legs - thighLength;
     const thighRadius = .111 * p.thighSize;
     const calfRadius = .090 * p.calfSize;
+    // Both segments converge to this radius at the articulated knee.
+    const jointRadius = Math.min(thighRadius * .88, calfRadius * 1.06);
     ball(upper, sphere, 0, -.027, .005, thighRadius * 1.02 * p.hipSize,
       thighRadius * .88, thighRadius * .97, 'hip');
-    if (female) {
-      // Gluteal volume belongs to the posterior pelvis / upper-thigh root,
-      // not halfway up the abdomen. The front remains unchanged by gluteSize.
-      // It follows the animated upper-leg bone with no additional seam mesh.
-      const rearBase = 1.05 + (p.gluteSize - 1) * .65;
-      const thigh = [
-        station(-thighLength, thighRadius * .82, thighRadius * .77),
-        station(-thighLength * .88, thighRadius * .91, thighRadius * .86),
-        station(-thighLength * .62, thighRadius * .99, thighRadius * .94),
-        station(-thighLength * .34, thighRadius * 1.03, thighRadius * .96),
-        station(-thighLength * .19, thighRadius * 1.06, thighRadius * 1.01,
-          .008, 1 + (rearBase - 1) * .56),
-        station(-thighLength * .09, thighRadius * 1.11, thighRadius * 1.02,
-          .012, rearBase),
-        station(-thighLength * .022, thighRadius * .94, thighRadius * .92,
-          .011, 1 + (rearBase - 1) * .88),
-        station(.012, thighRadius * .70, thighRadius * .69,
-          .008, 1 + (rearBase - 1) * .56),
-      ];
-      add(upper, softLoftGeometry(thigh, 16, 2.35), material, 'thigh');
-    } else {
-      add(upper, taperedSegment(thighLength, thighRadius * 1.05,
-        thighRadius * .82, 1.03), material, 'thigh');
-    }
+
+    const upperRear = female ? 1.035 : 1;
+    const thigh = [
+      station(-thighLength, jointRadius * .98, jointRadius * .94),
+      station(-thighLength * .975, jointRadius * 1.025, jointRadius * .99),
+      station(-thighLength * .91, jointRadius * 1.09, jointRadius * 1.04),
+      station(-thighLength * .81, thighRadius * .93, thighRadius * .89),
+      station(-thighLength * .62, thighRadius * 1.01, thighRadius * .96),
+      station(-thighLength * .38, thighRadius * 1.06, thighRadius * .99),
+      station(-thighLength * .20, thighRadius * 1.08, thighRadius * 1.015,
+        .006, upperRear),
+      station(-thighLength * .09, thighRadius * 1.09, thighRadius * 1.025,
+        .008, upperRear),
+      station(-thighLength * .022, thighRadius * .95, thighRadius * .95,
+        .008, upperRear),
+      station(.012, thighRadius * .70, thighRadius * .69, .006),
+    ];
+    add(upper, softLoftGeometry(thigh, 20, 2.3), material, 'thigh');
+
     const knee = new THREE.Bone();
     knee.name = sign < 0 ? 'leftLowerLeg' : 'rightLowerLeg';
     knee.position.y = -thighLength;
     upper.add(knee);
-    ball(knee, sphere, 0, 0, 0, Math.min(thighRadius, calfRadius) * 1.03, undefined, undefined, 'knee');
-    add(knee, taperedSegment(calfLength, calfRadius * 1.11, calfRadius * .70), material, 'calf');
+    ball(knee, sphere, 0, 0, 0, jointRadius * 1.065,
+      jointRadius * 1.065, jointRadius * 1.065, 'knee');
+    const calf = [
+      station(-calfLength, calfRadius * .69, calfRadius * .65),
+      station(-calfLength * .94, calfRadius * .77, calfRadius * .73),
+      station(-calfLength * .76, calfRadius * .93, calfRadius * .91),
+      station(-calfLength * .49, calfRadius * 1.09, calfRadius * 1.04),
+      station(-calfLength * .28, calfRadius * 1.13, calfRadius * 1.07),
+      station(-calfLength * .115, jointRadius * 1.075, jointRadius * 1.035),
+      station(-calfLength * .032, jointRadius * 1.025, jointRadius * .985),
+      station(.012, jointRadius * .98, jointRadius * .94),
+    ];
+    add(knee, softLoftGeometry(calf, 20, 2.25), material, 'calf');
     const foot = new THREE.Group();
     foot.name = 'hemisphere-foot';
     foot.position.set(0, -calfLength, -.036);
@@ -462,5 +474,36 @@ export function buildSoftAvatar(avatar, p) {
   avatar.rightArm = arm(1);
   avatar.leftLeg = leg(-1);
   avatar.rightLeg = leg(1);
+
+  // Two distinct posterior pelvic lobes. The narrow ends disappear into the
+  // abdomen and upper thighs, avoiding an exposed spherical junction. The
+  // front of each loft is tucked inside the body; gluteSize changes posterior
+  // depth rather than changing thigh shape or the abdominal silhouette.
+  // These are parented to the pelvis/root, never to animated leg bones.
+  function addGlute(sign) {
+    const thighRadius = .111 * p.thighSize;
+    const thighLength = legs * p.thighRatio;
+    const x = sign * p.hips * .285 * p.legSpacing;
+    const width = thighRadius * (female ? 1.08 : 1.00) * Math.sqrt(p.hipSize);
+    const rearDepth = thighRadius * (female ? 1.30 : 1.08) *
+      (.34 + .66 * p.gluteSize);
+    const rearBias = thighRadius * (female ? .51 : .43);
+    const gluteStation = (y, rx, rz, z) =>
+      Object.assign(station(y, rx, rz, z, 1, .48), { x });
+    const rings = [
+      gluteStation(legs - thighLength * .44, width * .12, rearDepth * .09, rearBias * .18),
+      gluteStation(legs - thighLength * .33, width * .51, rearDepth * .36, rearBias * .55),
+      gluteStation(legs - thighLength * .23, width * .82, rearDepth * .74, rearBias * .91),
+      gluteStation(legs - thighLength * .13, width * 1.00, rearDepth * .97, rearBias * 1.06),
+      gluteStation(legs - thighLength * .052, width * 1.04, rearDepth * 1.00, rearBias * 1.06),
+      gluteStation(legs + .035, width * .88, rearDepth * .83, rearBias * .86),
+      gluteStation(legs + .09, width * .53, rearDepth * .47, rearBias * .49),
+      gluteStation(legs + .125, width * .08, rearDepth * .075, rearBias * .12),
+    ];
+    add(root, softLoftGeometry(rings, 24, 2.55), material,
+      sign < 0 ? 'left-glute' : 'right-glute');
+  }
+  addGlute(-1);
+  addGlute(1);
   avatar.root.userData.height = p.height;
 }
