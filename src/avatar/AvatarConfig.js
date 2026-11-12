@@ -38,7 +38,7 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
 /** Keep old CC0 VRoid models accessible; no asset removal/migration. */
 export const AVATAR_DEFAULTS = Object.freeze({
   ...SOFT_MODEL_PRESETS.softMale,
-  bodyColor: '#a9c4fb',
+  bodyColor: '#a9c4fb', profileVersion: 3,
   baseModel: 'softMale', outfit: 'none', hair: 'sample', hairColor: 'original', visor: false,
   skinTone: 'warm', eyeColor: 'brown', underwear: 'none',
   shirtVisible: true, jacketVisible: true, pantsVisible: true, shoesVisible: true,
@@ -149,4 +149,25 @@ export function normalizeAvatar(input = {}) {
   if (Object.hasOwn(SKIN_TONES, input.skinTone)) p.skinTone = input.skinTone;
   if (Object.hasOwn(EYE_COLORS, input.eyeColor)) p.eyeColor = input.eyeColor;
   return p;
+}
+
+/** Upgrade untouched v2 female defaults while retaining hand-edited settings.
+ * Applied only when loading old localStorage profiles, never during slider edits.
+ */
+export function migrateSoftProfile(input = {}) {
+  if (!input || typeof input !== 'object') return normalizeAvatar();
+  if (input.profileVersion >= 3 || input.baseModel !== 'softFemale')
+    return normalizeAvatar(input);
+  const oldFemale = {
+    height: 1.68, shoulders: .435, hips: .46,
+    legRatio: .52, headScale: 1.12, torsoDepth: .97,
+    chestWidth: .97, chestDepth: 1.03,
+    chestFullness: 1.08, chestRatio: .52,
+  };
+  const replacement = {};
+  for (const [key, value] of Object.entries(oldFemale)) {
+    if (Object.hasOwn(input, key) && input[key] === value)
+      replacement[key] = SOFT_MODEL_PRESETS.softFemale[key];
+  }
+  return normalizeAvatar({ ...input, ...replacement });
 }
