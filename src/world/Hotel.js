@@ -49,6 +49,21 @@ export class Hotel {
     this.build();
     this.city = new CitySkyline(scene);
     this.actors = new Actors(scene, this.collisions, events.toast);
+    // NPCs use the same object-attached action buttons as doors and furniture.
+    for (const person of this.actors.people) {
+      this.interactables.push({
+        floor: 0,
+        position: person.position,
+        get labelPosition() {
+          return { x: person.position.x, y: person.position.y + 1.32, z: person.position.z };
+        },
+        isAvailable: () => person.ready,
+        getLabel: () => person.name + ' · Konuş',
+        activate: () => this.events.toast(person.anchored
+          ? 'Mira: Vitae Hotel’in 47-50. katlarındasınız. Şehir aşağıda; merdivenler batı kanadında.'
+          : 'Nova: Merhaba! Sol veya sağ tuşla elimi tutabilirsin. Tekerlekle it veya çek.'),
+      });
+    }
   }
   createMaterials() {
     this.surfaceTextures = createSurfaceTextures();
@@ -423,14 +438,15 @@ export class Hotel {
     let found = null;
     let best = Infinity;
     for (const obj of this.interactables) {
-      if (obj.floor !== player.floor) continue;
+      if (obj.floor !== player.floor || obj.isAvailable?.() === false) continue;
       const dx = obj.position.x - player.position.x;
       const dz = obj.position.z - player.position.z;
       const distance = Math.hypot(dx, dz);
-      if (distance > 2.35 || distance < .01) continue;
+      if (distance > 2.75 || distance < .01) continue;
       const facing = (dx * direction.x + dz * direction.z) / distance;
-      if (facing < 0.16) continue;
-      const score = distance - facing * .6;
+      if (facing < .16) continue;
+      // Favor what the crosshair faces over a slightly closer object off-axis.
+      const score = distance * .35 + (1 - facing) * 2.2;
       if (score < best) { best = score; found = obj; }
     }
     if (!found) {
