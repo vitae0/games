@@ -5,7 +5,7 @@ import { Avatar } from '../src/avatar/Avatar.js';
 import { softLoftGeometry } from '../src/avatar/SoftAvatar.js';
 import {
   normalizeAvatar, AVATAR_RANGES, SOFT_AVATAR_FIELDS,
-  SOFT_MODEL_PRESETS, switchSoftModel, isSoftModel,
+  SOFT_MODEL_PRESETS, switchSoftModel, isSoftModel, migrateSoftProfile,
 } from '../src/avatar/AvatarConfig.js';
 import { NPC_CAST, npcProfile } from '../src/world/NpcCast.js';
 
@@ -263,4 +263,26 @@ test('hip width, rear glute and outward arm stance deform the intended axes', ()
     assert.ok(Math.abs(avatar.leftArm.rotation.z) < 1e-12);
     assert.ok(Math.abs(avatar.rightArm.rotation.z) < 1e-12);
   } finally { avatar.dispose(); }
+});
+
+test('saved v2 female profiles receive new baseline without erasing user edits', () => {
+  const old = {
+    baseModel: 'softFemale', height: 1.68, chestWidth: .97,
+    chestDepth: 1.03, chestFullness: 1.08, chestRatio: .52,
+    shoulders: .435, hips: .46, legRatio: .52, torsoDepth: .97,
+    bodyColor: '#44aacc', forearmSize: 1.32, abdomenFullness: 1.20,
+  };
+  const migrated = migrateSoftProfile(old);
+  assert.equal(migrated.height, 1.73);
+  assert.equal(migrated.chestWidth, SOFT_MODEL_PRESETS.softFemale.chestWidth);
+  assert.equal(migrated.chestDepth, SOFT_MODEL_PRESETS.softFemale.chestDepth);
+  assert.equal(migrated.chestRatio, SOFT_MODEL_PRESETS.softFemale.chestRatio);
+  assert.equal(migrated.forearmSize, 1.32);
+  assert.equal(migrated.abdomenFullness, 1.20);
+  assert.equal(migrated.bodyColor, '#44aacc');
+  assert.equal(migrated.profileVersion, 3);
+  const edited = migrateSoftProfile({ ...old, height: 1.65, chestDepth: 1.25 });
+  assert.equal(edited.height, 1.65);
+  assert.equal(edited.chestDepth, 1.25);
+  assert.equal(migrateSoftProfile(migrated).height, 1.73);
 });
