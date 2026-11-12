@@ -199,14 +199,14 @@ test('female starts taller than v2 yet remains below male and enlarges chest eve
   } finally { upgraded.dispose(); previous.dispose(); }
 });
 
-test('three independently configurable torso surfaces have watertight shared loft seams', () => {
+test('abdomen, chest and clavicular collar have watertight shared loft seams', () => {
   for (const model of ['softMale', 'softFemale']) {
     const avatar = new Avatar(new THREE.Scene(), { baseModel: model });
     try {
       const torso = avatar.body;
       const abdomen = torso.getObjectByName('soft-abdomen');
       const chest = torso.getObjectByName('soft-chest');
-      const upper = torso.getObjectByName('soft-upper-chest');
+      const upper = torso.getObjectByName('soft-clavicular');
       for (const segment of [abdomen, chest, upper]) {
         assert.ok(segment?.isMesh);
         assert.ok(segment.geometry.getAttribute('normal'));
@@ -235,7 +235,7 @@ test('three independently configurable torso surfaces have watertight shared lof
       const upperBefore = upper.geometry.getAttribute('position').array.slice();
       const chestBefore = chest.geometry.getAttribute('position').array.slice();
       avatar.updateStyle({ ...avatar.profile, upperChestFullness: 1.36 });
-      assert.notDeepEqual(Array.from(avatar.body.getObjectByName('soft-upper-chest').geometry.getAttribute('position').array),
+      assert.notDeepEqual(Array.from(avatar.body.getObjectByName('soft-clavicular').geometry.getAttribute('position').array),
         Array.from(upperBefore));
       assert.deepEqual(Array.from(avatar.body.getObjectByName('soft-chest').geometry.getAttribute('position').array),
         Array.from(chestBefore));
@@ -285,4 +285,66 @@ test('saved v2 female profiles receive new baseline without erasing user edits',
   assert.equal(edited.height, 1.65);
   assert.equal(edited.chestDepth, 1.25);
   assert.equal(migrateSoftProfile(migrated).height, 1.73);
+});
+
+test('clavicular collar is above pectoral chest, reaches neck root and has distinct controls', () => {
+  const avatar = new Avatar(new THREE.Scene(), { baseModel: 'softFemale' });
+  try {
+    const collar = avatar.body.getObjectByName('soft-clavicular');
+    const chest = avatar.body.getObjectByName('soft-chest');
+    assert.ok(collar?.isMesh);
+    assert.equal(avatar.body.getObjectByName('soft-upper-chest'), undefined,
+      'the previous broad upper-pectoral piece is replaced by a clavicular neck-base zone');
+    chest.geometry.computeBoundingBox();
+    collar.geometry.computeBoundingBox();
+    assert.ok(collar.geometry.boundingBox.min.y > chest.geometry.boundingBox.min.y + .11);
+    assert.ok(collar.geometry.boundingBox.max.y > chest.geometry.boundingBox.max.y);
+    assert.ok(collar.geometry.boundingBox.max.y > avatar.leftArm.position.y,
+      'collar extends from shoulders toward the neck beneath the sphere head');
+    const p = avatar.profile;
+    assert.ok(p.upperChestWidth > 0 && p.clavicleDefinition > 0);
+    assert.ok(p.neckBaseWidth > 0 && p.trapeziusVolume > 0);
+    const position = () => avatar.body.getObjectByName('soft-clavicular')
+      .geometry.getAttribute('position');
+    const ring = 2, sides = 20;
+    const front = ring * sides + 13; // anterior, left of the midline
+    const back = ring * sides + 7; // posterior, equally far from midline
+    const frontZ = position().getZ(front);
+    const frontY = position().getY(front);
+    const backZ = position().getZ(back);
+    const chestBefore = chest.geometry.getAttribute('position').array.slice();
+    avatar.updateStyle({ ...p, clavicleDefinition: 1.45 });
+    assert.ok(position().getZ(front) < frontZ, 'clavicle definition creates an anterior ridge');
+    assert.ok(position().getY(front) > frontY, 'collarbone ridge is subtly raised');
+    assert.ok(Math.abs(position().getZ(back) - backZ) < 1e-6,
+      'the collarbone setting does not raise the back of the neck');
+    assert.deepEqual(Array.from(avatar.body.getObjectByName('soft-chest')
+      .geometry.getAttribute('position').array), Array.from(chestBefore),
+      'clavicle definition does not deform the pectoral chest');
+    const neckRing = 5 * sides;
+    const oldNeckWidth = position().getX(neckRing);
+    avatar.updateStyle({ ...avatar.profile, neckBaseWidth: 1.4 });
+    assert.ok(position().getX(neckRing) > oldNeckWidth,
+      'neck base grows without altering head dimensions');
+    const rearBefore = position().getZ(back);
+    avatar.updateStyle({ ...avatar.profile, trapeziusVolume: 1.48 });
+    assert.ok(position().getZ(back) > rearBefore, 'rear trapezius gains volume');
+  } finally { avatar.dispose(); }
+});
+
+test('new clavicular slider values clamp and v3 upperChest settings stay compatible', () => {
+  const p = normalizeAvatar({
+    baseModel: 'softFemale', upperChestWidth: 1.27, upperChestDepth: 1.21,
+    upperChestFullness: .91, clavicleDefinition: 99, trapeziusVolume: -.8,
+    neckBaseWidth: 1.21,
+  });
+  assert.equal(p.upperChestWidth, 1.27);
+  assert.equal(p.upperChestDepth, 1.21);
+  assert.equal(p.upperChestFullness, .91);
+  assert.equal(p.clavicleDefinition, AVATAR_RANGES.clavicleDefinition[1]);
+  assert.equal(p.trapeziusVolume, AVATAR_RANGES.trapeziusVolume[0]);
+  assert.equal(p.neckBaseWidth, 1.21);
+  assert.ok(SOFT_AVATAR_FIELDS.some(([key, label]) =>
+    key === 'upperChestWidth' && label.includes('Klaviküler')));
+  assert.ok(SOFT_AVATAR_FIELDS.some(([key]) => key === 'clavicleDefinition'));
 });
