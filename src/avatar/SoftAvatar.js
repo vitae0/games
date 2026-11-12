@@ -214,7 +214,7 @@ export function buildSoftAvatar(avatar, p) {
     (.62 * p.upperChestDepth + .30 * p.chestDepth);
   // Female clavicle is a tucked-in transition. It must never exceed the chest
   // volume even at the highest configurable collar settings.
-  const upperJoinRx = female ? Math.min(upperJoinRxRaw, chestWidth * .80) : upperJoinRxRaw;
+  const upperJoinRx = female ? Math.min(upperJoinRxRaw * .89, chestWidth * .80) : upperJoinRxRaw;
   const upperJoinRz = female ? Math.min(upperJoinRzRaw, chestDepth * .82) : upperJoinRzRaw;
   const upperJoin = station(clavicleY, upperJoinRx, upperJoinRz, -.003);
   const shoulderWidth = female
