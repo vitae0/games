@@ -131,7 +131,6 @@ export class TouchControls {
   action(action) {
     switch (action) {
       case 'jump': this.player.jump(); break;
-      case 'interact': this.player.events.interact(); break;
       case 'sit': this.player.setFloorPosture('floorSit'); break;
       case 'kneel': this.player.setFloorPosture('kneel'); break;
       case 'camera': this.player.toggleCamera(); break;
