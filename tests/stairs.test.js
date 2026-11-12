@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {stairFlight,stairHeight,resolveGround,groundFloor,STAIR,STAIR_RISE,STAIR_RUN} from '../src/world/Stairwell.js';
 import {HOTEL} from '../src/config.js';
 import {Hotel} from '../src/world/Hotel.js';
+import * as THREE from 'three';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 
 test('rotated narrow stairs run horizontally, with an open entrance and right-hand first lane',()=>{
@@ -57,7 +58,11 @@ test('no extra overlapping first floor and render height matches rotated treads'
 
 test('reception and bar finishes sit above the common uninterrupted ground slab',()=>{
   const boxes=[];
+  const seatMaterial=new THREE.MeshBasicMaterial();
+  const geometry=new THREE.BoxGeometry(1,1,1);
   const fake={
+    scene:new THREE.Scene(),materials:{fabric:seatMaterial},
+    suiteMeshes:[],propGeometry:geometry,
     box:(mat,x,y,z,w,h,d)=>boxes.push({mat,x,y,z,w,h,d}),
     rounded:(mat,x,y,z,w,h,d)=>boxes.push({mat,x,y,z,w,h,d}),
     climbable(){},addWalkSurface(){},interactables:[],events:{toast(){}},roomLighting:null,
@@ -69,4 +74,5 @@ test('reception and bar finishes sit above the common uninterrupted ground slab'
   near(reception.y+reception.h/2,.03);
   assert.ok(boxes.some(b=>b.mat==='wood'&&Math.abs(b.z+10.68)<1e-8),
     'bar finishes also exist above shared first-floor deck');
+  seatMaterial.dispose(); geometry.dispose();
 });
