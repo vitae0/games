@@ -436,7 +436,12 @@ export class Hotel {
   }
   closestInteraction(player, direction) {
     if (player.posture !== 'stand') return {
-      getLabel: () => 'Mobilyadan kalk', activate: () => player.standUp(),
+      getLabel: () => ({
+        floorLie:'Yerden kalk · Önce otur',
+        kneel:'Diz çökmeden kalk · Önce otur',
+        floorSit:'Yerden kalk · Ayağa kalk',
+      }[player.posture] ?? 'Mobilyadan kalk'),
+      activate: () => player.standUp(),
     };
     let found = null;
     let best = Infinity;
