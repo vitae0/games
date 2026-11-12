@@ -473,7 +473,7 @@ export class Player {
       }
     }
     this.avatar.root.position.copy(this.position);
-    this.avatar.root.rotation.y = this.bodyYaw;
+    this.avatar.root.rotation.set(0,this.bodyYaw,0,'YXZ');
     // Furniture poses turn around the real hip/back contact, not around the
     // foot-level player controller, so small/tall avatars rest on the surface.
     this.sleepLean = THREE.MathUtils.damp(this.sleepLean,
@@ -483,9 +483,16 @@ export class Player {
     // Roll the entire skeleton onto the back; keep shoulders and head above
     // the floor without changing their bone lengths or the foot planting logic.
     this.avatar.root.rotation.x = -1.52 * this.sleepLean + 1.47 * this.floorLieLean;
+    this.lyingRoll=THREE.MathUtils.damp(this.lyingRoll,
+      this.posture === 'floorLie' ? this.lyingQuarterTurns*Math.PI/2 : 0,8,dt);
+    // Rotating around the reclining body's longitudinal local Y axis rolls
+    // 90° onto either side and 180° completely face-down.
+    this.avatar.root.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0,1,0),this.lyingRoll));
     this.avatar.root.position.y += .19 * this.floorLieLean;
     this.avatar.update(dt, this.walkSpeed,
-      this.posture === 'stand' && crouching ? 'crouch' : this.posture, this.furnitureStyle);
+      this.posture === 'stand' && crouching ? 'crouch' : this.posture,
+      this.furnitureStyle, this.currentFloorVariant?.id ?? null);
     if (this.savedStanding) alignAvatarToFurniture(this.avatar, this.position, this.furnitureStyle);
     for (const side of ['left', 'right']) {
       const hand = this.hands[side];
@@ -498,8 +505,7 @@ export class Player {
     });
     // FPS exposes only this avatar's actual limb bones. Other characters
     // remain complete: their layer masks are never modified.
-    const orbitCamera = this.thirdPerson || this.events.isCustomizerOpen() ||
-      isFloorPosture(this.posture) || this.savedStanding !== null;
+    const orbitCamera = this.thirdPerson || this.events.isCustomizerOpen();
     this.avatar.setFirstPersonMode(!orbitCamera);
     this.avatar.root.visible = true;
     this.handRig.update(dt, this.hands.left, this.hands.right, false);
@@ -518,7 +524,9 @@ export class Player {
       const target = this.savedStanding
         ? this.avatar.body.localToWorld(new THREE.Vector3(0,
           this.avatar.profile.height * (this.furnitureStyle === 'sleep' ? .63 : .69), 0))
-        : new THREE.Vector3(this.position.x, this.position.y + targetHeight, this.position.z);
+        : this.posture === 'floorLie'
+          ? this.avatar.body.localToWorld(new THREE.Vector3(0,this.avatar.profile.height*.57,0))
+          : new THREE.Vector3(this.position.x, this.position.y + targetHeight, this.position.z);
       const behind = this.events.isCustomizerOpen()
         ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
       const horizontal = orbitHorizontalDistance(distance, this.pitch);
@@ -537,8 +545,7 @@ export class Player {
       this.camera.lookAt(target);
     } else {
       this.camera.position.copy(this.eyePosition());
-      this.camera.rotation.order = 'YXZ';
-      this.camera.rotation.set(this.pitch, this.yaw, 0);
+      this.camera.quaternion.copy(this.poseCameraQuaternion());
     }
     return this.walkSpeed;
   }
