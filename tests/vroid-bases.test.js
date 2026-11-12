@@ -5,11 +5,11 @@ import { classifyVRoidMaterial, vroidMaterialVisibility, applyVRoidWardrobe } fr
 import { SOURCES, gitBlobSha, inspectVrm } from '../scripts/fetch-vroid-bases.mjs';
 
 test('both CC0 beta base genders are accepted but outdated sources are rejected', () => {
-  assert.equal(normalizeAvatar().baseModel, 'vroidMale');
+  assert.equal(normalizeAvatar().baseModel, 'soft');
   assert.equal(normalizeAvatar({baseModel:'vroidFemale'}).baseModel, 'vroidFemale');
-  assert.equal(normalizeAvatar({baseModel:'quaternius'}).baseModel, 'vroidMale');
-  assert.equal(normalizeAvatar({baseModel:'procedural'}).baseModel, 'vroidMale');
-  assert.equal(normalizeAvatar({baseModel:'unlicensed'}).baseModel, 'vroidMale');
+  assert.equal(normalizeAvatar({baseModel:'quaternius'}).baseModel, 'soft');
+  assert.equal(normalizeAvatar({baseModel:'procedural'}).baseModel, 'soft');
+  assert.equal(normalizeAvatar({baseModel:'unlicensed'}).baseModel, 'soft');
 });
 test('VRoid garment classification leaves body, face, eyes and hair untouched', () => {
   for (const n of ['M00_Body_00_SKIN', 'Face', 'EyeIris', 'HairFront'])
