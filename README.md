@@ -1,6 +1,14 @@
-# VitaeWorld · Alpha 0.13 (Vitae Hotel)
+# VitaeWorld · Alpha 0.14 (Vitae Hotel)
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
+
+## Alpha 0.14: gerçek zemin pozları, üçlü Ctrl ve ayrık klozet etkileşimi
+
+- **Klozet/kapı ayrımı:** Umumi tuvalette kapıya tıklamak sadece kapı ve kilidi, klozete tıklamak kullanım, sifon ve kapağı gösterir. Kapalı kabinin içindeki klozet duvarın ardından seçilemez.
+- **Gerçek yere oturma:** Çift Ctrl, kalçayı yere indirir ve bacakları ileri uzatır; artık sandalye oturuşu değildir.
+- **Tam diz çökme:** Ctrl+Space iki dizi simetrik olarak yere indirir; bir ayak öne basılmaz.
+- **Yere uzanma:** Üç kısa Ctrl basışı sırtüstü yatmaya geçirir. E/KALK ile önce yere oturulur, ikinci E/KALK ile ayağa kalkılır. Mobil ekstra menüsünde YAT/KALK eklendi.
+- **Ctrl+W kazası:** Site keydown olayı ulaşırsa varsayılanı engellemeyi dener. Kullanıcı oyuna girdikten sonra sayfa kapatılırken desteklenen tarayıcıda çıkış onayı istenir. Üstteki **TAM EKRAN** düğmesi, tarayıcının izin verdiği klavye kilidini dener. **Normal sekmede tarayıcının sakladığı Ctrl+W kısayolu web sitesi tarafından kesin biçimde kapatılamaz.** Kapatma onayı ve tam ekran kilidi tarayıcı sürümüne/izinlerine bağlıdır.
 
 ## Alpha 0.13: umumi tuvalet yenilemesi
 
