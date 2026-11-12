@@ -250,13 +250,19 @@ test('hip width, rear glute and outward arm stance deform the intended axes', ()
     assert.ok(avatar.rightArm.rotation.z > 0);
     assert.ok(Math.abs(avatar.leftArm.rotation.z + avatar.rightArm.rotation.z) < 1e-9);
     const abdomen = () => avatar.body.getObjectByName('soft-abdomen').geometry.getAttribute('position');
-    const beforeBack = abdomen().getZ(25); // ring 1, 90deg, rear (+Z)
-    const beforeFront = abdomen().getZ(35); // ring 1, 270deg, front (-Z)
-    const beforeHip = abdomen().getX(20); // ring 1, lateral (+X)
+    const thigh = () => avatar.leftLeg.getObjectByName('thigh').geometry.getAttribute('position');
+    const backIdx = 5 * 16 + 4;  // upper thigh, posterior (+Z)
+    const frontIdx = 5 * 16 + 12; // upper thigh, anterior (-Z)
+    const beforeBack = thigh().getZ(backIdx);
+    const beforeFront = thigh().getZ(frontIdx);
+    const beforeAbdomen = Array.from(abdomen().array);
+    const beforeHip = abdomen().getX(20); // pelvis ring, lateral (+X)
     avatar.updateStyle({ ...avatar.profile, gluteSize: 1.55 });
-    assert.ok(abdomen().getZ(25) > beforeBack, 'rear contour increases with glute setting');
-    assert.ok(Math.abs(abdomen().getZ(35) - beforeFront) < 1e-6,
-      'glute setting does not bulge the front of the body');
+    assert.ok(thigh().getZ(backIdx) > beforeBack, 'glute grows from upper thigh root to the rear');
+    assert.ok(Math.abs(thigh().getZ(frontIdx) - beforeFront) < 1e-6,
+      'glute setting does not bulge the anterior thigh');
+    assert.deepEqual(Array.from(abdomen().array), beforeAbdomen,
+      'glute setting must not reshape the abdomen');
     avatar.updateStyle({ ...avatar.profile, hipSize: 1.4 });
     assert.ok(abdomen().getX(20) > beforeHip, 'hips gain lateral width');
     avatar.updateStyle({ ...avatar.profile, armSpread: 0 });
@@ -347,4 +353,107 @@ test('new clavicular slider values clamp and v3 upperChest settings stay compati
   assert.ok(SOFT_AVATAR_FIELDS.some(([key, label]) =>
     key === 'upperChestWidth' && label.includes('Klaviküler')));
   assert.ok(SOFT_AVATAR_FIELDS.some(([key]) => key === 'clavicleDefinition'));
+});
+
+test('female chest is longer and rounder, with paired anterior lobes, not a peak', () => {
+  const preset = SOFT_MODEL_PRESETS.softFemale;
+  assert.equal(preset.height, 1.73);
+  assert.ok(preset.height < SOFT_MODEL_PRESETS.softMale.height);
+  assert.equal(preset.chestDepth, 1.08);
+  assert.ok(preset.chestRatio > .585);
+  const female = new Avatar(new THREE.Scene(), { baseModel: 'softFemale' });
+  const oldDepth = new Avatar(new THREE.Scene(), { baseModel: 'softFemale', chestDepth: 1.12 });
+  try {
+    const chest = female.body.getObjectByName('soft-chest').geometry;
+    assert.ok(chest.getAttribute('position').count > 10 * 20,
+      'female chest has extra stations for a rounded shape');
+    const vertex = chest.getAttribute('position');
+    const ring = 5 * 20; // broadest front section
+    assert.ok(Math.abs(vertex.getZ(ring + 14) - vertex.getZ(ring + 16)) < 1e-6,
+      'left and right bust contours are symmetric');
+    assert.ok(vertex.getZ(ring + 14) < vertex.getZ(ring + 13),
+      'a rounded lobe curves back toward the outer side');
+    const depthOf = avatar => {
+      const g = avatar.body.getObjectByName('soft-chest').geometry;
+      g.computeBoundingBox();
+      return g.boundingBox.min.z;
+    };
+    assert.ok(depthOf(female) > depthOf(oldDepth),
+      'female front depth is slightly reduced from the previous preset');
+  } finally { female.dispose(); oldDepth.dispose(); }
+});
+
+test('female clavicular collar stays tucked within chest and is a shorter transition', () => {
+  const female = new Avatar(new THREE.Scene(), { baseModel:'softFemale' });
+  const oldCollar = new Avatar(new THREE.Scene(), {
+    baseModel:'softFemale', upperChestWidth: .98, upperChestDepth: 1.0,
+    upperChestFullness: 1.03, clavicleDefinition: .49,
+    trapeziusVolume: .96, neckBaseWidth: .95,
+  });
+  try {
+    const chest = female.body.getObjectByName('soft-chest').geometry;
+    const collar = female.body.getObjectByName('soft-clavicular').geometry;
+    chest.computeBoundingBox();
+    collar.computeBoundingBox();
+    const cx = chest.boundingBox.max.x;
+    const ux = collar.boundingBox.max.x;
+    assert.ok(ux < cx, 'collar width fits inside the bust/chest');
+    assert.ok(collar.boundingBox.min.z >= chest.boundingBox.min.z,
+      'collar never protrudes further forward than chest');
+    assert.ok(collar.boundingBox.max.z <= chest.boundingBox.max.z,
+      'collar never extends further backward than chest');
+    const clavicleY = collar.getAttribute('position').getY(0);
+    const shoulder = female.leftArm.position.y;
+    assert.ok(shoulder - clavicleY < .08, 'clavicle begins close to shoulder level');
+    const original = oldCollar.body.getObjectByName('soft-clavicular').geometry;
+    original.computeBoundingBox();
+    assert.ok(collar.boundingBox.max.x < original.boundingBox.max.x,
+      'the new default clavicle is narrower');
+  } finally { female.dispose(); oldCollar.dispose(); }
+});
+
+test('female glute deformation stays below pelvis while male thigh contour is unchanged', () => {
+  const female = new Avatar(new THREE.Scene(), {baseModel:'softFemale'});
+  const male = new Avatar(new THREE.Scene(), {baseModel:'softMale'});
+  try {
+    const thigh = female.leftLeg.getObjectByName('thigh').geometry;
+    const abdomen = female.body.getObjectByName('soft-abdomen').geometry;
+    const oldMale = male.leftLeg.getObjectByName('thigh').geometry;
+    assert.equal(thigh.userData.loft.stationCount, 8);
+    assert.equal(oldMale.userData.loft.stationCount, 7,
+      'the original male taperedSegment implementation is preserved');
+    assert.ok(thigh.getAttribute('position').getY(5*16) < 0,
+      'rear glute lobe is attached below the hip joint');
+    assert.ok(abdomen.getAttribute('position').getY(5*20) > thigh.getAttribute('position').getY(5*16),
+      'rear glute is no longer midway up the abdomen');
+    const before = Array.from(thigh.getAttribute('position').array);
+    female.updateStyle({...female.profile, gluteSize:1.52});
+    assert.notDeepEqual(
+      Array.from(female.leftLeg.getObjectByName('thigh').geometry.getAttribute('position').array),
+      before);
+    assert.equal(male.body.getObjectByName('soft-clavicular')?.isMesh, true);
+  } finally { female.dispose(); male.dispose(); }
+});
+
+test('v3 saved female defaults upgrade to v4 without overwriting user edits', () => {
+  const v3 = {
+    profileVersion: 3, baseModel:'softFemale',
+    height:1.73, chestDepth:1.12, chestFullness:1.15,
+    chestRatio:.585, upperChestWidth:.98, upperChestDepth:1,
+    upperChestFullness:1.03, gluteSize:1.12,
+    clavicleDefinition:.49, trapeziusVolume:.96, neckBaseWidth:.95,
+    abdomenFullness:1.23, bodyColor:'#4488cc',
+  };
+  const newer = migrateSoftProfile(v3);
+  assert.equal(newer.profileVersion, 4);
+  assert.equal(newer.chestDepth, 1.08);
+  assert.equal(newer.chestRatio, .62);
+  assert.equal(newer.upperChestWidth, .88);
+  assert.equal(newer.gluteSize, 1.06);
+  assert.equal(newer.abdomenFullness,1.23);
+  assert.equal(newer.bodyColor,'#4488cc');
+  const edited = migrateSoftProfile({ ...v3, chestDepth: .91, gluteSize: 1.43 });
+  assert.equal(edited.chestDepth,.91);
+  assert.equal(edited.gluteSize,1.43);
+  assert.equal(migrateSoftProfile(newer).chestRatio,.62);
 });
