@@ -223,7 +223,7 @@ export class Hud {
     groupFields('Baş ve yüz', ['height','headScale','eyeSpacing','eyeLength','neckSize']);
     groupFields('Genel vücut oranları', ['shoulders','waist','hips','torsoDepth']);
     groupFields('Göğüs', ['chestWidth','chestDepth','chestFullness','chestRatio']);
-    groupFields('Üst göğüs', ['upperChestWidth','upperChestDepth','upperChestFullness']);
+    groupFields('Köprücük kemikleri ve boyun tabanı', ['upperChestWidth','upperChestDepth','upperChestFullness','clavicleDefinition','trapeziusVolume','neckBaseWidth']);
     groupFields('Karın (ayrı mesh)', ['abdomenWidth','abdomenDepth','abdomenFullness']);
     groupFields('Kollar', ['armSpread','armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
     groupFields('Kalça ve glute', ['hipSize','gluteSize']);
