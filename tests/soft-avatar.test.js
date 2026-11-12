@@ -235,9 +235,9 @@ test('three independently configurable torso surfaces have watertight shared lof
       const upperBefore = upper.geometry.getAttribute('position').array.slice();
       const chestBefore = chest.geometry.getAttribute('position').array.slice();
       avatar.updateStyle({ ...avatar.profile, upperChestFullness: 1.36 });
-      assert.notDeepEqual(Array.from(torso.getObjectByName('soft-upper-chest').geometry.getAttribute('position').array),
+      assert.notDeepEqual(Array.from(avatar.body.getObjectByName('soft-upper-chest').geometry.getAttribute('position').array),
         Array.from(upperBefore));
-      assert.deepEqual(Array.from(torso.getObjectByName('soft-chest').geometry.getAttribute('position').array),
+      assert.deepEqual(Array.from(avatar.body.getObjectByName('soft-chest').geometry.getAttribute('position').array),
         Array.from(chestBefore));
     } finally { avatar.dispose(); }
   }
