@@ -68,8 +68,10 @@ export class Avatar {
     this.materials.forEach(m => m.dispose());
     this.geometry = []; this.materials = [];
     this.softAvatar = false;
+    this.firstPersonOccluders = [];
     if (isSoftModel(this.profile.baseModel)) {
       buildSoftAvatar(this, this.profile);
+      this.setupFirstPersonVisibility();
       return;
     }
     this.createShapes();
@@ -114,6 +116,7 @@ export class Avatar {
     this.leftLeg = this.buildLeg(-1, legLength, p.hips);
     this.rightLeg = this.buildLeg(1, legLength, p.hips);
     this.updateGarmentVisibility();
+    this.setupFirstPersonVisibility();
     if (this.external) {
       this.root.add(this.external.wrapper);
       this.body.visible = false;
@@ -363,6 +366,17 @@ export class Avatar {
       this.onStyleLoad?.();
       console.warn('CC0 hazır saç yüklenemedi:', error);
     });
+  }
+  setupFirstPersonVisibility() {
+    // Layer 1: local camera occluders. The rest of the body remains on layer 0.
+    this.firstPersonOccluders = [];
+    const add = object => object?.traverse(child => {
+      if (!child.isMesh) return;
+      child.layers.set(1);
+      this.firstPersonOccluders.push(child);
+    });
+    add(this.head);
+    if (this.softAvatar) add(this.body.getObjectByName('clavicular-transition'));
   }
   headWorldHeight() {
     return this.profile.height + this.body.position.y - this.profile.height * .08;

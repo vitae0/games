@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PLAYER, HOTEL } from '../config.js';
 import { Avatar } from '../avatar/Avatar.js';
 import { HandRig } from './HandRig.js';
+import { BodyIK } from './BodyIK.js';
 import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw, yawFromDisplacement, approachYaw } from './Orientation.js';
 import { isFloorPosture, nextFloorPosture } from './Postures.js';
 import { PostureControls } from './PostureControls.js';
@@ -20,6 +21,8 @@ export class Player {
     this.touchRun = false; this.touchCrouch = false; this.touchGripAdjustment = 0;
     this.avatar = new Avatar(scene, profile);
     this.handRig = new HandRig(camera, profile);
+    this.bodyIK = new BodyIK(this.avatar);
+    this.cameraDistance = 3.8;
     this.hands = {
       left: { pressed: false, grip: null, distance: 1.55 },
       right: { pressed: false, grip: null, distance: 1.55 },
@@ -62,7 +65,7 @@ export class Player {
     }
   }
   pressHand(side) {
-    if (!this.active || this.posture !== 'stand') return;
+    if (!this.active || this.posture !== 'stand' || this.keys.has('KeyZ')) return;
     this.releaseHand(side);
     const hand = this.hands[side];
     hand.pressed = true;
@@ -93,13 +96,19 @@ export class Player {
       .addScaledVector(this.rightVector(), sign * .32)
       .add(new THREE.Vector3(0, -.24, 0));
   }
+  requestFootStep() {
+    if (!this.active || this.posture !== 'stand' || !this.keys.has('KeyZ') || !this.keys.has('KeyW')) return;
+    if (this.keys.has('KeyD')) this.bodyIK.placeFoot('right', this.yaw, this.bodyYaw);
+    if (this.keys.has('KeyA')) this.bodyIK.placeFoot('left', this.yaw, this.bodyYaw);
+  }
   bindEvents() {
     this.mouseMove = (event) => {
       if (!this.active || document.pointerLockElement !== this.canvas) return;
       this.lookBy(event.movementX, event.movementY);
     };
     this.mouseDown = (event) => {
-      if (!this.active || this.posture !== 'stand' || (this.touchActive && document.pointerLockElement !== this.canvas)) return;
+      if (!this.active || this.posture !== 'stand' || this.keys.has('KeyZ') ||
+          (this.touchActive && document.pointerLockElement !== this.canvas)) return;
       if (event.button !== 0 && event.button !== 2) return;
       event.preventDefault();
       this.pressHand(event.button === 0 ? 'left' : 'right');
@@ -109,7 +118,13 @@ export class Player {
     };
     this.contextMenu = (event) => event.preventDefault();
     this.wheel = (event) => {
-      if (!this.active || !Object.values(this.hands).some(h => h.grip)) return;
+      if (!this.active) return;
+      if (this.thirdPerson) {
+        event.preventDefault();
+        this.cameraDistance = clamp(this.cameraDistance + Math.sign(event.deltaY) * .38, 1.35, 7.5);
+        return;
+      }
+      if (!Object.values(this.hands).some(h => h.grip)) return;
       event.preventDefault();
       this.adjustGripDistance(Math.sign(event.deltaY) * .19);
     };
@@ -124,6 +139,17 @@ export class Player {
       if (['Space', 'ControlLeft', 'ControlRight', 'ArrowUp', 'ArrowDown', 'Tab'].includes(event.code)) event.preventDefault();
       if (event.repeat || this.keys.has(event.code)) return;
       this.keys.add(event.code);
+      if (event.code === 'KeyZ') {
+        this.releaseHands();
+        this.bodyIK.clearSteps();
+        this.requestFootStep();
+        this.events.toast('Vücut modu · W+D sağ ayak · W+A sol ayak');
+        return;
+      }
+      if (this.keys.has('KeyZ') && ['KeyW', 'KeyA', 'KeyD'].includes(event.code)) {
+        this.requestFootStep();
+        return;
+      }
       const action = this.postureControls.press(event.code, performance.now());
       if (action === 'floorSit' || action === 'kneel') {
         this.setFloorPosture(action);
@@ -142,10 +168,12 @@ export class Player {
     };
     this.keyUp = (event) => {
       this.keys.delete(event.code);
+      if (event.code === 'KeyZ') this.bodyIK.clearSteps();
       this.postureControls.release(event.code);
     };
     this.blur = () => {
       this.keys.clear(); this.postureControls.reset(); this.setTouchMove(0, 0); this.releaseHands();
+      this.bodyIK.clearSteps();
     };
     this.onUnlock = () => { if (!this.active) this.blur(); };
     document.addEventListener('mousemove', this.mouseMove);
@@ -164,6 +192,7 @@ export class Player {
     const next = nextFloorPosture(this.posture, requested);
     if (next === 'stand') { this.standUp(); return; }
     this.releaseHands();
+    this.bodyIK.clearSteps();
     this.postureControls.cancelJump();
     this.posture = next;
     this.walkSpeed = 0;
@@ -181,6 +210,7 @@ export class Player {
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
     this.furnitureHeight = 0; this.savedStanding = null;
     this.postureControls.reset();
+    this.bodyIK.clearSteps();
     this.keys.clear(); this.setTouchMove(0, 0);
     this.yaw = Math.PI; this.bodyYaw = this.yaw; this.walkSpeed = 0;
   }
@@ -224,11 +254,12 @@ export class Player {
     let movedX = 0, movedZ = 0;
     let surfaceGround = null;
     const crouching = this.postureControls.crouching || this.touchCrouch;
+    const precision = active && this.keys.has('KeyZ') && this.posture === 'stand';
     if (this.postureControls.consumeJump(performance.now()) &&
-      this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching) {
+      this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching && !precision) {
       this.verticalSpeed = PLAYER.jumpSpeed;
     }
-    if (active && this.posture === 'stand') {
+    if (active && this.posture === 'stand' && !precision) {
       const f = clamp(Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown')) + this.touchMove.forward, -1, 1);
       const r = clamp(Number(this.keys.has('KeyD')) - Number(this.keys.has('KeyA')) + this.touchMove.x, -1, 1);
       const movement = movementFromYaw(this.yaw, f, r);
@@ -333,17 +364,20 @@ export class Player {
     for (const side of ['left', 'right']) {
       const hand = this.hands[side];
       if (hand.grip) this.hotel.moveGrip(side, this.anchor(side, hand.distance));
-      const arm = side === 'left' ? this.avatar.leftArm : this.avatar.rightArm;
-      if (hand.pressed) arm.rotation.x = THREE.MathUtils.damp(arm.rotation.x, 1.28, 13, dt);
     }
-    // Floor postures need a visible character even when the user normally plays in FPS.
-    const showingCharacter = this.thirdPerson || this.events.isCustomizerOpen() ||
+    this.bodyIK.update(dt, {
+      hands: this.hands, eye: this.eyePosition(), look: this.viewDirection,
+      right: this.rightVector(), posture: this.posture, precision,
+    });
+    // FPS renders the genuine avatar, hiding only the face/collar in the local camera.
+    const orbitCamera = this.thirdPerson || this.events.isCustomizerOpen() ||
       isFloorPosture(this.posture) || this.savedStanding !== null;
-    this.avatar.root.visible = showingCharacter;
-    this.handRig.update(dt, this.hands.left, this.hands.right,
-      !showingCharacter && this.posture === 'stand');
-    if (showingCharacter) {
-      const distance = this.events.isCustomizerOpen() ? 3.1 : 3.8;
+    this.avatar.root.visible = true;
+    this.handRig.update(dt, this.hands.left, this.hands.right, false);
+    this.camera.layers.set(0);
+    if (orbitCamera) this.camera.layers.enable(1);
+    if (orbitCamera) {
+      const distance = this.events.isCustomizerOpen() ? 3.1 : this.cameraDistance;
       const head = this.avatar.headWorldHeight?.() ?? this.avatar.profile.height * .82;
       const targetHeight = this.furnitureStyle === 'sleep' ? .49
         : isFloorPosture(this.posture) ? Math.max(.57, head - .20)

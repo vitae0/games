@@ -22,9 +22,16 @@ export class MirrorPool {
       // Reflect the player in first person, too. Restore visibility afterwards.
       const avatar = this.player?.avatar?.root;
       const previous = avatar?.visible;
+      const occluders = this.player?.avatar?.firstPersonOccluders || [];
+      const layerMasks = occluders.map(mesh => mesh.layers.mask);
       if (avatar) avatar.visible = true;
+      // Reflector's virtual camera renders layer 0: temporarily show the complete face.
+      for (const mesh of occluders) mesh.layers.enable(0);
       try { render.call(this.reflection, ...args); }
-      finally { if (avatar) avatar.visible = previous; }
+      finally {
+        occluders.forEach((mesh, index) => { mesh.layers.mask = layerMasks[index]; });
+        if (avatar) avatar.visible = previous;
+      }
     };
     scene.add(this.reflection);
   }
