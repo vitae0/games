@@ -59,6 +59,18 @@ export function groupWorldActions(items, limit = MAX_ACTIONS) {
   return groups.sort((a,b)=>a.score-b.score).slice(0,limit);
 }
 
+/** Screen-space targeting for pointer-locked desktop clicks. Never infer a
+ * target from world-space nearest distance when the cursor misses a badge. */
+export function hitWorldAction(items, x, y, width, height, radius = 54) {
+  const px = x * width, py = y * height;
+  let best = null, bestDistance = radius;
+  for (const item of items) {
+    const d = Math.hypot(item.x * width - px, item.y * height - py);
+    if (d < bestDistance) { best = item; bestDistance = d; }
+  }
+  return best;
+}
+
 /** Each in-world action badge opens the *clicked object*, never a nearby one.
  * DOM buttons keep their object identity across frames, so a moving camera cannot
  * silently turn a press on one object into a press on another one.
@@ -89,6 +101,25 @@ export class WorldActionLabels {
           !event.target.closest?.('.world-action-button')) this.closeChoices();
     };
     window.addEventListener('pointerdown', this.onOutsideClick, true);
+    // Pointer lock delivers mouse input to the canvas, not a projected HTML
+    // badge. Test the crosshair against projected badges before Player grip.
+    this.onCanvasClick = event => {
+      if (event.button !== 0 || !this.player.active || this.player.posture !== 'stand' ||
+          this.player.events.isModalOpen() || this.choiceActions) return;
+      this.camera.updateMatrixWorld();
+      const visible = groupWorldActions(collectWorldActions(
+        this.hotel.interactables, this.player, this.camera, MAX_ACTIONS * 3));
+      const rect = this.player.canvas.getBoundingClientRect();
+      const locked = document.pointerLockElement === this.player.canvas;
+      const x = locked ? .5 : (event.clientX - rect.left) / rect.width;
+      const y = locked ? .5 : (event.clientY - rect.top) / rect.height;
+      const item = hitWorldAction(visible,x,y,rect.width,rect.height);
+      if (!item) return;
+      event.preventDefault();
+      event.stopImmediatePropagation?.();
+      this.activate(item.action,item.actions);
+    };
+    this.player.canvas.addEventListener('mousedown',this.onCanvasClick,true);
     this.root = document.createElement('div');
     this.root.className = 'world-action-layer';
     this.root.setAttribute('aria-label', 'Nesne üzerindeki kullan düğmeleri');
@@ -267,6 +298,7 @@ export class WorldActionLabels {
     this.closeChoices();
     window.removeEventListener('keydown', this.onChoiceKey, true);
     window.removeEventListener('pointerdown', this.onOutsideClick, true);
+    this.player.canvas.removeEventListener('mousedown',this.onCanvasClick,true);
     this.choicePanel.remove();
     this.root.remove();
     this.buttons.length = 0;
