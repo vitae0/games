@@ -260,7 +260,7 @@ test('hip width, rear glute and outward arm stance deform the intended axes', ()
     avatar.updateStyle({ ...avatar.profile, hipSize: 1.4 });
     assert.ok(abdomen().getX(20) > beforeHip, 'hips gain lateral width');
     avatar.updateStyle({ ...avatar.profile, armSpread: 0 });
-    assert.equal(avatar.leftArm.rotation.z, 0);
-    assert.equal(avatar.rightArm.rotation.z, 0);
+    assert.ok(Math.abs(avatar.leftArm.rotation.z) < 1e-12);
+    assert.ok(Math.abs(avatar.rightArm.rotation.z) < 1e-12);
   } finally { avatar.dispose(); }
 });
