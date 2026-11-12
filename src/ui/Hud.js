@@ -432,6 +432,7 @@ export class Hud {
     if (tab === 'face') this.studioStage.setView('face');
     if (tab === 'body' || tab === 'legs' || tab === 'model') this.studioStage.setView('front');
     if (tab === 'chest' || tab === 'arms') this.studioStage.setView('front');
+    this.studioStage.focusAnatomy(tab);
     this.setStudioViewButton(tab === 'face' ? 'face' : 'front');
     this.refreshStudioSection();
   }
