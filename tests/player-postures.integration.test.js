@@ -200,19 +200,19 @@ test('Z precision controls legs, arms, wrist and fingers while seated and lying'
   const p=createPlayer();
   try {
     p.setFloorPosture('floorSit');
-    key(p,'KeyZ'); key(p,'KeyW'); key(p,'KeyA');
+    key(p,'KeyZ'); key(p,'KeyS'); key(p,'KeyA');
     for(let i=0;i<14;i++)p.update(.05);
-    assert.ok(p.bodyIK.armTargets.left,'Z+W+A must aim left arm while seated');
+    assert.ok(p.bodyIK.armTargets.left,'Z+S+A must aim left arm while seated');
     assert.equal(p.bodyIK.armTargets.right,null);
     assert.ok(p.avatar.leftArm.quaternion.angleTo(new THREE.Quaternion())>.04);
-    up(p,'KeyA');up(p,'KeyW');
-    key(p,'KeyS');key(p,'KeyD'); key(p,'ControlLeft');
+    up(p,'KeyA');up(p,'KeyS');
+    key(p,'KeyQ');key(p,'KeyD'); key(p,'ControlLeft');
     for(let i=0;i<18;i++)p.update(.05);
     assert.ok(p.bodyIK.wristTargets.right);
     assert.ok(p.bodyIK.wristTargets.right.curl>.5);
     assert.ok(p.avatar.rightArm.userData.hand.userData.fingers
       .some(f=>f.rotation.x>.4));
-    up(p,'ControlLeft');up(p,'KeyD');up(p,'KeyS');up(p,'KeyZ');
+    up(p,'ControlLeft');up(p,'KeyD');up(p,'KeyQ');up(p,'KeyZ');
     p.update(.05);
     assert.ok(p.bodyIK.armTargets.left,'arm pose remains after releasing Z');
 
