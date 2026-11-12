@@ -608,8 +608,8 @@ export class Hud {
     const legHint = $('#leg-control-hint');
     if (legHint) {
       legHint.classList.toggle('hidden', !precision);
-      const mode = player.keys.has('KeyW') ? 'KOL'
-        : player.keys.has('KeyS') ? 'EL / PARMAK' : 'BACAK';
+      const mode = player.keys.has('KeyS') ? 'KOL'
+        : player.keys.has('KeyQ') ? 'EL / PARMAK' : 'BACAK';
       const selected = player.keys.has('KeyA') && player.keys.has('KeyD') ? 'İKİ'
         : player.keys.has('KeyA') ? 'SOL' : player.keys.has('KeyD') ? 'SAĞ' : 'A / D';
       const label = legHint.querySelector('[data-leg-selection]');
