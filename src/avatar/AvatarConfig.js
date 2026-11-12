@@ -19,6 +19,7 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     eyeSpacing: 1, eyeLength: 1,
     upperChestWidth: 1.04, upperChestDepth: 1.0, upperChestFullness: 1.0,
     hipSize: 1.0, gluteSize: .96, armSpread: .11,
+    clavicleDefinition: .66, trapeziusVolume: 1.08, neckBaseWidth: 1,
   }),
   softFemale: Object.freeze({
     height: 1.73, shoulders: .44, waist: .335, hips: .47,
@@ -32,6 +33,7 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     eyeSpacing: 1, eyeLength: 1,
     upperChestWidth: .98, upperChestDepth: 1.0, upperChestFullness: 1.03,
     hipSize: 1.08, gluteSize: 1.12, armSpread: .15,
+    clavicleDefinition: .49, trapeziusVolume: .96, neckBaseWidth: .95,
   }),
 });
 
@@ -55,6 +57,8 @@ export const AVATAR_RANGES = Object.freeze({
   upperChestWidth: [.70, 1.45], upperChestDepth: [.70, 1.45],
   upperChestFullness: [.75, 1.45], hipSize: [.70, 1.50],
   gluteSize: [.65, 1.65], armSpread: [0, .34],
+  clavicleDefinition: [0, 1.5], trapeziusVolume: [.55, 1.6],
+  neckBaseWidth: [.70, 1.45],
   upperArmSize: [.65, 1.55], forearmSize: [.65, 1.55],
   handSize: [.70, 1.50], upperArmRatio: [.40, .60],
   thighSize: [.65, 1.55], calfSize: [.65, 1.55],
@@ -76,9 +80,14 @@ export const SOFT_AVATAR_FIELDS = Object.freeze([
   ['chestDepth', 'Göğüs derinliği', '×', .01],
   ['chestFullness', 'Göğüs dolgunluğu', '×', .01],
   ['chestRatio', 'Göğüs / gövde oranı', '', .005],
-  ['upperChestWidth', 'Üst göğüs genişliği', '×', .01],
-  ['upperChestDepth', 'Üst göğüs derinliği', '×', .01],
-  ['upperChestFullness', 'Üst göğüs dolgunluğu', '×', .01],
+  // Existing upperChest* keys remain to preserve saved v3 customizations.
+  // These controls now shape the collarbone and neck-shoulder transition.
+  ['upperChestWidth', 'Klaviküler bölge genişliği', '×', .01],
+  ['upperChestDepth', 'Klaviküler bölge derinliği', '×', .01],
+  ['upperChestFullness', 'Klaviküler bölge hacmi', '×', .01],
+  ['clavicleDefinition', 'Köprücük kemiği belirginliği', '×', .01],
+  ['trapeziusVolume', 'Trapez / boyun-omuz geçişi', '×', .01],
+  ['neckBaseWidth', 'Boyun tabanı genişliği', '×', .01],
   ['abdomenWidth', 'Karın genişliği', '×', .01],
   ['abdomenDepth', 'Karın derinliği', '×', .01],
   ['abdomenFullness', 'Karın dolgunluğu', '×', .01],
