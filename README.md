@@ -62,13 +62,9 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 | --- | --- |
 | WASD, Fare | Yürü, bakış açısını değiştir |
 | Z basılı | Hassas vücut modu; normal WASD yürüyüşü durur |
-| Z + W + D | Sağ ayağı bakış yönünde ileri uzat (iki kemikli IK) |
-| Z + W + A | Sol ayağı bakış yönünde ileri uzat (iki kemikli IK) |
-| Z + A/D + W/S | Seçilen bacağı ileri/geri hareket ettir |
-| Z + A/D + Q/E | Seçilen bacağı yana aç / içeri çek |
-| Z + A/D + R/F | Seçilen ayağı yükselt / alçalt |
+| Z + A/D + fare | Sol/sağ ayağı fareyle baktığın yöne taşı; ileri, yana ve yukarı hareket ettir (IK) |
 | Z + A/D + Ctrl | Seçilen dizin bükülmesini artır (basılı tut) |
-| Z + A/D + Space | Seçilen bacakla öne tekme at |
+| Z + A/D + Space | Seçilen bacakla fare yönüne tekme at |
 | Üçüncü şahıs + fare tekerleği | Kamerayı yakınlaştır / uzaklaştır |
 | Shift / Space / Ctrl | Koş / zıpla / basılıyken çömel |
 | Çift Ctrl | Bulunduğu yerde yere otur / kalk |
@@ -86,7 +82,7 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 
 - Birinci şahısta ayrı kamera-elleri gösterilmez; gerçek kollar, gövde ve bacaklar görünür. Yerel kameradan baş ve yaka gizlenir, üçüncü şahıs ve aynalar tüm karakteri gösterir.
 - LMB/RMB gerçek kol kemiklerinde iki kemikli IK kullanır. Nesne üstündeki KULLAN hedefleme sistemi önce çalışır.
-- Z basılıyken A/D sol/sağ bacakları seçer; W/S ileri-geri, Q/E yana aç-kapat, R/F ayak yüksekliği, Ctrl diz kıvırma, Space ise hazırlık-uzatma-toparlanma içeren tekme hareketidir. İki bacak aynı anda seçilebilir. Yanal açıklık önceki sürümden belirgin biçimde genişletildi ancak IK erişim uzunluğunu aşmaz. Z bırakılınca yürüyüş ve otomatik pozlar geri gelir; başlamış tekme kısa animasyonunu tamamlar.
+- Z basılıyken A/D sol/sağ bacağı seçer, fareyle bakış yönü ayak IK hedefini sürekli belirler: sağa-sola bakmak bacağı açar, yukarı-aşağı bakmak ayağı yükseltir/indirir. Ctrl dizi büker, Space bakılan yöne doğru hazırlık-uzatma-toparlanma tekmesini başlatır. FPS'de Z basılıyken torso sabit kalır ve mouse bağımsız yönlendirilir. İki bacak aynı anda seçilebilir. Yanal açıklık 62 cm'ye kadar uzanır ancak IK bacak uzunluğunu aşmaz. Z bırakılınca yürüyüş ve otomatik pozlar geri gelir; başlamış tekme kısa animasyonunu tamamlar.
 - Üçüncü şahısta tekerlek zoom, birinci şahısta ise mevcut kavrama mesafesi kontrolüdür.
 - Gelişmiş IK ilk sürümde yalnızca prosedürel karakter iskeletine uygulanır. Harici VRM/GLB için eksen/kemik uyarlayıcısı gerekir.
 

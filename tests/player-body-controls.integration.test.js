@@ -88,9 +88,11 @@ test('precision side controls do not trigger interaction, jump, crouch or hand r
   const p=makePlayer();
   try{
     down(p,'KeyZ');down(p,'KeyD');
-    down(p,'KeyQ');down(p,'KeyR');down(p,'ControlLeft');
+    p.lookBy(260, -130);
+    down(p,'KeyE');down(p,'ControlLeft');
     p.update(.05);
     assert.ok(p.bodyIK.steps.right.sideways>0);
+    assert.ok(p.bodyIK.steps.right.height>.37);
     assert.ok(p.bodyIK.steps.right.bend>0);
     assert.equal(p.posture,'stand');
     assert.equal(p.postureControls.crouching,false);
@@ -102,5 +104,27 @@ test('precision side controls do not trigger interaction, jump, crouch or hand r
     assert.equal(p.bodyIK.steps.right,null);
     p.update(.05);
     assert.ok(p.bodyIK.kicks.right);
+  } finally{p.dispose();}
+});
+
+test('mouse freely aims one foot without rotating the FPS torso while Z is held',()=>{
+  const p=makePlayer();
+  try {
+    p.update(.016);
+    down(p,'KeyZ');down(p,'KeyD');
+    const lockedBodyYaw=p.bodyYaw;
+    p.lookBy(250,-180);
+    p.update(.05);
+    assert.equal(p.bodyYaw,lockedBodyYaw);
+    assert.ok(p.bodyIK.steps.right.sideways>.3);
+    assert.ok(p.bodyIK.steps.right.height>.4);
+    const first=p.bodyIK.steps.right.sideways;
+    p.lookBy(-450,280);
+    for(let i=0;i<6;i++)p.update(.05);
+    assert.ok(p.bodyIK.steps.right.sideways < first-.2);
+    assert.ok(p.bodyIK.steps.right.height<.4);
+    up(p,'KeyZ');
+    p.update(.05);
+    assert.equal(p.bodyYaw,p.yaw);
   } finally{p.dispose();}
 });

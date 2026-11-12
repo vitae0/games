@@ -96,11 +96,6 @@ export class Player {
       .addScaledVector(this.rightVector(), sign * .32)
       .add(new THREE.Vector3(0, -.24, 0));
   }
-  requestFootStep() {
-    if (!this.active || this.posture !== 'stand' || !this.keys.has('KeyZ') || !this.keys.has('KeyW')) return;
-    if (this.keys.has('KeyD')) this.bodyIK.placeFoot('right', this.yaw, this.bodyYaw);
-    if (this.keys.has('KeyA')) this.bodyIK.placeFoot('left', this.yaw, this.bodyYaw);
-  }
   bindEvents() {
     this.mouseMove = (event) => {
       if (!this.active || document.pointerLockElement !== this.canvas) return;
@@ -143,21 +138,20 @@ export class Player {
         this.releaseHands();
         this.bodyIK.clearSteps();
         this.postureControls.reset();
-        this.requestFootStep();
-        this.events.toast('Bacak kontrolü · A/D seç · Space tekme · Ctrl diz');
+        this.events.toast('Bacak kontrolü · A/D seç, fareyle yönlendir · Space tekme · Ctrl diz');
         return;
       }
       if (this.keys.has('KeyZ') && this.posture === 'stand') {
         const precisionKeys = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ',
           'KeyE', 'KeyR', 'KeyF', 'Space', 'ControlLeft', 'ControlRight'];
         if (precisionKeys.includes(event.code)) {
-          if (['KeyW', 'KeyA', 'KeyD'].includes(event.code)) this.requestFootStep();
           if (event.code === 'Space') {
-            if (this.keys.has('KeyA')) this.bodyIK.kick('left');
-            if (this.keys.has('KeyD')) this.bodyIK.kick('right');
+            if (this.keys.has('KeyA')) this.bodyIK.kick('left', this.viewDirection, this.bodyYaw);
+            if (this.keys.has('KeyD')) this.bodyIK.kick('right', this.viewDirection, this.bodyYaw);
           }
           if (['KeyA', 'KeyD'].includes(event.code) && this.keys.has('Space')) {
-            this.bodyIK.kick(event.code === 'KeyA' ? 'left' : 'right');
+            this.bodyIK.kick(event.code === 'KeyA' ? 'left' : 'right',
+              this.viewDirection, this.bodyYaw);
           }
           return;
         }
@@ -356,8 +350,10 @@ export class Player {
     }
     // Camera yaw is independent from avatar facing in third-person mode.
     // Rotate only after genuine horizontal locomotion; camera orbit while idle is free.
-    if (!this.thirdPerson) this.bodyYaw = this.yaw;
-    else if (this.posture === 'stand') {
+    if (!this.thirdPerson) {
+      // In body control mode the mouse aims the foot, not the entire torso.
+      if (!precision) this.bodyYaw = this.yaw;
+    } else if (this.posture === 'stand' && !precision) {
       const desiredFacing = yawFromDisplacement(movedX, movedZ);
       if (desiredFacing !== null) this.bodyYaw = approachYaw(this.bodyYaw, desiredFacing, dt, 14);
     }
@@ -380,7 +376,7 @@ export class Player {
     this.bodyIK.update(dt, {
       hands: this.hands, eye: this.eyePosition(), look: this.viewDirection,
       right: this.rightVector(), posture: this.posture, precision,
-      keys: this.keys,
+      keys: this.keys, bodyYaw: this.bodyYaw,
     });
     // FPS exposes only this avatar's actual limb bones. Other characters
     // remain complete: their layer masks are never modified.
