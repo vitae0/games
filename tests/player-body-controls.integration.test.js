@@ -203,3 +203,20 @@ test('O switches camera without snapping facing, wheel zoom survives grip modifi
     assert.equal(p.thirdPerson,true);
   } finally {p.dispose();}
 });
+
+test('third-person pitch orbits upward and downward without changing the root facing',()=>{
+  const p=makePlayer();
+  try{
+    p.toggleCamera();p.update(.016);
+    const base=p.camera.position.y,facing=p.avatar.root.rotation.y;
+    p.lookBy(0,-380);
+    p.update(.016);
+    const high=p.camera.position.y;
+    p.lookBy(0,760);
+    p.update(.016);
+    const low=p.camera.position.y;
+    assert.ok(high>base+.35,`high=${high} base=${base}`);
+    assert.ok(low<base-.35,`low=${low} base=${base}`);
+    assert.equal(p.avatar.root.rotation.y,facing);
+  }finally{p.dispose();}
+});
