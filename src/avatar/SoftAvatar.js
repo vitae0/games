@@ -474,6 +474,7 @@ export function buildSoftAvatar(avatar, p) {
   // Hip, knee and ankle remain distinct; rounded feet end on y=0.
   function leg(sign) {
     const upper = new THREE.Bone();
+    upper.rotation.order = 'YXZ'; // hip yaw opens thighs sideways AFTER hip flexion
     upper.name = sign < 0 ? 'leftUpperLeg' : 'rightUpperLeg';
     upper.position.set(sign * p.hips * .285 * p.legSpacing, legs, 0);
     root.add(upper);
@@ -505,6 +506,7 @@ export function buildSoftAvatar(avatar, p) {
     add(upper, softLoftGeometry(thigh, 20, 2.3), material, 'thigh');
 
     const knee = new THREE.Bone();
+    knee.rotation.order = 'YXZ'; // calf yaw follows the actual bent knee
     knee.name = sign < 0 ? 'leftLowerLeg' : 'rightLowerLeg';
     knee.position.y = -thighLength;
     upper.add(knee);
