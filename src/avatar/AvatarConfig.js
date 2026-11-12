@@ -11,7 +11,7 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     height: 1.78, shoulders: .51, waist: .38, hips: .41,
     legRatio: .49, armRatio: .36, headScale: 1.08,
     torsoDepth: 1.05, chestWidth: 1.09, chestDepth: 1.05,
-    chestFullness: 1.0, abdomenWidth: .98, abdomenDepth: 1.0,
+    chestFullness: 1.0, backFullness: 1, abdomenWidth: .98, abdomenDepth: 1.0,
     abdomenFullness: .98, chestRatio: .57, neckSize: 1.0,
     upperArmSize: 1.05, forearmSize: 1.0, handSize: 1.0,
     upperArmRatio: .49, thighSize: 1.05, calfSize: 1,
@@ -25,7 +25,7 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     height: 1.73, shoulders: .44, waist: .335, hips: .47,
     legRatio: .515, armRatio: .355, headScale: 1.10,
     torsoDepth: .99, chestWidth: 1.10, chestDepth: 1.08,
-    chestFullness: 1.13, abdomenWidth: .91, abdomenDepth: 1.02,
+    chestFullness: 1.13, backFullness: 1, abdomenWidth: .91, abdomenDepth: 1.02,
     abdomenFullness: 1, chestRatio: .62, neckSize: .91,
     upperArmSize: .89, forearmSize: .9, handSize: .9,
     upperArmRatio: .49, thighSize: 1.07, calfSize: .95,
@@ -34,6 +34,31 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     upperChestWidth: .88, upperChestDepth: .84, upperChestFullness: .88,
     hipSize: 1.08, gluteSize: 1.06, armSpread: .15,
     clavicleDefinition: .32, trapeziusVolume: .82, neckBaseWidth: .92,
+  }),
+});
+
+/**
+ * Distinct structural templates, deliberately separate from body measurements.
+ * Equal size sliders do NOT produce identical bodies. These are stylized
+ * starting morphologies, not universal rules about men or women.
+ * No extra bones, skin meshes, shoulder caps or per-frame physics.
+ */
+export const SOFT_STRUCTURAL_PROFILES = Object.freeze({
+  softMale: Object.freeze({
+    chestType: 'pectoral', bustEmphasis: 0, pectoralPad: .012,
+    sternumInset: .0025, scapulaPad: .012, lumbarHollow: .006,
+    iliacFlare: .004, lowerAbdomenPad: .0025,
+    thighOuterFlare: .004, thighInnerFlare: .002,
+    thighRearPad: .004, calfRearPad: .013,
+    armContour: .045, palmDepth: 1.04,
+  }),
+  softFemale: Object.freeze({
+    chestType: 'paired-soft-tissue', bustEmphasis: 1.48, pectoralPad: .002,
+    sternumInset: .008, scapulaPad: .007, lumbarHollow: .012,
+    iliacFlare: .012, lowerAbdomenPad: .007,
+    thighOuterFlare: .014, thighInnerFlare: .007,
+    thighRearPad: .008, calfRearPad: .008,
+    armContour: -.025, palmDepth: .96,
   }),
 });
 
@@ -51,7 +76,7 @@ export const AVATAR_RANGES = Object.freeze({
   hips: [.30, .64], legRatio: [.42, .56], armRatio: [.30, .42],
   headScale: [.82, 1.30], torsoDepth: [.70, 1.45],
   chestWidth: [.72, 1.43], chestDepth: [.70, 1.44],
-  chestFullness: [.70, 1.4], abdomenWidth: [.67, 1.45],
+  chestFullness: [.70, 1.4], backFullness: [.70, 1.45], abdomenWidth: [.67, 1.45],
   abdomenDepth: [.70, 1.5], abdomenFullness: [.72, 1.45],
   chestRatio: [.40, .68], neckSize: [.72, 1.4],
   upperChestWidth: [.70, 1.45], upperChestDepth: [.70, 1.45],
@@ -79,6 +104,7 @@ export const SOFT_AVATAR_FIELDS = Object.freeze([
   ['chestWidth', 'Göğüs genişliği', '×', .01],
   ['chestDepth', 'Göğüs derinliği', '×', .01],
   ['chestFullness', 'Göğüs dolgunluğu', '×', .01],
+  ['backFullness', 'Sırt dolgunluğu', '×', .01],
   ['chestRatio', 'Göğüs / gövde oranı', '', .005],
   // Existing upperChest* keys remain to preserve saved v3 customizations.
   // These controls now shape the collarbone and neck-shoulder transition.
