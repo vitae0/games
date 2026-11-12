@@ -69,6 +69,13 @@ export class Actors {
   }
 
   handPoint(person, side) {
+    // Procedural actors expose actual animated hand anchors, so grabbing them
+    // remains aligned even after changing arm length or shoulder width.
+    if (person.avatar.profile.baseModel === 'soft') {
+      const arm = side === 'left' ? person.avatar.leftArm : person.avatar.rightArm;
+      const hand = arm?.userData.hand;
+      if (hand) return hand.getWorldPosition(new THREE.Vector3());
+    }
     const sign = side === 'left' ? -1 : 1;
     const local = new THREE.Vector3(sign * .45, person.avatar.profile.height * .69, -.32);
     local.applyAxisAngle(UP, person.yaw);
