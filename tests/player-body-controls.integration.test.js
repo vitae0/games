@@ -105,7 +105,9 @@ test('precision side controls do not trigger interaction, jump, crouch or hand r
     down(p,'Space');
     assert.ok(p.bodyIK.kicks.right);
     assert.equal(p.verticalSpeed,0);
-    up(p,'KeyZ');
+    // Releasing Z while still holding D would start walking and correctly
+    // cancel the kick; release movement keys to test stationary continuity.
+    up(p,'KeyD'); up(p,'KeyE'); up(p,'KeyZ');
     assert.ok(p.bodyIK.steps.right);
     p.update(.05);
     assert.ok(p.bodyIK.kicks.right);
@@ -128,9 +130,10 @@ test('mouse freely aims one foot without rotating the FPS torso while Z is held'
     for(let i=0;i<6;i++)p.update(.05);
     assert.ok(p.bodyIK.steps.right.sideways < first-.2);
     assert.ok(p.bodyIK.steps.right.height<.4);
-    up(p,'KeyZ');
+    up(p,'KeyD'); up(p,'KeyZ');
     p.update(.05);
-    assert.equal(p.bodyYaw,p.yaw);
+    assert.equal(p.bodyYaw,lockedBodyYaw);
+    assert.notEqual(p.bodyYaw,p.yaw);
   } finally{p.dispose();}
 });
 
