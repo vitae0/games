@@ -5,7 +5,7 @@ import { HandRig } from './HandRig.js';
 import { BodyIK } from './BodyIK.js';
 import { scrollZoomDistance, orbitFocusHeight, orbitVerticalOffset } from './CameraOrbit.js';
 import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw, yawFromDisplacement, approachYaw } from './Orientation.js';
-import { isFloorPosture, nextFloorPosture } from './Postures.js';
+import { isFloorPosture, nextFloorPosture, nextRisePosture } from './Postures.js';
 import { PostureControls } from './PostureControls.js';
 import { resolveGround, groundFloor } from '../world/Stairwell.js';
 
@@ -33,6 +33,7 @@ export class Player {
     this.furnitureStyle = null;
     this.furnitureExit = null;
     this.sleepLean = 0;
+    this.floorLieLean = 0;
     this.avatar.root.rotation.order = 'YXZ';
     this.postureControls = new PostureControls();
     this.bindEvents();
@@ -95,8 +96,9 @@ export class Player {
   releaseHands() { this.releaseHand('left'); this.releaseHand('right'); }
   eyePosition() {
     const eye = this.posture === 'sit' ? .99 : this.posture === 'rest' ? .55 :
-      this.posture === 'floorSit' ? this.avatar.profile.height * .43 :
-      this.posture === 'kneel' ? this.avatar.profile.height * .57 :
+      this.posture === 'floorSit' ? this.avatar.profile.height * .61 :
+      this.posture === 'kneel' ? this.avatar.profile.height * .72 :
+      this.posture === 'floorLie' ? .29 :
       (this.postureControls.crouching || this.touchCrouch) ? this.avatar.profile.height * .69 : this.avatar.profile.height - .12;
     return new THREE.Vector3(this.position.x, this.position.y + eye, this.position.z);
   }
@@ -146,7 +148,9 @@ export class Player {
         return;
       }
       // Prevent native browser shortcuts from hijacking combinations while in pointer lock.
-      if (['Space', 'ControlLeft', 'ControlRight', 'ArrowUp', 'ArrowDown', 'Tab'].includes(event.code)) event.preventDefault();
+      if (['Space', 'ControlLeft', 'ControlRight', 'ArrowUp', 'ArrowDown', 'Tab'].includes(event.code) ||
+          (event.code === 'KeyW' && (event.ctrlKey || this.postureControls.crouching)))
+        event.preventDefault();
       if (event.repeat || this.keys.has(event.code)) return;
       this.keys.add(event.code);
       if (event.code === 'KeyZ') {
@@ -171,7 +175,7 @@ export class Player {
         }
       }
       const action = this.postureControls.press(event.code, performance.now());
-      if (action === 'floorSit' || action === 'kneel') {
+      if (action === 'floorSit' || action === 'kneel' || action === 'floorLie') {
         this.setFloorPosture(action);
         return;
       }
@@ -217,7 +221,12 @@ export class Player {
     this.posture = next;
     this.walkSpeed = 0;
     this.verticalSpeed = 0;
-    this.events.toast(next === 'floorSit' ? 'Yere oturdun · Çift Ctrl ile kalk' : 'Diz çöktün · Ctrl + Space ile kalk');
+    const labels = {
+      floorSit:'Yere oturdun · E ile ayağa kalk',
+      kneel:'İki dizinin üstündesin · E ile önce otur',
+      floorLie:'Yere uzandın · E ile önce otur',
+    };
+    this.events.toast(labels[next]);
   }
   teleport(floor) {
     if (!Number.isInteger(floor) || floor < 0 || floor >= HOTEL.floors) return;
@@ -230,6 +239,7 @@ export class Player {
     this.floor = floor;
     this.position.set(0, floor * HOTEL.floorHeight, 12.1);
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
+    this.floorLieLean = 0; this.sleepLean = 0;
     this.furnitureHeight = 0; this.savedStanding = null;
     this.postureControls.reset();
     this.bodyIK.clearSteps();
@@ -257,6 +267,16 @@ export class Player {
   }
   standUp() {
     if (this.posture === 'stand') return;
+    if (isFloorPosture(this.posture)) {
+      this.posture = nextRisePosture(this.posture);
+      this.walkSpeed = 0;
+      this.bodyIK.clearSteps();
+      this.postureControls.cancelJump();
+      this.events.toast(this.posture === 'floorSit'
+        ? 'Önce yere oturdun · Bir kez daha E ile kalk'
+        : 'Ayağa kalktın');
+      return;
+    }
     this.furnitureExit?.();
     this.furnitureExit = null;
     this.furnitureStyle = null;
@@ -389,7 +409,12 @@ export class Player {
     // to keep the head inside the bed's footprint.
     this.sleepLean = THREE.MathUtils.damp(this.sleepLean,
       this.posture === 'rest' && this.furnitureStyle === 'sleep' ? 1 : 0, 7, dt);
-    this.avatar.root.rotation.x = -1.24 * this.sleepLean;
+    this.floorLieLean = THREE.MathUtils.damp(this.floorLieLean,
+      this.posture === 'floorLie' ? 1 : 0, 8, dt);
+    // Roll the entire skeleton onto the back; keep shoulders and head above
+    // the floor without changing their bone lengths or the foot planting logic.
+    this.avatar.root.rotation.x = -1.24 * this.sleepLean + 1.47 * this.floorLieLean;
+    this.avatar.root.position.y += .19 * this.floorLieLean;
     this.avatar.root.position.x += Math.sin(this.bodyYaw) * .57 * this.sleepLean;
     this.avatar.root.position.z += Math.cos(this.bodyYaw) * .57 * this.sleepLean;
     this.avatar.update(dt, this.walkSpeed,
