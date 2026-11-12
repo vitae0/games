@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { collectWorldActions, groupWorldActions } from '../src/ui/WorldActionLabels.js';
+import { collectWorldActions, groupWorldActions, hitWorldAction } from '../src/ui/WorldActionLabels.js';
 
 const player = { floor: 0, position: new THREE.Vector3(0, 0, 0) };
 function camera() {
@@ -60,4 +60,15 @@ test('explicit multi-action objects consolidate without reassigning clicked targ
     ['Yatak · Kenara otur','Yatak · Uzan']);
   assert.ok(groups.some(g=>g.actions.length===1&&g.actions[0]===c));
   assert.equal(groupWorldActions(raw,1).length,1);
+});
+
+test('mouse chooses the targeted projected action, never closest world object',()=>{
+  const close=object(-.6,-1.5),target=object(.15,-2.3);
+  const groups=groupWorldActions(collectWorldActions([close,target],player,camera(),8));
+  const projected=groups.find(item=>item.action===target);
+  assert.ok(projected);
+  const selected=hitWorldAction(groups,projected.x,projected.y,1280,800,2);
+  assert.equal(selected.action,target);
+  assert.equal(hitWorldAction(groups,.99,.99,1280,800),null,
+    'clicks away from interactive objects must not run nearest fallback');
 });
