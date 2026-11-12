@@ -147,6 +147,22 @@ export class CharacterStage {
     this.onZoom(this.targetDistance);
   }
 
+  focusAnatomy(tab) {
+    const focus = {
+      model: [3.45, .55],
+      face: [1.35, .84],
+      body: [2.95, .52],
+      chest: [2.25, .69],
+      arms: [2.9, .62],
+      legs: [2.70, .28],
+      style: [3.45, .55],
+    }[tab];
+    if (!focus) return;
+    this.targetDistance = focus[0];
+    this.focusRatio = focus[1];
+    this.onZoom(this.targetDistance);
+  }
+
   zoom(direction) {
     this.targetDistance = clamp(this.targetDistance * (direction > 0 ? 1.13 : .885), 1.06, 5.25);
     this.onZoom(this.targetDistance);
