@@ -222,9 +222,11 @@ export class Hud {
 
     groupFields('Baş ve yüz', ['height','headScale','eyeSpacing','eyeLength','neckSize']);
     groupFields('Genel vücut oranları', ['shoulders','waist','hips','torsoDepth']);
-    groupFields('Göğüs (ayrı mesh)', ['chestWidth','chestDepth','chestFullness','chestRatio']);
+    groupFields('Göğüs', ['chestWidth','chestDepth','chestFullness','chestRatio']);
+    groupFields('Üst göğüs', ['upperChestWidth','upperChestDepth','upperChestFullness']);
     groupFields('Karın (ayrı mesh)', ['abdomenWidth','abdomenDepth','abdomenFullness']);
-    groupFields('Kollar', ['armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
+    groupFields('Kollar', ['armSpread','armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
+    groupFields('Kalça ve glute', ['hipSize','gluteSize']);
     groupFields('Bacaklar ve ayaklar', ['legRatio','legSpacing','thighRatio','thighSize','calfSize','footSize','footLength']);
 
     const sections = [

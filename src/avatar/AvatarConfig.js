@@ -17,24 +17,28 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     upperArmRatio: .49, thighSize: 1.05, calfSize: 1,
     thighRatio: .53, legSpacing: 1, footSize: .96, footLength: 1,
     eyeSpacing: 1, eyeLength: 1,
+    upperChestWidth: 1.04, upperChestDepth: 1.0, upperChestFullness: 1.0,
+    hipSize: 1.0, gluteSize: .96, armSpread: .11,
   }),
   softFemale: Object.freeze({
-    height: 1.68, shoulders: .435, waist: .335, hips: .46,
-    legRatio: .52, armRatio: .355, headScale: 1.12,
-    torsoDepth: .97, chestWidth: .97, chestDepth: 1.03,
-    chestFullness: 1.08, abdomenWidth: .91, abdomenDepth: 1.02,
-    abdomenFullness: 1, chestRatio: .52, neckSize: .91,
+    height: 1.73, shoulders: .44, waist: .335, hips: .47,
+    legRatio: .515, armRatio: .355, headScale: 1.10,
+    torsoDepth: .99, chestWidth: 1.10, chestDepth: 1.12,
+    chestFullness: 1.15, abdomenWidth: .91, abdomenDepth: 1.02,
+    abdomenFullness: 1, chestRatio: .585, neckSize: .91,
     upperArmSize: .89, forearmSize: .9, handSize: .9,
     upperArmRatio: .49, thighSize: 1.07, calfSize: .95,
     thighRatio: .55, legSpacing: 1, footSize: .89, footLength: .93,
     eyeSpacing: 1, eyeLength: 1,
+    upperChestWidth: .98, upperChestDepth: 1.0, upperChestFullness: 1.03,
+    hipSize: 1.08, gluteSize: 1.12, armSpread: .15,
   }),
 });
 
 /** Keep old CC0 VRoid models accessible; no asset removal/migration. */
 export const AVATAR_DEFAULTS = Object.freeze({
   ...SOFT_MODEL_PRESETS.softMale,
-  bodyColor: '#a9c4fb',
+  bodyColor: '#a9c4fb', profileVersion: 3,
   baseModel: 'softMale', outfit: 'none', hair: 'sample', hairColor: 'original', visor: false,
   skinTone: 'warm', eyeColor: 'brown', underwear: 'none',
   shirtVisible: true, jacketVisible: true, pantsVisible: true, shoesVisible: true,
@@ -48,6 +52,9 @@ export const AVATAR_RANGES = Object.freeze({
   chestFullness: [.70, 1.4], abdomenWidth: [.67, 1.45],
   abdomenDepth: [.70, 1.5], abdomenFullness: [.72, 1.45],
   chestRatio: [.40, .68], neckSize: [.72, 1.4],
+  upperChestWidth: [.70, 1.45], upperChestDepth: [.70, 1.45],
+  upperChestFullness: [.75, 1.45], hipSize: [.70, 1.50],
+  gluteSize: [.65, 1.65], armSpread: [0, .34],
   upperArmSize: [.65, 1.55], forearmSize: [.65, 1.55],
   handSize: [.70, 1.50], upperArmRatio: [.40, .60],
   thighSize: [.65, 1.55], calfSize: [.65, 1.55],
@@ -69,16 +76,22 @@ export const SOFT_AVATAR_FIELDS = Object.freeze([
   ['chestDepth', 'Göğüs derinliği', '×', .01],
   ['chestFullness', 'Göğüs dolgunluğu', '×', .01],
   ['chestRatio', 'Göğüs / gövde oranı', '', .005],
+  ['upperChestWidth', 'Üst göğüs genişliği', '×', .01],
+  ['upperChestDepth', 'Üst göğüs derinliği', '×', .01],
+  ['upperChestFullness', 'Üst göğüs dolgunluğu', '×', .01],
   ['abdomenWidth', 'Karın genişliği', '×', .01],
   ['abdomenDepth', 'Karın derinliği', '×', .01],
   ['abdomenFullness', 'Karın dolgunluğu', '×', .01],
   ['neckSize', 'Boyun kalınlığı', '×', .01],
   ['armRatio', 'Kol uzunluğu', '', .005],
+  ['armSpread', 'Kolların yana açıklığı', 'rad', .01],
   ['upperArmRatio', 'Üst kol / kol oranı', '', .005],
   ['upperArmSize', 'Üst kol kalınlığı', '×', .01],
   ['forearmSize', 'Ön kol kalınlığı', '×', .01],
   ['handSize', 'El büyüklüğü', '×', .01],
   ['legRatio', 'Bacak uzunluğu', '', .005],
+  ['hipSize', 'Kalça yan genişliği (hip)', '×', .01],
+  ['gluteSize', 'Kalça arkası dolgunluğu (glute)', '×', .01],
   ['legSpacing', 'Bacak aralığı', '×', .01],
   ['thighRatio', 'Uyluk / bacak oranı', '', .005],
   ['thighSize', 'Uyluk kalınlığı', '×', .01],
@@ -136,4 +149,25 @@ export function normalizeAvatar(input = {}) {
   if (Object.hasOwn(SKIN_TONES, input.skinTone)) p.skinTone = input.skinTone;
   if (Object.hasOwn(EYE_COLORS, input.eyeColor)) p.eyeColor = input.eyeColor;
   return p;
+}
+
+/** Upgrade untouched v2 female defaults while retaining hand-edited settings.
+ * Applied only when loading old localStorage profiles, never during slider edits.
+ */
+export function migrateSoftProfile(input = {}) {
+  if (!input || typeof input !== 'object') return normalizeAvatar();
+  if (input.profileVersion >= 3 || input.baseModel !== 'softFemale')
+    return normalizeAvatar(input);
+  const oldFemale = {
+    height: 1.68, shoulders: .435, hips: .46,
+    legRatio: .52, headScale: 1.12, torsoDepth: .97,
+    chestWidth: .97, chestDepth: 1.03,
+    chestFullness: 1.08, chestRatio: .52,
+  };
+  const replacement = {};
+  for (const [key, value] of Object.entries(oldFemale)) {
+    if (Object.hasOwn(input, key) && input[key] === value)
+      replacement[key] = SOFT_MODEL_PRESETS.softFemale[key];
+  }
+  return normalizeAvatar({ ...input, ...replacement });
 }
