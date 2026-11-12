@@ -4,7 +4,7 @@ import { Hotel } from './world/Hotel.js';
 import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
 import { WorldActionLabels } from './ui/WorldActionLabels.js';
-import { normalizeAvatar } from './avatar/AvatarConfig.js';
+import { normalizeAvatar, isSoftModel } from './avatar/AvatarConfig.js';
 import { loadBundledCharacterModel } from './avatar/ModelImporter.js';
 import { isTouchCapable } from './input/TouchMath.js';
 
@@ -79,7 +79,7 @@ player = new Player(canvas, camera, scene, hotel, loadProfile(), events);
 let modelRequest = 0;
 async function syncBaseModel({ force = false } = {}) {
   const request = ++modelRequest;
-  if (player.avatar.profile.baseModel === 'soft') {
+  if (isSoftModel(player.avatar.profile.baseModel)) {
     // Uploaded models remain until reset, unless the user explicitly changes bases.
     if (player.avatar.external && (force || player.avatar.external.source !== 'upload')) {
       player.avatar.clearExternal();
