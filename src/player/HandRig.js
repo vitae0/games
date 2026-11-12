@@ -57,6 +57,7 @@ export class HandRig {
       arm.wrist.visible = !soft;
       arm.thumb.visible = true;
       arm.relaxedDigits.visible = soft;
+      if(soft) arm.relaxedDigits.scale.set(.087*p.handSize,.073*p.handSize,.035*p.handSize);
       for (const digit of arm.digits) digit.visible = !soft;
       arm.palm.scale.setScalar(soft ? .092 * p.handSize : 1);
       if (!soft) arm.palm.scale.set(.101, .13, .053);
