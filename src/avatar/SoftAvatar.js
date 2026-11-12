@@ -523,7 +523,7 @@ export function buildSoftAvatar(avatar, p) {
     add(knee, softLoftGeometry(calf, 20, 2.25), material, 'calf');
     const foot = new THREE.Group();
     foot.name = 'hemisphere-foot';
-    foot.position.set(0, -calfLength, -.036);
+    foot.position.set(0, -calfLength + .008, -.036);
     knee.add(foot);
     const footGeometry = new THREE.SphereGeometry(1, 18, 9, 0, 2 * Math.PI, 0, Math.PI / 2);
     const footDisc = new THREE.CircleGeometry(1, 18);
@@ -537,17 +537,22 @@ export function buildSoftAvatar(avatar, p) {
     dome.position.z = -.018;
     const sole = add(foot, footDisc, material, 'flat-sole');
     sole.rotation.x = Math.PI / 2;
-    sole.scale.set(radiusX, radiusZ, 1);
+    // The old disk sat exactly on both the dome's equator and room floors.
+    // Sink it INSIDE the dome and shrink the rim: no overlapping coplanar faces.
+    sole.scale.set(radiusX * .955, radiusZ * .955, 1);
+    sole.position.y = .006;
     sole.position.z = -.018;
     // Heel / midfoot / three broad toe pads preserve the simple cartoony
     // silhouette but make the foot read as an articulated anatomical unit.
-    ball(foot, sphere, 0, .026, radiusZ * .37,
-      radiusX * .77, .037 * p.footSize, radiusZ * .39, 'heel-pad');
-    ball(foot, sphere, 0, .055, -.008,
-      radiusX * .69, .044 * p.footSize, radiusZ * .63, 'instep');
+    ball(foot, sphere, 0, .036, radiusZ * .37,
+      radiusX * .77, .030 * p.footSize, radiusZ * .39, 'heel-pad');
+    // Reduce the instep overlap: geometry remains rounded but distinct from
+    // the dome rather than two near-coincident curved surfaces flickering.
+    ball(foot, sphere, 0, .049, -.008,
+      radiusX * .62, .035 * p.footSize, radiusZ * .59, 'instep');
     for (let toe = -1; toe <= 1; toe++) {
-      ball(foot, sphere, toe * radiusX * .52, .019, -radiusZ * .79,
-        radiusX * (toe === 0 ? .32 : .27), .020 * p.footSize,
+      ball(foot, sphere, toe * radiusX * .52, .028, -radiusZ * .79,
+        radiusX * (toe === 0 ? .32 : .27), .018 * p.footSize,
         radiusZ * .29, toe === -1 ? 'medial-toes' : toe === 0 ? 'central-toes' : 'lateral-toes');
     }
     upper.userData.knee = knee;
