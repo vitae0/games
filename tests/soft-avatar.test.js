@@ -286,7 +286,7 @@ test('saved v2 female profiles receive new baseline without erasing user edits',
   assert.equal(migrated.forearmSize, 1.32);
   assert.equal(migrated.abdomenFullness, 1.20);
   assert.equal(migrated.bodyColor, '#44aacc');
-  assert.equal(migrated.profileVersion, 3);
+  assert.equal(migrated.profileVersion, 4);
   const edited = migrateSoftProfile({ ...old, height: 1.65, chestDepth: 1.25 });
   assert.equal(edited.height, 1.65);
   assert.equal(edited.chestDepth, 1.25);
