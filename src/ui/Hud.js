@@ -1,6 +1,7 @@
 import { TouchControls } from '../input/TouchControls.js';
 import { isTouchCapable, clampTouchSensitivity } from '../input/TouchMath.js';
-import { AVATAR_DEFAULTS, AVATAR_RANGES, SOFT_AVATAR_FIELDS, normalizeAvatar, switchSoftModel, isSoftModel } from '../avatar/AvatarConfig.js';
+import { AVATAR_DEFAULTS, AVATAR_RANGES, SOFT_AVATAR_FIELDS, SOFT_MODEL_PRESETS, normalizeAvatar, switchSoftModel, isSoftModel } from '../avatar/AvatarConfig.js';
+import { CharacterStage } from './CharacterStage.js';
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
@@ -24,6 +25,26 @@ const FIELDS = {
 };
 export const CHARACTER_CONTROL_IDS = Object.freeze(Object.keys(FIELDS));
 
+export const STUDIO_TABS = Object.freeze({
+  model: { title:'Karakter modeli', subtitle:'İki Vitae Soft gövdesi veya klasik hazır VRoid modelleri.', index:'01' },
+  face: { title:'Yüz & baş', subtitle:'Bakışın, başın ve boyun oranların. Küçük detaylar büyük fark yaratır.', index:'02' },
+  body: { title:'Vücut mimarisi', subtitle:'Silüetini oluştur. Bel, karın, kalça ve temel oranlar.', index:'03' },
+  chest: { title:'Göğüs & klavikula', subtitle:'Göğüs hacmi, köprücük kemikleri ve boyun bağlantısını şekillendir.', index:'04' },
+  arms: { title:'Kollar & eller', subtitle:'Üst kol, ön kol ve el formunu hassas biçimde ayarla.', index:'05' },
+  legs: { title:'Bacaklar & ayaklar', subtitle:'Duruş, bacak oranları ve ayak boyutları.', index:'06' },
+  style: { title:'Görünüm & stil', subtitle:'Renk paletini seç, hazır modellerde saç ve kıyafeti düzenle.', index:'07' },
+});
+const STUDIO_SWATCHES = Object.freeze([
+  '#a9c4fb','#e4bda3','#f2d6c6','#c99065','#9b614a','#683f36','#ced2cb',
+  '#cab6db','#a8d5c7','#a4acc6','#dfada8','#8e9cb0','#282f3d','#dbcec0',
+]);
+const STUDIO_MODEL_CARDS = Object.freeze([
+  ['softMale','01 / VITAE SOFT','ERKEK'],
+  ['softFemale','02 / VITAE SOFT','KADIN'],
+  ['vroidMale','03 / CLASSIC','VRM ERKEK'],
+  ['vroidFemale','04 / CLASSIC','VRM KADIN'],
+]);
+
 
 export class Hud {
   constructor(canvas, options) {
@@ -35,6 +56,16 @@ export class Hud {
     this.toastNode = $('#toast');
     this.lastToastTimeout = 0;
     this.profile = normalizeAvatar(options.getProfile());
+    this.studioTab = 'model';
+    this.studioHistory = [];
+    this.studioHistoryIndex = -1;
+    this.studioLastEdit = { key: null, time: 0 };
+    this.studioStage = new CharacterStage($('#studio-viewport'), {
+      onStatus: text => { $('#studio-render-status').textContent = text; },
+      onZoom: distance => {
+        $('#studio-zoom-display').textContent = Math.round(345 / distance) + '%';
+      },
+    });
     this.touchMode = isTouchCapable(window);
     this.touchControls = this.touchMode ? new TouchControls($('#mobile-ui'), options.player, {
       toast: (message) => this.toast(message),
@@ -67,10 +98,38 @@ export class Hud {
     $('#close-settings').addEventListener('click', () => this.closeSettings());
     $('#avatar-toggle').addEventListener('click', () => this.toggleCustomizer());
     $('#close-customizer').addEventListener('click', () => this.closeCustomizer());
-    $('#avatar-reset').addEventListener('click', () => { this.profile = normalizeAvatar(AVATAR_DEFAULTS); this.syncAvatarControls(); this.preview(); });
-    $('#avatar-save').addEventListener('click', () => {
-      this.options.saveProfile(this.profile); $('#save-message').textContent = 'Karakter ayarları tarayıcıda kaydedildi.'; this.toast('Karakter profili kaydedildi');
+    $('#avatar-reset').addEventListener('click', () => {
+      this.profile = switchSoftModel(this.profile, this.profile.baseModel);
+      this.profile = normalizeAvatar({
+        ...this.profile, ...(SOFT_MODEL_PRESETS[this.profile.baseModel] || {}),
+      });
+      this.commitStudioEdit('reset-all');
+      this.syncAvatarControls();
+      this.preview();
     });
+    $('#avatar-save').addEventListener('click', () => {
+      this.options.saveProfile(this.profile);
+      $('#save-message').textContent = 'KAYDEDİLDİ / BU CİHAZ';
+      this.studioOriginal = JSON.stringify(this.profile);
+      this.updateStudioHistoryButtons();
+      this.toast('Karakter profili kaydedildi');
+    });
+    $('#studio-undo').addEventListener('click', () => this.stepStudioHistory(-1));
+    $('#studio-redo').addEventListener('click', () => this.stepStudioHistory(1));
+    $('#studio-reset-group').addEventListener('click', () => this.resetStudioGroup());
+    $('#studio-randomize').addEventListener('click', () => this.randomizeStudioGroup());
+    $('#studio-search').addEventListener('input', () => this.refreshStudioSection());
+    document.querySelectorAll('.studio-rail button[data-studio-tab]').forEach(button => {
+      button.addEventListener('click', () => this.setStudioTab(button.dataset.studioTab));
+    });
+    document.querySelectorAll('[data-studio-view]').forEach(button => {
+      button.addEventListener('click', () => {
+        this.studioStage.setView(button.dataset.studioView);
+        this.setStudioViewButton(button.dataset.studioView);
+      });
+    });
+    $('#studio-zoom-in').addEventListener('click', () => this.studioStage.zoom(-1));
+    $('#studio-zoom-out').addEventListener('click', () => this.studioStage.zoom(1));
     $('#close-elevator').addEventListener('click', () => this.closeElevator());
     document.querySelectorAll('[data-floor]').forEach(btn => btn.addEventListener('click', () => {
       const floor = Number(btn.dataset.floor);
@@ -79,6 +138,23 @@ export class Hud {
       if (!this.touchMode) this.canvas.requestPointerLock?.();
     }));
     document.addEventListener('keydown', (e) => {
+      if (this.isCustomizerOpen() && (e.ctrlKey || e.metaKey)) {
+        if (e.code === 'KeyZ') {
+          e.preventDefault();
+          this.stepStudioHistory(e.shiftKey ? 1 : -1);
+          return;
+        }
+        if (e.code === 'KeyY') {
+          e.preventDefault();
+          this.stepStudioHistory(1);
+          return;
+        }
+        if (e.code === 'KeyS') {
+          e.preventDefault();
+          $('#avatar-save').click();
+          return;
+        }
+      }
       if (e.code === 'Escape') {
         if (this.isElevatorOpen()) this.closeElevator();
         else if (this.isCustomizerOpen()) this.closeCustomizer();
@@ -139,25 +215,32 @@ export class Hud {
   buildAvatarFields() {
     const parent = $('#avatar-fields');
     parent.replaceChildren();
+    this.studioFieldsByTab = {};
 
-    const heading = (title, cssClass = '') => {
-      const el = document.createElement('h3');
-      el.className = 'character-section-title ' + cssClass;
-      el.textContent = title;
-      parent.append(el);
+    const group = (tab, title, kind = '') => {
+      const section = document.createElement('section');
+      section.className = 'studio-fields-group ' + kind;
+      section.dataset.studioTab = tab;
+      const h = document.createElement('h3');
+      h.className = 'character-section-title';
+      h.textContent = title;
+      section.append(h);
+      parent.append(section);
+      return section;
     };
-    const wrapField = (key, label, cssClass = '') => {
+    const wrapField = (section, key, label, kind = '') => {
       const wrap = document.createElement('div');
-      wrap.className = 'field ' + cssClass;
+      wrap.className = 'field ' + kind;
+      wrap.dataset.studioKey = key;
       const caption = document.createElement('label');
       caption.htmlFor = 'avatar-' + key;
       caption.textContent = label;
       wrap.append(caption);
-      parent.append(wrap);
+      section.append(wrap);
       return wrap;
     };
-    const selectField = (key, label, legacy = false) => {
-      const wrap = wrapField(key, label, legacy ? 'legacy-avatar-field' : '');
+    const selectField = (section, key, label) => {
+      const wrap = wrapField(section, key, label);
       const select = document.createElement('select');
       select.id = 'avatar-' + key;
       for (const [value, name] of FIELDS[key]) {
@@ -168,8 +251,6 @@ export class Hud {
       }
       select.addEventListener('change', () => {
         if (key === 'baseModel') {
-          // Selecting the other soft model starts from its own anatomy,
-          // while retaining the chosen colour and legacy wardrobe settings.
           this.profile = switchSoftModel(this.profile, select.value);
           this.syncAvatarControls();
         } else {
@@ -177,18 +258,19 @@ export class Hud {
             ? select.value === 'true' : select.value;
         }
         this.preview();
-        this.updateConditionalControls();
+        this.commitStudioEdit(key);
+        this.refreshStudioSection();
       });
       wrap.append(select);
+      return wrap;
     };
-    heading('Karakter türü');
-    selectField('baseModel', 'Model');
-
-    const groupFields = (title, keys) => {
-      heading(title, 'soft-avatar-field');
+    const rangeGroup = (tab, title, keys) => {
+      const section = group(tab, title, 'soft-avatar-field');
+      this.studioFieldsByTab[tab] ||= [];
+      this.studioFieldsByTab[tab].push(...keys);
       for (const key of keys) {
-        const [ , label, unit, step] = SOFT_AVATAR_FIELDS.find(field => field[0] === key);
-        const wrap = wrapField(key, label, 'soft-avatar-field');
+        const [, label, unit, step] = SOFT_AVATAR_FIELDS.find(field => field[0] === key);
+        const wrap = wrapField(section, key, label);
         const [min, max] = AVATAR_RANGES[key];
         const out = document.createElement('output');
         out.id = 'avatar-' + key + '-value';
@@ -196,76 +278,172 @@ export class Hud {
         const range = document.createElement('input');
         range.id = 'avatar-' + key;
         range.type = 'range';
-        range.min = String(min);
-        range.max = String(max);
+        range.min = String(min); range.max = String(max);
         range.step = String(step);
+        range.setAttribute('aria-label', label);
         range.addEventListener('input', () => {
           this.profile[key] = Number(range.value);
           out.textContent = Number(range.value).toFixed(step < .01 ? 3 : 2) + (unit ? ' ' + unit : '');
+          range.style.setProperty('--fill', (100 * (Number(range.value) - min) / (max - min)) + '%');
           this.preview();
+          this.commitStudioEdit(key);
         });
         wrap.append(out, range);
       }
     };
 
-    heading('Renk', 'soft-avatar-field');
-    const colorWrap = wrapField('bodyColor', 'Gövde, kafa ve uzuv rengi', 'soft-avatar-field');
+    // Model selection is card-first, but retains its accessible select for
+    // keyboard users and to preserve the legacy control ID contract.
+    const base = group('model', '01 / SYSTEM ARCHITECTURE');
+    const models = document.createElement('div');
+    models.className = 'studio-model-card-grid';
+    for (const [value, eyebrow, label] of STUDIO_MODEL_CARDS) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'studio-model-card';
+      card.dataset.model = value;
+      card.setAttribute('aria-label', label);
+      card.setAttribute('aria-pressed', 'false');
+      card.innerHTML = '<span class="studio-model-portrait" aria-hidden="true"></span>'
+        + '<span class="studio-card-check" aria-hidden="true">✓</span>'
+        + '<span class="studio-card-id">' + eyebrow + '</span>'
+        + '<span class="studio-card-name">' + label + '</span>';
+      card.addEventListener('click', () => {
+        if (this.profile.baseModel === value) return;
+        this.profile = switchSoftModel(this.profile, value);
+        this.preview();
+        this.commitStudioEdit('baseModel');
+        this.syncAvatarControls();
+      });
+      models.append(card);
+    }
+    base.append(models);
+    const description = document.createElement('p');
+    description.className = 'studio-model-caption';
+    description.textContent = 'Vitae Soft: tamamen ayarlanabilir hafif geometri. VRM: hazır modeller ve giyim seçenekleri.';
+    base.append(description);
+    selectField(base, 'baseModel', 'Modeli listeden seç');
+
+    rangeGroup('face', 'BAŞ & BOYUN', ['headScale','eyeSpacing','eyeLength','neckSize']);
+    rangeGroup('body', 'VÜCUT ORANLARI', ['height','shoulders','waist','hips','torsoDepth']);
+    rangeGroup('body', 'KARIN & KALÇA', ['abdomenWidth','abdomenDepth','abdomenFullness','hipSize','gluteSize']);
+    rangeGroup('chest', 'GÖĞÜS YAPISI', ['chestWidth','chestDepth','chestFullness','chestRatio']);
+    rangeGroup('chest', 'KLAVİKULA & BOYUN BAĞLANTISI', ['upperChestWidth','upperChestDepth','upperChestFullness','clavicleDefinition','trapeziusVolume','neckBaseWidth']);
+    rangeGroup('arms', 'KOLLAR & ELLER', ['armSpread','armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
+    rangeGroup('legs', 'BACAK ORANLARI', ['legRatio','legSpacing','thighRatio','thighSize','calfSize','footSize','footLength']);
+
+    const colorGroup = group('style', 'VITAE SOFT / MATERIAL', 'soft-avatar-field');
+    const swatches = document.createElement('div');
+    swatches.className = 'studio-swatch-grid';
+    for (const hex of STUDIO_SWATCHES) {
+      const button = document.createElement('button');
+      button.className = 'studio-swatch';
+      button.type = 'button';
+      button.dataset.color = hex;
+      button.style.backgroundColor = hex;
+      button.setAttribute('aria-label', 'Ten rengi ' + hex);
+      button.setAttribute('aria-pressed', 'false');
+      button.addEventListener('click', () => {
+        this.profile.bodyColor = hex;
+        this.syncAvatarControls();
+        this.preview();
+        this.commitStudioEdit('bodyColor');
+      });
+      swatches.append(button);
+    }
+    colorGroup.append(swatches);
+    const colorWrap = wrapField(colorGroup, 'bodyColor', 'Özel renk seç');
     const color = document.createElement('input');
     color.id = 'avatar-bodyColor';
     color.type = 'color';
     color.addEventListener('input', () => {
       this.profile.bodyColor = color.value;
+      this.syncAvatarControls();
       this.preview();
+      this.commitStudioEdit('bodyColor');
     });
     colorWrap.append(color);
-
-    groupFields('Baş ve yüz', ['height','headScale','eyeSpacing','eyeLength','neckSize']);
-    groupFields('Genel vücut oranları', ['shoulders','waist','hips','torsoDepth']);
-    groupFields('Göğüs', ['chestWidth','chestDepth','chestFullness','chestRatio']);
-    groupFields('Köprücük kemikleri ve boyun tabanı', ['upperChestWidth','upperChestDepth','upperChestFullness','clavicleDefinition','trapeziusVolume','neckBaseWidth']);
-    groupFields('Karın (ayrı mesh)', ['abdomenWidth','abdomenDepth','abdomenFullness']);
-    groupFields('Kollar', ['armSpread','armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
-    groupFields('Kalça ve glute', ['hipSize','gluteSize']);
-    groupFields('Bacaklar ve ayaklar', ['legRatio','legSpacing','thighRatio','thighSize','calfSize','footSize','footLength']);
+    this.studioFieldsByTab.style = ['bodyColor'];
 
     const sections = [
-      ['Yüz ve hazır saç', [
-        ['hair', 'Saç modeli'], ['hairColor', 'Saç rengi'],
-        ['eyeColor', 'Göz rengi'], ['skinTone', 'Ten tonu'],
-      ]],
-      ['İç giyim', [
-        ['underwear', 'Orijinal iç giyim dokusu'],
-      ]],
-      ['Dış giyim (VRoid hazır mesh)', [
-        ['outfit', 'Hazır dış kıyafetler'],
-        ['shirtVisible', 'Üst parça'], ['pantsVisible', 'Alt parça'], ['shoesVisible', 'Ayakkabı'],
-      ]],
+      ['YÜZ & HAZIR SAÇ', [['hair','Saç modeli'],['hairColor','Saç rengi'],
+        ['eyeColor','Göz rengi'],['skinTone','Ten tonu']]],
+      ['İÇ GİYİM', [['underwear','Orijinal iç giyim dokusu']]],
+      ['KIYAFETLER / VRM', [['outfit','Hazır dış kıyafet'],['shirtVisible','Üst parça'],
+        ['pantsVisible','Alt parça'],['shoesVisible','Ayakkabı']]],
     ];
     for (const [title, fields] of sections) {
-      heading(title, 'legacy-avatar-field');
-      for (const [key, label] of fields) selectField(key, label, true);
+      const section = group('style', title, 'legacy-avatar-field');
+      for (const [key, label] of fields) selectField(section, key, label);
     }
-    const note = document.createElement('p');
-    note.className = 'small character-info legacy-avatar-field';
-    note.textContent = 'Eski VRoid/HairSample CC0 varlıkları korunuyor. Sadece eski model seçildiğinde yüklenir.';
-    parent.append(note);
     this.syncAvatarControls();
+    this.setStudioTab('model');
   }
+
   updateConditionalControls() {
-    const soft = isSoftModel(this.profile.baseModel);
-    for (const element of document.querySelectorAll('#avatar-fields .soft-avatar-field')) {
-      element.classList.toggle('hidden', !soft);
-    }
-    for (const element of document.querySelectorAll('#avatar-fields .legacy-avatar-field')) {
-      element.classList.toggle('hidden', soft);
-    }
-    if (!soft) {
-      const showClothes = this.profile.outfit !== 'none';
-      for (const field of ['shirtVisible','pantsVisible','shoesVisible']) {
-        $('#avatar-' + field)?.closest('.field')?.classList.toggle('hidden', !showClothes);
-      }
-    }
+    this.refreshStudioSection();
   }
+
+  refreshStudioSection() {
+    const tab = this.studioTab;
+    const soft = isSoftModel(this.profile.baseModel);
+    const search = ($('#studio-search').value || '').trim().toLocaleLowerCase('tr');
+    let count = 0;
+    for (const section of document.querySelectorAll('#avatar-fields .studio-fields-group')) {
+      const allowed = section.dataset.studioTab === tab
+        && (!section.classList.contains('soft-avatar-field') || soft)
+        && (!section.classList.contains('legacy-avatar-field') || !soft);
+      section.hidden = !allowed;
+      if (!allowed) continue;
+      let visible = 0;
+      for (const field of section.querySelectorAll('.field')) {
+        const matched = !search || field.textContent.toLocaleLowerCase('tr').includes(search);
+        field.hidden = !matched;
+        if (matched) visible++;
+      }
+      const cards = section.querySelector('.studio-model-card-grid');
+      if (cards) {
+        cards.hidden = !!search && !'model vitae soft erkek kadın vrm classic'.includes(search);
+        if (!cards.hidden) visible += 4;
+      }
+      if (!visible) section.hidden = true;
+      count += visible;
+    }
+    $('#studio-field-count').textContent = String(count).padStart(2, '0') + (tab === 'model' ? ' SEÇENEK' : ' PARAMETRE');
+    $('#studio-empty').classList.toggle('hidden', count > 0);
+    const tabInfo = STUDIO_TABS[tab];
+    $('#studio-section-title').textContent = tabInfo.title;
+    $('#studio-section-description').textContent = tabInfo.subtitle;
+    $('#studio-category-index').textContent = tabInfo.index;
+    document.querySelectorAll('.studio-rail button[data-studio-tab]').forEach(button => {
+      const active = button.dataset.studioTab === tab;
+      button.classList.toggle('is-selected', active);
+      button.setAttribute('aria-current', active ? 'true' : 'false');
+    });
+    $('#studio-reset-group').disabled = tab === 'model' || (!soft && tab !== 'style');
+    $('#studio-randomize').disabled = !soft && tab !== 'model';
+  }
+
+  setStudioTab(tab) {
+    if (!STUDIO_TABS[tab]) return;
+    this.studioTab = tab;
+    $('#studio-search').value = '';
+    $('#avatar-fields').scrollTop = 0;
+    if (tab === 'face') this.studioStage.setView('face');
+    if (tab === 'body' || tab === 'legs' || tab === 'model') this.studioStage.setView('front');
+    if (tab === 'chest' || tab === 'arms') this.studioStage.setView('front');
+    this.setStudioViewButton(tab === 'face' ? 'face' : 'front');
+    this.refreshStudioSection();
+  }
+
+  setStudioViewButton(view) {
+    document.querySelectorAll('[data-studio-view]').forEach(button => {
+      const active = button.dataset.studioView === view;
+      button.classList.toggle('is-selected', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
   syncAvatarControls() {
     for (const key of CHARACTER_CONTROL_IDS) {
       const input = $('#avatar-' + key);
@@ -273,19 +451,114 @@ export class Hud {
     }
     for (const [key, , unit, step] of SOFT_AVATAR_FIELDS) {
       const input = $('#avatar-' + key);
-      if (input) input.value = String(this.profile[key]);
-      const output = $('#avatar-' + key + '-value');
-      if (output) output.textContent = this.profile[key].toFixed(step < .01 ? 3 : 2) + (unit ? ' ' + unit : '');
+      if (input) {
+        input.value = String(this.profile[key]);
+        const [min,max] = AVATAR_RANGES[key];
+        input.style.setProperty('--fill', 100 * (this.profile[key] - min) / (max - min) + '%');
+      }
+      const out = $('#avatar-' + key + '-value');
+      if (out) out.textContent = this.profile[key].toFixed(step < .01 ? 3 : 2) + (unit ? ' ' + unit : '');
     }
     const color = $('#avatar-bodyColor');
     if (color) color.value = this.profile.bodyColor;
-    this.updateConditionalControls();
+    document.querySelectorAll('.studio-model-card').forEach(button => {
+      const active = button.dataset.model === this.profile.baseModel;
+      button.classList.toggle('is-selected', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    document.querySelectorAll('.studio-swatch').forEach(button => {
+      const active = button.dataset.color.toLowerCase() === this.profile.bodyColor.toLowerCase();
+      button.classList.toggle('is-selected', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    this.refreshStudioSection();
   }
+
   preview() {
     this.profile = normalizeAvatar(this.profile);
     this.options.previewProfile(this.profile);
+    this.studioStage.setProfile(this.profile);
     this.refreshModelStatus();
   }
+
+  commitStudioEdit(key) {
+    if (!this.isCustomizerOpen()) return;
+    const snapshot = JSON.stringify(this.profile);
+    if (snapshot === this.studioHistory[this.studioHistoryIndex]) return;
+    const now = performance.now();
+    const merged = key === this.studioLastEdit.key
+      && (now - this.studioLastEdit.time) < 620
+      && this.studioHistoryIndex > 0
+      && this.studioHistoryIndex === this.studioHistory.length - 1;
+    if (merged) {
+      this.studioHistory[this.studioHistoryIndex] = snapshot;
+    } else {
+      this.studioHistory = this.studioHistory.slice(0, this.studioHistoryIndex + 1);
+      this.studioHistory.push(snapshot);
+      if (this.studioHistory.length > 75) this.studioHistory.shift();
+      this.studioHistoryIndex = this.studioHistory.length - 1;
+    }
+    this.studioLastEdit = { key, time: now };
+    this.updateStudioHistoryButtons();
+  }
+
+  stepStudioHistory(direction) {
+    const next = this.studioHistoryIndex + direction;
+    if (next < 0 || next >= this.studioHistory.length) return;
+    this.studioHistoryIndex = next;
+    this.profile = normalizeAvatar(JSON.parse(this.studioHistory[next]));
+    this.studioLastEdit = { key:null, time:0 };
+    this.syncAvatarControls();
+    this.preview();
+    this.updateStudioHistoryButtons();
+  }
+
+  updateStudioHistoryButtons() {
+    $('#studio-undo').disabled = this.studioHistoryIndex <= 0;
+    $('#studio-redo').disabled = this.studioHistoryIndex >= this.studioHistory.length - 1;
+    const dirty = this.studioOriginal !== JSON.stringify(this.profile);
+    $('.studio-autosave-indicator')?.classList.toggle('is-dirty', dirty);
+    $('#studio-unsaved-label').textContent = dirty ? 'KAYDEDİLMEMİŞ DEĞİŞİKLİK' : 'PROFİL HAZIR';
+    $('#studio-model-name').textContent = this.profile.baseModel === 'softFemale'
+      ? 'SOFT / FEMALE' : this.profile.baseModel === 'softMale'
+        ? 'SOFT / MALE' : this.profile.baseModel === 'vroidFemale'
+          ? 'VRM / FEMALE' : 'VRM / MALE';
+  }
+
+  resetStudioGroup() {
+    const keys = this.studioFieldsByTab[this.studioTab] || [];
+    if (!keys.length) return;
+    const preset = SOFT_MODEL_PRESETS[this.profile.baseModel] || AVATAR_DEFAULTS;
+    const updates = {};
+    for (const key of keys) updates[key] = preset[key] ?? AVATAR_DEFAULTS[key];
+    this.profile = normalizeAvatar({ ...this.profile, ...updates });
+    this.syncAvatarControls();
+    this.preview();
+    this.commitStudioEdit('reset-' + this.studioTab);
+  }
+
+  randomizeStudioGroup() {
+    if (this.studioTab === 'model') {
+      this.profile = switchSoftModel(this.profile, Math.random() > .5 ? 'softFemale' : 'softMale');
+    } else {
+      if (!isSoftModel(this.profile.baseModel)) return;
+      for (const key of (this.studioFieldsByTab[this.studioTab] || [])) {
+        if (key === 'bodyColor') {
+          this.profile.bodyColor = STUDIO_SWATCHES[Math.floor(Math.random() * STUDIO_SWATCHES.length)];
+          continue;
+        }
+        const [min,max] = AVATAR_RANGES[key];
+        const noise = (Math.random() * 2 - 1) * (max - min) * .095;
+        const step = SOFT_AVATAR_FIELDS.find(field => field[0] === key)?.[3] || .01;
+        const value = Math.max(min, Math.min(max, this.profile[key] + noise));
+        this.profile[key] = Math.round(value / step) * step;
+      }
+    }
+    this.syncAvatarControls();
+    this.preview();
+    this.commitStudioEdit('random-' + this.studioTab);
+  }
+
   isCustomizerOpen() { return !this.customizer.classList.contains('hidden'); }
   isElevatorOpen() { return !this.elevator.classList.contains('hidden'); }
   isModalOpen() { return this.isCustomizerOpen() || this.isElevatorOpen() || this.isSettingsOpen(); }
@@ -293,10 +566,15 @@ export class Hud {
   openCustomizer() {
     this.touchControls?.suspend();
     this.profile = normalizeAvatar(this.options.getProfile());
-    this.syncAvatarControls();
     this.customizer.classList.remove('hidden');
-    this.restoreFirstPerson = !this.options.player.thirdPerson;
-    if (this.restoreFirstPerson) this.options.player.toggleCamera();
+    this.studioHistory = [JSON.stringify(this.profile)];
+    this.studioHistoryIndex = 0;
+    this.studioOriginal = JSON.stringify(this.profile);
+    this.studioLastEdit = { key:null, time:0 };
+    this.studioStage.open(this.profile);
+    this.syncAvatarControls();
+    this.setStudioTab('model');
+    this.updateStudioHistoryButtons();
     this.refreshModelStatus();
     $('#save-message').textContent = '';
     document.exitPointerLock?.();
@@ -304,8 +582,7 @@ export class Hud {
   }
   closeCustomizer() {
     this.customizer.classList.add('hidden');
-    if (this.restoreFirstPerson && this.options.player.thirdPerson) this.options.player.toggleCamera();
-    this.restoreFirstPerson = false;
+    this.studioStage.close();
     this.refreshStartScreen();
   }
   openElevator() { this.touchControls?.suspend(); this.elevator.classList.remove('hidden'); document.exitPointerLock?.(); this.startScreen.classList.add('hidden'); }
@@ -323,5 +600,5 @@ export class Hud {
     $('#position-status').textContent = `${player.position.x.toFixed(1)} / ${player.position.z.toFixed(1)} m`;
     $('#fps').textContent = `${fps} FPS`;
   }
-  dispose() { this.touchControls?.dispose(); clearTimeout(this.lastToastTimeout); }
+  dispose() { this.touchControls?.dispose(); this.studioStage.dispose(); clearTimeout(this.lastToastTimeout); }
 }
