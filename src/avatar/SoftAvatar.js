@@ -37,8 +37,10 @@ export function softLoftGeometry(stations, sides = 16, exponent = 2.4, caps = { 
       // Optional paired rounded lobes affect the anterior female chest only.
       // A smooth lateral Gaussian is combined with a vertical envelope from
       // successive loft stations. No disconnected spheres or sharp apexes.
-      const pairedLobes = Math.exp(-Math.pow((u - .46) / .43, 2)) +
-        Math.exp(-Math.pow((u + .46) / .43, 2));
+      // Concentrate the two lobes toward the sternum. Their deformation
+      // changes local Z only; the entire lateral X silhouette is unchanged.
+      const pairedLobes = Math.exp(-Math.pow((u - .30) / .18, 2)) +
+        Math.exp(-Math.pow((u + .30) / .18, 2));
       const bust = (ring.bustBulge ?? 0) * front * pairedLobes;
       const z = (ring.z || 0)
         + ring.rz * v * (v >= 0 ? (ring.backScale ?? 1) : (ring.frontScale ?? 1))
@@ -224,9 +226,9 @@ export function buildSoftAvatar(avatar, p) {
   // Breast/pectoral fullness spans both horizontal and vertical space.
   // Female preset increases width, depth AND the allocated chest height.
   // Adjacent bridge stations let the chest and abdomen meet tangentially.
-  // Female torso uses a broad, rounded, twin-lobed anterior surface. The
-  // horizontal lobes are subtle and do not change the independent pectoral
-  // mesh structure or produce protruding caps underneath clothing.
+  // Female chest fullness is strictly anterior: it only adjusts the two
+  // rounded Z protrusions, never the X radii or the rear half of the torso.
+  // chestWidth and chestDepth remain separate independent body measurements.
   const bustStation = (y, rx, rz, z, bulge = 0) =>
     Object.assign(station(y, rx, rz, z), { bustBulge: bulge * p.chestFullness });
   const chest = female ? [
@@ -236,20 +238,20 @@ export function buildSoftAvatar(avatar, p) {
       joinRx * .70 + chestWidth * .30,
       joinRz * .65 + chestDepth * .35, -.003),
     bustStation(splitY + chestBodyHeight * .31,
-      chestWidth * .77 * p.chestFullness,
-      chestDepth * .87 * p.chestFullness, -.006, .012),
+      chestWidth * .75,
+      chestDepth * .89, -.006, .013),
     bustStation(splitY + chestBodyHeight * .45,
-      chestWidth * .88 * p.chestFullness,
-      chestDepth * .94 * p.chestFullness, -.009, .021),
+      chestWidth * .84,
+      chestDepth * .96, -.009, .022),
     bustStation(splitY + chestBodyHeight * .57,
-      chestWidth * .94 * p.chestFullness,
-      chestDepth * .97 * p.chestFullness, -.010, .024),
+      chestWidth * .87,
+      chestDepth * .99, -.010, .024),
     bustStation(splitY + chestBodyHeight * .71,
-      chestWidth * .97 * p.chestFullness,
-      chestDepth * .95 * p.chestFullness, -.008, .020),
+      chestWidth * .89,
+      chestDepth * .96, -.008, .019),
     bustStation(splitY + chestBodyHeight * .82,
-      chestWidth * .94 * (1 + (p.chestFullness - 1) * .72),
-      chestDepth * .91 * (1 + (p.chestFullness - 1) * .70), -.006, .011),
+      chestWidth * .89,
+      chestDepth * .91, -.006, .011),
     bustStation(splitY + chestBodyHeight * .92,
       upperJoinRx * .55 + chestWidth * .45,
       upperJoinRz * .55 + chestDepth * .45, -.004, .003),
