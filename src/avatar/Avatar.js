@@ -6,6 +6,7 @@ import { visibleGarmentLayers } from './ClothingLayers.js';
 import { applyVRoidWardrobe } from './VRoidLayers.js';
 import { applyVRoidColors, disposeVRoidStyle } from './VRoidStyle.js';
 import { loadPremadeHair, clonePremadeHair, discardPremadeHair } from './VRoidPremadeHair.js';
+import { buildSoftAvatar } from './SoftAvatar.js';
 
 /**
  * Stylised human with exposed skin anatomy and detachable visual clothing layers.
@@ -59,11 +60,18 @@ export class Avatar {
   }
   rebuild(profile = this.profile) {
     this.profile = normalizeAvatar(profile);
-    // Preserve imported rig when customizing the procedural wardrobe.
+    // Returning from an imported VRoid to the procedural rig releases only
+    // its live instance; the bundled asset files remain available.
+    if (this.profile.baseModel === 'soft') this.clearExternal();
     this.root.clear();
     this.geometry.forEach(g => g.dispose());
     this.materials.forEach(m => m.dispose());
     this.geometry = []; this.materials = [];
+    this.softAvatar = false;
+    if (this.profile.baseModel === 'soft') {
+      buildSoftAvatar(this, this.profile);
+      return;
+    }
     this.createShapes();
     const p = this.profile;
     const LOOK = {
@@ -302,6 +310,11 @@ export class Avatar {
     this.external.group.position.y = -this.external.sourceMinY * factor;
   }
   updateStyle(profile) {
+    // Body sliders update the native model immediately without asset loading.
+    if (this.profile.baseModel === 'soft') {
+      this.rebuild(profile);
+      return;
+    }
     // Recolor and layer existing CC0 source assets without rebuilding the rig.
     this.profile = normalizeAvatar(profile);
     if (this.external?.vrm) this.updateVRoidStyle();
