@@ -142,13 +142,25 @@ export class Player {
       if (event.code === 'KeyZ') {
         this.releaseHands();
         this.bodyIK.clearSteps();
+        this.postureControls.reset();
         this.requestFootStep();
-        this.events.toast('Vücut modu · W+D sağ ayak · W+A sol ayak');
+        this.events.toast('Bacak kontrolü · A/D seç · Space tekme · Ctrl diz');
         return;
       }
-      if (this.keys.has('KeyZ') && ['KeyW', 'KeyA', 'KeyD'].includes(event.code)) {
-        this.requestFootStep();
-        return;
+      if (this.keys.has('KeyZ') && this.posture === 'stand') {
+        const precisionKeys = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ',
+          'KeyE', 'KeyR', 'KeyF', 'Space', 'ControlLeft', 'ControlRight'];
+        if (precisionKeys.includes(event.code)) {
+          if (['KeyW', 'KeyA', 'KeyD'].includes(event.code)) this.requestFootStep();
+          if (event.code === 'Space') {
+            if (this.keys.has('KeyA')) this.bodyIK.kick('left');
+            if (this.keys.has('KeyD')) this.bodyIK.kick('right');
+          }
+          if (['KeyA', 'KeyD'].includes(event.code) && this.keys.has('Space')) {
+            this.bodyIK.kick(event.code === 'KeyA' ? 'left' : 'right');
+          }
+          return;
+        }
       }
       const action = this.postureControls.press(event.code, performance.now());
       if (action === 'floorSit' || action === 'kneel') {
@@ -368,6 +380,7 @@ export class Player {
     this.bodyIK.update(dt, {
       hands: this.hands, eye: this.eyePosition(), look: this.viewDirection,
       right: this.rightVector(), posture: this.posture, precision,
+      keys: this.keys,
     });
     // FPS exposes only this avatar's actual limb bones. Other characters
     // remain complete: their layer masks are never modified.

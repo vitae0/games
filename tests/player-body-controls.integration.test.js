@@ -83,3 +83,24 @@ test('left and right mouse buttons control separate real arm bones', () => {
     assert.equal(p.hands.right.pressed, true);
   } finally { p.dispose(); }
 });
+
+test('precision side controls do not trigger interaction, jump, crouch or hand release',()=>{
+  const p=makePlayer();
+  try{
+    down(p,'KeyZ');down(p,'KeyD');
+    down(p,'KeyQ');down(p,'KeyR');down(p,'ControlLeft');
+    p.update(.05);
+    assert.ok(p.bodyIK.steps.right.sideways>0);
+    assert.ok(p.bodyIK.steps.right.bend>0);
+    assert.equal(p.posture,'stand');
+    assert.equal(p.postureControls.crouching,false);
+    up(p,'ControlLeft');
+    down(p,'Space');
+    assert.ok(p.bodyIK.kicks.right);
+    assert.equal(p.verticalSpeed,0);
+    up(p,'KeyZ');
+    assert.equal(p.bodyIK.steps.right,null);
+    p.update(.05);
+    assert.ok(p.bodyIK.kicks.right);
+  } finally{p.dispose();}
+});

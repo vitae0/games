@@ -604,7 +604,17 @@ export class Hud {
     $('#floor-status').textContent = `${player.floor + 47}. KAT`;
     const held = ['left', 'right'].filter(side => player.hands[side].grip);
     $('#hand-status').textContent = held.length ? `TUTUŞ: ${held.join(' + ').toUpperCase()}` : 'LMB / RMB · ELLER';
-    $('#movement-status').textContent = player.posture === 'stand' && (player.postureControls.crouching || player.touchCrouch) ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'DİZ ÇÖKMÜŞ' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
+    const precision = player.active && player.keys.has('KeyZ') && player.posture === 'stand';
+    const legHint = $('#leg-control-hint');
+    if (legHint) {
+      legHint.classList.toggle('hidden', !precision);
+      const selected = player.keys.has('KeyA') && player.keys.has('KeyD') ? 'İKİ BACAK'
+        : player.keys.has('KeyA') ? 'SOL BACAK'
+          : player.keys.has('KeyD') ? 'SAĞ BACAK' : 'BACAK SEÇ: A / D';
+      const label = legHint.querySelector('[data-leg-selection]');
+      if (label) label.textContent = selected;
+    }
+    $('#movement-status').textContent = precision ? 'BACAK KONTROLÜ' : player.posture === 'stand' && (player.postureControls.crouching || player.touchCrouch) ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'DİZ ÇÖKMÜŞ' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
     $('#position-status').textContent = `${player.position.x.toFixed(1)} / ${player.position.z.toFixed(1)} m`;
     $('#fps').textContent = `${fps} FPS`;
   }
