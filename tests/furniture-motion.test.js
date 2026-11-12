@@ -57,6 +57,8 @@ test('wardrobe hinges, minibar reverse facing and drawers use one shared box mes
     assert.ok(reversed.pivot.rotation.y< -1);
     assert.ok(drawer.group.position.z<.25);
     assert.ok(seat.part.scale.y<.17);
+    assert.ok(seat.surfaceY() < .5);
+    assert.ok(Math.abs(seat.surfaceY() - (seat.part.position.y + seat.part.scale.y / 2)) < 1e-10);
     assert.ok(seat.part.rotation.y>.08);
     left.setOpen(false);right.setOpen(false);
     drawer.setOpen(false);seat.setOccupied(false);

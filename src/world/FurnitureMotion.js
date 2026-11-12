@@ -145,7 +145,10 @@ export function furnitureSeat(hotel, {
     part.scale.y = height - compression * t;
     part.rotation.y = swivel * t;
   }, 8);
-  return { part, motion, setOccupied(occupied) {
+  return { part, motion,
+    // Contact height is sampled live as the cushion compresses.
+    surfaceY() { return part.position.y + part.scale.y * .5; },
+    setOccupied(occupied) {
     if (motion) motion.set(occupied ? 1 : 0);
     else {
       part.position.y = y - compression * (occupied ? .52 : 0);

@@ -99,7 +99,7 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 - Birinci şahısta ayrı kamera-elleri gösterilmez; gerçek kollar, gövde ve bacaklar görünür. Yerel kameradan baş ve yaka gizlenir, üçüncü şahıs ve aynalar tüm karakteri gösterir.
 - LMB/RMB gerçek kol kemiklerinde iki kemikli IK kullanır. Nesne üstündeki KULLAN hedefleme sistemi önce çalışır.
 - Z basılıyken A/D sol/sağ bacağı seçer, fareyle bakış yönü ayak IK hedefini sürekli belirler: sağa-sola bakmak bacağı açar, yukarı-aşağı bakmak ayağı yükseltir/indirir. Ctrl dizi büker, Space bakılan yöne doğru hazırlık-uzatma-toparlanma tekmesini başlatır. İki bacak aynı anda seçilebilir. **Z bırakıldığında ayak hedefleri sabit kalır**, yalnızca gerçek yürüyüş, zıplama veya mobilyaya oturma gibi poz değişimi onları sıfırlar. Yanal açıklık IK bacak uzunluğunu aşmaz.
-- Fare tekerleği FPS/TPS arasında birinci şahıstan başlayarak 30 metreye kadar yakınlaşıp uzaklaşır. TPS kadrajı uzakken gövdenin merkezini, kamera göze yaklaştıkça yüz hizasını hedefler; nesne tutulurken Shift+tekerlek kavrama mesafesini değiştirir. Gövde hem FPS hem TPS'de, ayrıca mobilyaya oturulduğunda, yalnızca bakış yönü değişti diye dönmez; gerçek yürüyüş hareketine göre yönelir.
+- Fare tekerleği FPS/TPS arasında birinci şahıstan başlayarak 30 metreye kadar artık çok daha ince ara adımlarla yakınlaşıp uzaklaşır (fare ve touchpad scroll miktarına duyarlı). TPS dikey bakışı gerçek küresel kamera yörüngesiyle üstten ve alttan geniş açılara erişir; iç mekânda zemin ve tavanda kırpılır. Nesne tutulurken Shift+tekerlek kavrama mesafesini değiştirir. Gövde yalnızca bakış yönü değişti diye dönmez.
 - Gelişmiş IK ilk sürümde yalnızca prosedürel karakter iskeletine uygulanır. Harici VRM/GLB için eksen/kemik uyarlayıcısı gerekir.
 
 ## Yeni postür ve iskelet sistemi
@@ -293,3 +293,9 @@ saç/kıyafet geometrisi yapay olarak üretilmez. 15 metre içinde tembel yükle
 
 Kaynak, lisans ve teknik ayrıntılar:
 [`docs/VROID_NPC_CAST.md`](docs/VROID_NPC_CAST.md).
+
+### Mobilya animasyonu ve temas hizalama
+
+- Yatak, yatak kenarı, süit kanepesi, masa sandalyesi, bar taburesi ve bar kanepesi için oturma yüzeyi hareketli minderin **gerçek üst yüzeyinden** ölçülür. Klozet oturma yüksekliği gerçek kapağa göre ayarlanmıştır; küvetin iç tabanına oturma korunur.
+- Karakterin kök noktası değil gerçek kalça/sırt teması yüzeye hizalanır. Gövde ve ayaklar mobilyaya göre konumlanır; özelleştirilmiş farklı boy ve bacak oranlarında bu hizalama otomatik tekrar hesaplanır. Minderin ezilmesi sırasında karakter minderle beraber hareket eder.
+- Yatakta sırtın yatay konumu iyileştirilmiştir. Manuel ayak IK'sinin diz bükülme düzlemi ters çevrilmiştir; mobilya ve yerdeki mevcut anatomik pozlar bağımsız olarak korunur.

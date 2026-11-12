@@ -131,3 +131,10 @@ test('leg kick continues after precision release and ends on its own',()=>{
     assert.equal(ik.kicks.right,null);
   } finally{avatar.dispose();}
 });
+
+test('reversed manual knee pole bends on the opposite side of its old plane',()=>{
+  const hip=new THREE.Vector3(0,.89,0),foot=new THREE.Vector3(0,.45,-.28);
+  const previous=solveTwoBone(hip,foot,.46,.44,new THREE.Vector3(.15,.12,-1));
+  const reversed=solveTwoBone(hip,foot,.46,.44,new THREE.Vector3(.15,.12,1));
+  assert.ok(reversed.elbow.z > previous.elbow.z + .10);
+});

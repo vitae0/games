@@ -97,11 +97,13 @@ export function buildSuite(hotel, floor, side, z) {
   const bedActions = `bed:${floor}:${side}:${z}`;
   interact({ x: side * 7.18, z: b.z - .5 }, () => 'Yatak · Uzan', player => {
     player.useFurniture('rest', b.x, b.z - .18, side === -1 ? -Math.PI / 2 : Math.PI / 2, .62,
-      {style:'sleep', onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
+      {style:'sleep', getSurfaceHeight:()=>mattress.surfaceY()-y,
+        onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
   },{x:b.x,z:b.z,y:.65},bedActions);
   interact({ x: side * 8.10, z: b.z - 1.04 }, () => 'Yatak kenarı · Otur', player => {
     player.useFurniture('sit', b.x, b.z - .87, side * Math.PI / 2, .61,
-      {style:'bedEdge', onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
+      {style:'bedEdge', getSurfaceHeight:()=>mattress.surfaceY()-y,
+        onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
   },{x:b.x,z:b.z-.65,y:.66},bedActions);
 
   const sofa = q.sofa;
@@ -120,7 +122,8 @@ export function buildSuite(hotel, floor, side, z) {
   box('trim', ct.x, y + .16, ct.z, .12, .30, .12);
   interact({ x: sofa.x, z: sofa.z - .75 }, () => 'Koltuk · Otur', player => {
     player.useFurniture('sit', sofa.x, sofa.z - .03, Math.PI, .44,
-      {style:'lounge', onEnter:()=>sofaSeat.setOccupied(true), onExit:()=>sofaSeat.setOccupied(false)});
+      {style:'lounge', getSurfaceHeight:()=>sofaSeat.surfaceY()-y,
+        onEnter:()=>sofaSeat.setOccupied(true), onExit:()=>sofaSeat.setOccupied(false)});
   },{x:sofa.x,z:sofa.z,y:.68});
 
   const tv = q.tv;
@@ -174,7 +177,8 @@ export function buildSuite(hotel, floor, side, z) {
   box('trim', ch.x, y + .21, ch.z, .15, .36, .15);
   interact({ x: ch.x, z: ch.z + .7 }, () => 'Çalışma sandalyesi · Otur', player => {
     player.useFurniture('sit', ch.x, ch.z, -side*Math.PI/2, .43,
-      {style:'desk', onEnter:()=>chairSeat.setOccupied(true), onExit:()=>chairSeat.setOccupied(false)});
+      {style:'desk', getSurfaceHeight:()=>chairSeat.surfaceY()-y,
+        onEnter:()=>chairSeat.setOccupied(true), onExit:()=>chairSeat.setOccupied(false)});
   },{x:ch.x,z:ch.z,y:.55});
 
   // Separate minibar and hanging wardrobe. Their doors are functional and cheap to animate.

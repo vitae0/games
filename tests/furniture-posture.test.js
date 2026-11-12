@@ -1,3 +1,4 @@
+import { furnitureContactAnchor } from '../src/player/FurnitureFit.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -62,4 +63,54 @@ test('specific furniture style drives pose, activates and releases responsive fu
     p.standUp();
     assert.equal(exits,2);
   } finally {p.dispose()}
+});
+
+test('all seated styles fit their pelvis onto the surface for diverse custom heights',()=>{
+  for(const [baseModel,height] of [['softMale',1.95],['softFemale',1.58]]) {
+    for(const style of ['desk','lounge','bedEdge','stool','bathe']) {
+      const p=makePlayer();
+      try{
+        p.avatar.rebuild({...p.avatar.profile,baseModel,height});
+        p.useFurniture('sit',1,2,.7,.62,{style});
+        for(let i=0;i<14;i++)p.update(.05);
+        const a=furnitureContactAnchor(p.avatar.profile,style);
+        const marker=p.avatar.body.localToWorld(new THREE.Vector3(0,a.localY,a.localZ));
+        assert.ok(Math.abs(marker.y-(p.position.y+a.clearance))<.002,
+          style+' '+baseModel+' contact y mismatch');
+        assert.ok(Math.abs(marker.x-p.position.x)<.002
+          && Math.abs(marker.z-p.position.z)<.002,style+' xz mismatch');
+      }finally{p.dispose();}
+    }
+  }
+});
+
+test('sleep is centered on its real back and laid flat on the mattress',()=>{
+  const p=makePlayer();
+  try{
+    p.useFurniture('rest',8,3,Math.PI/2,.60,{style:'sleep'});
+    for(let i=0;i<28;i++)p.update(.05);
+    const a=furnitureContactAnchor(p.avatar.profile,'sleep');
+    const point=p.avatar.body.localToWorld(new THREE.Vector3(0,a.localY,a.localZ));
+    assert.ok(point.distanceTo(new THREE.Vector3(8,.60+a.clearance,3))<.003);
+    assert.ok(p.avatar.root.rotation.x < -1.35);
+    assert.ok(p.camera.position.y>=.099,
+      'low-angle orbit may rest exactly on the interior floor bound');
+  }finally{p.dispose();}
+});
+
+test('animated cushion compression moves the seated player without hovering',()=>{
+  const p=makePlayer();
+  try{
+    let top=.58;
+    p.useFurniture('sit',2,2,0,.50,{style:'lounge',getSurfaceHeight:()=>top});
+    p.update(.05);
+    assert.equal(p.position.y,.58);
+    top=.54;p.update(.05);
+    assert.equal(p.position.y,.54);
+    const a=furnitureContactAnchor(p.avatar.profile,'lounge');
+    const marker=p.avatar.body.localToWorld(new THREE.Vector3(0,a.localY,a.localZ));
+    assert.ok(Math.abs(marker.y-(.54+a.clearance))<.002);
+    p.standUp();
+    assert.equal(p.furnitureSurfaceHeight,null);
+  }finally{p.dispose();}
 });
