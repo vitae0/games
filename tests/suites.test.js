@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Hotel } from '../src/world/Hotel.js';
 import { suitePlan } from '../src/world/SuitePlan.js';
 import { createBathAssets } from '../src/world/BathAssets.js';
+import { FurnitureMotion } from '../src/world/FurnitureMotion.js';
 
 function suite(side, z, floor = 1) {
   const events = [], geometry = [], doors = new Map();
@@ -11,13 +12,15 @@ function suite(side, z, floor = 1) {
   const geometries = [new THREE.BoxGeometry(1.70, 1, .025), new THREE.BoxGeometry(.54,.72,.032),
     new THREE.BoxGeometry(.06,2.33,1.12),new THREE.BoxGeometry(.025,.74,.025),
     new THREE.CylinderGeometry(.063,.063,.20,8)];
-  const mats = {warm:new THREE.MeshBasicMaterial(), glass:new THREE.MeshBasicMaterial()};
+  const mats = Object.fromEntries(
+    ['warm','glass','wood','fabric','trim','black'].map(name=>[name,new THREE.MeshBasicMaterial()]));
   const media = Array.from({length:3}, () => ({material:new THREE.MeshBasicMaterial()}));
   const bathAssets = createBathAssets();
   const fake = {
     scene: new THREE.Scene(), suiteScreenGeometry:geometries[0], suiteMinibarGlowGeometry:geometries[1],
     suiteBathroomDoorGeometry:geometries[2], suiteWaterGeometry:geometries[3], suiteBottleGeometry:geometries[4],
     media, materials:mats, bathAssets, suiteMeshes:[], interactables:[], animations:[], walkSurfaces:[],
+    furnitureMotion:new FurnitureMotion(), propGeometry:new THREE.BoxGeometry(1,1,1),
     box(name, x, y, z, width, height, depth, roomFloor, solid) {
       geometry.push({name,x,y,z,width,height,depth,floor:roomFloor,solid:!!solid});
     },
@@ -30,6 +33,7 @@ function suite(side, z, floor = 1) {
   return {fake,geometry,doors,events,cleanup(){
     geometries.forEach(g=>g.dispose());media.forEach(m=>m.material.dispose());
     Object.values(mats).forEach(m=>m.dispose()); bathAssets.dispose();
+    fake.propGeometry.dispose(); fake.furnitureMotion.dispose();
   }};
 }
 
@@ -57,7 +61,8 @@ test('TV cycles city, art, relax then switches off',()=>{
     tv.activate(); assert.ok(tv.getLabel().includes('Art'));
     tv.activate(); assert.ok(tv.getLabel().includes('Relax'));
     tv.activate(); assert.equal(tv.getLabel(),'TV · Aç');
-    assert.equal(s.fake.suiteMeshes[0].visible,false);
+    const screen=s.fake.suiteMeshes.find(mesh=>mesh.geometry===s.fake.suiteScreenGeometry);
+    assert.equal(screen.visible,false);
   }finally{s.cleanup()}
 });
 
@@ -79,8 +84,13 @@ test('minibar and bath doors, shower and water each toggle their state',()=>{
     assert.ok(water && water.visible===false);
     tub.activate(); assert.ok(tub.getLabel().includes('boşalt'));
     assert.equal(water.visible,true);
+    for(let i=0;i<35;i++)s.fake.furnitureMotion.update(.075);
+    const raised=water.position.y;
+    assert.ok(raised>3.4+.30,'bath water rose inside the tub');
     tub.activate(); assert.ok(tub.getLabel().includes('doldur'));
+    for(let i=0;i<35;i++)s.fake.furnitureMotion.update(.075);
     assert.equal(water.visible,false);
+    assert.ok(water.position.y<raised,'bath drained smoothly');
   }finally{s.cleanup()}
 });
 
@@ -140,4 +150,56 @@ test('sofa faces the TV and desk chair faces the workstation in both mirrored su
       assert.equal(commands[1][3],-side*Math.PI/2,'chair must point toward its workstation');
     }finally{s.cleanup()}
   }
+});
+
+test('wardrobe, minibar and drawer interactions move real meshes independently',()=>{
+  const s=suite(-1,3.5);
+  try{
+    const hotel=s.fake;
+    const get=text=>hotel.interactables.find(i=>i.getLabel().startsWith(text));
+    const wardrobe=get('Gardırop');
+    const drawer=get('Masa çekmecesi');
+    const night=get('Komodin');
+    const fridge=get('Minibar');
+    assert.ok(wardrobe&&drawer&&night&&fridge);
+    const left=hotel.suiteMeshes.find(mesh=>mesh.name==='wardrobe-left-door');
+    const right=hotel.suiteMeshes.find(mesh=>mesh.name==='wardrobe-right-door');
+    const tray=hotel.suiteMeshes.find(mesh=>mesh.name==='desk-drawer');
+    const minibar=hotel.suiteMeshes.find(mesh=>mesh.name==='minibar-door');
+    assert.ok(left&&right&&tray&&minibar);
+    wardrobe.activate();
+    drawer.activate();
+    fridge.activate();
+    for(let i=0;i<18;i++)hotel.furnitureMotion.update(.075);
+    assert.ok(left.rotation.y>.5);
+    assert.ok(right.rotation.y<-.5);
+    assert.ok(tray.position.z<s.fake.interactables.find(i=>i.getLabel().startsWith('Masa çekmecesi')).position.z+.73);
+    assert.ok(minibar.rotation.y<-.4,'minibar swings toward the usable +Z face');
+    assert.ok(night.getLabel().includes('kapat')===false);
+    night.activate();
+    assert.ok(night.getLabel().includes('kapat'));
+    wardrobe.activate();
+    for(let i=0;i<35;i++)hotel.furnitureMotion.update(.075);
+    assert.ok(Math.abs(left.rotation.y)<.01);
+    assert.ok(Math.abs(right.rotation.y)<.01);
+  }finally{s.cleanup()}
+});
+
+test('cushions respond to furniture enter and release callbacks',()=>{
+  const s=suite(1,3.5);
+  try{
+    const hotel=s.fake, calls=[];
+    const makePlayer={useFurniture:(...args)=>calls.push(args)};
+    hotel.interactables.find(i=>i.getLabel()==='Koltuk · Otur').activate(makePlayer);
+    const args=calls[0];
+    assert.equal(args[5].style,'lounge');
+    const seat=hotel.suiteMeshes.find(mesh=>mesh.name==='sofa-cushion');
+    const original=seat.scale.y;
+    args[5].onEnter();
+    for(let i=0;i<18;i++)hotel.furnitureMotion.update(.075);
+    assert.ok(seat.scale.y<original);
+    args[5].onExit();
+    for(let i=0;i<30;i++)hotel.furnitureMotion.update(.075);
+    assert.ok(Math.abs(seat.scale.y-original)<.001);
+  }finally{s.cleanup()}
 });
