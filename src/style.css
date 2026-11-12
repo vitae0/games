@@ -175,3 +175,11 @@ html,body,#app{width:100%;height:100%;height:100dvh;overscroll-behavior:none}
 .leg-control-hint strong{font-size:11px;letter-spacing:.07em;color:#f4e4d0}
 .leg-control-hint span{color:#d6ccbe}
 @media(max-width:800px){.leg-control-hint{display:none}}
+
+/* Optional keyboard-lock fullscreen: game input takes priority only when the
+   browser explicitly grants fullscreen capture. Mobile uses its own controls. */
+#fullscreen-toggle{font-size:10px;letter-spacing:.055em;padding:9px 11px;
+  border:1px solid #38506d;border-radius:5px;background:rgba(16,27,48,.92);
+  white-space:nowrap}
+#fullscreen-toggle[aria-pressed="true"]{border-color:#b2d8dc;color:#dbf7f5}
+@media(max-width:720px){#fullscreen-toggle{display:none}}
