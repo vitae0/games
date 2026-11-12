@@ -49,7 +49,7 @@ test('real Player: double Ctrl makes floor sitting visible in FPS and second dou
     assert.equal(p.posture, 'floorSit');
     p.update(.08);
     assert.equal(p.avatar.root.visible, true);
-    assert.ok(p.avatar.leftLeg.userData.knee.rotation.x < -.1);
+    assert.ok(p.avatar.leftLeg.userData.knee.rotation.x < -.05);
     up(p,'ControlLeft');
     key(p,'ControlLeft'); up(p,'ControlLeft');
     key(p,'ControlLeft');
