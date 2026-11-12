@@ -11,8 +11,18 @@ export function poseFor(posture, locomotion, time, height = 1.73, furnitureStyle
   const bases = {
     stand: { drop: 0, hip: [0, 0], knee: [0, 0], arms: [-swing * .72, swing * .72] },
     crouch: { drop: .135 * height, hip: [.62, .62], knee: [-1.20, -1.20], arms: [.20, .20] },
-    floorSit: { drop: .205 * height, hip: [1.39, 1.39], knee: [-1.42, -1.42], arms: [.24, .24] },
-    kneel: { drop: .155 * height, hip: [.72, 1.10], knee: [-1.63, -1.74], arms: [.12, .33] },
+    // Actual floor seating: pelvis almost on the ground, both shins reach
+    // forward rather than falling vertically as they would from a chair.
+    floorSit: { drop: .36 * height, hip: [1.42, 1.42], knee: [-.13, -.13],
+      arms: [.28, .28], spine: -.035 },
+    // Both knees take weight: vertical thighs, horizontal shins behind body.
+    // No asymmetrical planted foot, unlike a one-knee proposal pose.
+    kneel: { drop: .23 * height, hip: [.12, .12], knee: [-1.64, -1.64],
+      arms: [.17, .17], spine: .04 },
+    // Flat, back-up pose. The whole avatar is tilted by Player, not by
+    // distorting either articulated leg independently.
+    floorLie: { drop: 0, hip: [.055, .055], knee: [-.075, -.075],
+      arms: [-.30, -.30], spine: 0 },
     sit: { drop: .16 * height, hip: [1.30, 1.30], knee: [-1.34, -1.34], arms: [.20, .20] },
     rest: { drop: .31 * height, hip: [.40, .40], knee: [-.52, -.52], arms: [.08, .08] },
   };
@@ -31,6 +41,7 @@ export function poseFor(posture, locomotion, time, height = 1.73, furnitureStyle
     : (furniture[furnitureStyle] ?? bases[posture] ?? bases.stand);
   const drop = selected.drop * (selected === bases.stand || selected === bases.crouch ||
     selected === bases.floorSit || selected === bases.kneel ||
+    selected === bases.floorLie ||
     selected === bases.sit || selected === bases.rest ? 1 : height);
   return {
     drop,
