@@ -1,6 +1,16 @@
-# VitaeWorld · Alpha 0.14 (Vitae Hotel)
+# VitaeWorld · Alpha 0.15 (Vitae Hotel)
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
+
+## Alpha 0.15: konumsal poz varyantları, yere yatışta yuvarlanma ve tam FPS
+
+- **Yatış rotasyonları:** `Ctrl×3` ile sırtüstü yat; yerdeyken A/D her seferinde karakterin kendi baş-ayak ekseninde 90° döndürür. Sırtüstü → yan → yüzüstü → diğer yan, ayrıca geri yönde dönüş. W/S içinde yatış biçimleri (`Düz`, `Dizleri topla`, `Bir diz yukarı`, `Esneme`) seçilir.
+- **Oturma varyantları:** `Ctrl×2` sonrasında A/D ile düz, bağdaş, kelebek, iki yana oturuş, bir diz yukarı ve dizlere sarılma biçimleri çevrilir. Sadece isim değil, kalça yaw/roll ve diz açıları değişir.
+- **Diz çökme varyantları:** `Ctrl+Space` sonrası A/D ile çift diz, topuk üstü oturuş, öne eğilme ve kolları uzatma.
+- **Pozdan bağımsız uzuv IK:** Z+A/D ve eski Z+W+A/D ile bacak; Z+S+A/D ile kol; Z+Q+A/D ile bilek/parmak; Ctrl ile seçili uzvu bük. Hedefler Z bırakıldığında korunur, yeni temel poza geçince temizlenir.
+- **Kamera:** FPS/TPS seçimi artık yerdeki ve mobilyadaki pozlarda da çalışır; FPS kamerası animasyonlu başın dünya konumuna/rotasyonuna yerleştirilir, zemine veya avatar içine girmesi sınırlandırılır. O/V veya fare tekerleği modları değiştirir.
+- **Ayak z-fighting:** Düz taban diski dome yüzeyinden içeride ve biraz yukarıda; topuk/burun parçaları ayrıştırıldı. Umumi tuvaletin zemin fiziği gerçek karo yüksekliğiyle eşleştirildi.
+- **Mobil:** Ek kontrollerde poz geri/ileri, yatış biçimi, yatma ve aşamalı kalkma bulunur. Tüm varyantlar saf sabit veri olarak `src/player/PoseVariants.js` içinde tutulur.
 
 ## Alpha 0.14: gerçek zemin pozları, üçlü Ctrl ve ayrık klozet etkileşimi
 
