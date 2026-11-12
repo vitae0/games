@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HOTEL } from '../config.js';
 import { suitePlan } from './SuitePlan.js';
+import { furniturePart } from './FurnitureMotion.js';
 
 const Y=floor=>floor*HOTEL.floorHeight;
 const add=(hotel,mesh)=>{hotel.scene.add(mesh);hotel.suiteMeshes.push(mesh);return mesh;};
@@ -61,14 +62,34 @@ export function buildBathroom(hotel,floor,side,z) {
   water.renderOrder=1;
   water.visible=false;
   add(hotel,water);
-  interact({x:side*9.80,z:z-2.65},()=> 'Küvet · İçine gir',player=>{
-    player.useFurniture('sit',tub.x,tub.z,side*Math.PI/2,.17);
-  },{x:tub.x,z:tub.z,y:.55});
   let filled=false;
+  const waterMotion=hotel.furnitureMotion?.create(level=>{
+    // Existing shared water shader supplies ripples; the surface actually rises
+    // and lowers as the bath fills and drains, rather than snapping instantly.
+    water.position.y=y+.13+level*.205;
+    water.scale.x=.50+level*.03;
+    water.scale.y=.56+level*.05;
+    water.visible=filled||level>.003;
+  },2.7);
+  const stream=furniturePart(hotel,'glass',side*11.0,y+.80,z-1.58,
+    .024,.26,.024,'tub-faucet-stream');
+  stream.visible=false;
+  const streamMotion=hotel.furnitureMotion?.create(level=>{
+    stream.visible=filled&&level<.98;
+    stream.scale.y=.05+.21*(1-level);
+  },3);
+  interact({x:side*9.80,z:z-2.65},()=> 'Küvet · İçine gir',player=>{
+    player.useFurniture('sit',tub.x,tub.z,side*Math.PI/2,.17,
+      {style:'bathe'});
+  },{x:tub.x,z:tub.z,y:.55});
   interact({x:side*9.75,z:z-2.21},()=>filled?'Küvet · Suyu boşalt':'Küvet · Suyu doldur',()=>{
     filled=!filled;
-    water.visible=filled;
-    hotel.events.toast(filled?'Küvet doldu':'Küvet boşaltıldı');
+    if(filled) water.visible=true;
+    if(waterMotion) waterMotion.set(filled?1:0);
+    else water.visible=filled;
+    streamMotion?.set(filled?1:0);
+    if(!filled)stream.visible=false;
+    hotel.events.toast(filled?'Küvet dolduruluyor':'Küvet boşaltılıyor');
   });
   // Faucet is a compact brushed-metal bridge with no overlapping surfaces.
   round('trim',side*11.12,y+.75,z-1.50,.055,.50,.07);
@@ -81,6 +102,21 @@ export function buildBathroom(hotel,floor,side,z) {
   round('ceramic',sinkX,y+.89,z-.98,.66,.13,.33);
   hotel.addWalkSurface?.(floor,sinkX,z-.98,.66,.33,y+.955);
   round('trim',sinkX,y+1.09,z-.98,.045,.27,.04);
+  const tapStream=furniturePart(hotel,'glass',sinkX,y+.965,z-.98,
+    .018,.20,.018,'sink-water-stream');
+  tapStream.visible=false;
+  let tapOn=false;
+  const sinkMotion=hotel.furnitureMotion?.create(level=>{
+    tapStream.scale.y=.20*level;
+    tapStream.position.y=y+1.04-.10*level;
+    tapStream.visible=level>.004;
+  },12);
+  interact({x:sinkX,z:z-1.35},()=>tapOn?'Lavabo · Musluğu kapat':'Lavabo · Musluğu aç',()=>{
+    tapOn=!tapOn;
+    if(sinkMotion)sinkMotion.set(tapOn?1:0);
+    else tapStream.visible=tapOn;
+    hotel.events.toast(tapOn?'Lavabo açıldı':'Lavabo kapatıldı');
+  },{x:sinkX,z:z-.98,y:1.06});
   // Real planar reflection is active only for the nearest bathroom, through
   // a single reusable 256px Reflector. This frame stays visible otherwise.
   box('trim',sinkX,y+1.75,z-.742,.91,1.16,.028);
