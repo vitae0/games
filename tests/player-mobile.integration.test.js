@@ -84,7 +84,8 @@ test('third-person camera orbit never rotates stationary avatar, movement rotate
     assert.equal(p.avatar.root.rotation.y,movementFacing,'facing persists after stopping even if camera turns');
     p.toggleCamera();
     p.update(.05);
-    assert.equal(p.avatar.root.rotation.y,p.yaw,'first-person restores camera-aligned facing');
+    assert.equal(p.avatar.root.rotation.y,movementFacing,
+      'first-person remains independent of camera yaw when idle');
   } finally {p.dispose();}
 });
 
