@@ -1,6 +1,14 @@
-# VitaeWorld · Alpha 0.11 (Vitae Hotel)
+# VitaeWorld · Alpha 0.13 (Vitae Hotel)
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
+
+## Alpha 0.13: umumi tuvalet yenilemesi
+
+- **Yeni plan:** Hotel'in ilk katındaki doğu tuvaleti, giriş koridoru açık kalacak biçimde üç bağımsız, opak kabinle yeniden kuruldu. Üçüncü kabinde destek barları bulunuyor; bu bir erişilebilirlik sertifikasyonu değildir.
+- **Gerçek kabin mekanikleri:** Menteşeli kapılar, açık/kapalı fiziksel çarpışması, kilit ve dolu/boş göstergeleri. Kabin kullanımı sırasında kapı otomatik kapanıp kilitlenir; ayağa kalkıldığında açılır. Klozet kapağı ve sifonun ayrı animasyonları vardır.
+- **Vanity bankosu:** Üç ayrı lavabo, doğru yöne bakan aynalar, bağımsız musluklar ve sabun pompaları. Musluklar 12 saniye sonra otomatik kapanır.
+- **Diğer işlevler:** Dört saniye çalışan el kurutucu, hareketli çöp kutusu kapağı, kağıt ünitesi, bağımsız ışık anahtarı ve koridor üstünde WC levhası.
+- **Görsel/performans:** Taş zemin ve ince derzler, sıcak armatürler, yarı opak su, tam kapalı dış mahremiyet duvarı; hareketler yalnızca aktif nesnelerde hesaplanır. Yeni düzen `src/world/PublicRestroom.js` içinde bağımsız geliştirilir.
 
 ## Alpha 0.12: anatomik mesh, akıcı merdiven ve kesin hedefli etkileşimler
 
