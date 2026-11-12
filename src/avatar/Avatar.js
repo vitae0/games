@@ -277,9 +277,11 @@ export class Avatar {
     return upper;
   }
   buildLeg(sign, length, hips) {
-    const upper = new THREE.Bone(); upper.name = sign < 0 ? 'leftUpperLeg' : 'rightUpperLeg';
+    const upper = new THREE.Bone(); upper.rotation.order = 'YXZ';
+    upper.name = sign < 0 ? 'leftUpperLeg' : 'rightUpperLeg';
     upper.position.set(sign * hips * .29, length, 0); this.body.add(upper);
-    const lower = new THREE.Bone(); lower.name = sign < 0 ? 'leftLowerLeg' : 'rightLowerLeg';
+    const lower = new THREE.Bone(); lower.rotation.order = 'YXZ';
+    lower.name = sign < 0 ? 'leftLowerLeg' : 'rightLowerLeg';
     lower.position.y = -length * .52; upper.add(lower);
     const rad = Math.max(.082, hips * .195);
     const options = { x: upper.position.x, topY: length, length: length * .98,
