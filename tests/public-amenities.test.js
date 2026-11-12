@@ -109,13 +109,18 @@ test('cubicle doors, locks, privacy indicator and occupancy operate independentl
     const d1=findAction(f.hotel,'Kabin 1 · Kapıyı');
     const d2=findAction(f.hotel,'Kabin 2 · Kapıyı');
     const lock1=findAction(f.hotel,'Kabin 1 · Kilitle');
-    const use1=findAction(f.hotel,'Kabin 1 · Kullan');
+    const use1=findAction(f.hotel,'Klozet 1 · Kullan');
     const pivot=f.hotel.suiteMeshes.find(m=>m.name==='public-stall-door-1');
     const indicator=f.hotel.suiteMeshes.find(m=>m.name==='public-stall-occupancy-1');
     assert.ok(pivot && indicator);
+    assert.notEqual(d1.groupId,use1.groupId,'door and bowl are separate clickable objects');
+    assert.notDeepEqual(d1.labelPosition.toArray(),use1.labelPosition.toArray());
+    assert.equal(d1.isAvailable(),true);
+    assert.equal(use1.isAvailable(),false,'closed toilet cannot be clicked through the door');
     use1.activate({useFurniture:()=>assert.fail('closed stall cannot be occupied')});
     assert.ok(f.events.at(-1).includes('kapısını aç'));
     d1.activate();
+    assert.equal(use1.isAvailable(),true,'open stall exposes its independently clickable toilet');
     for(let i=0;i<24;i++)f.frame();
     assert.ok(pivot.rotation.y>1.0,'actual hinged door swings into cubicle');
     assert.equal([...f.states.values()].filter(s=>!s.active).length,1,
@@ -182,8 +187,8 @@ test('flushing, independent lid, timed hand dryer, bin and switch work',()=>{
     const open=findAction(f.hotel,'Kabin 3 · Kapıyı') ??
       findAction(f.hotel,'Erişilebilir kabin · Kapıyı');
     open.activate();
-    const flush=findAction(f.hotel,'Erişilebilir kabin · Sifonu');
-    const lid=findAction(f.hotel,'Erişilebilir kabin · Kapağı');
+    const flush=findAction(f.hotel,'Klozet 3 · Sifonu');
+    const lid=findAction(f.hotel,'Klozet 3 · Kapağı');
     assert.ok(flush && lid);
     lid.activate();
     for(let i=0;i<19;i++)f.frame();
@@ -236,4 +241,23 @@ test('bar stool compresses and reverses when player stands',()=>{
     for(let i=0;i<25;i++)f.frame();
     assert.ok(Math.abs(seat.scale.y-previous)<.001);
   }finally{f.dispose()}
+});
+
+test('toilet lid/flush/use are grouped at bowl, door and lock at the entrance',()=>{
+  const f=fakeHotel();
+  try{
+    buildPublicRestrooms(f.hotel);
+    for(const id of ['1','2','3']){
+      const doorGroup=f.hotel.interactables.filter(x=>x.groupId===`public-wc:door:${id}`);
+      const bowlGroup=f.hotel.interactables.filter(x=>x.groupId===`public-wc:toilet:${id}`);
+      assert.equal(doorGroup.length,2);
+      assert.equal(bowlGroup.length,3);
+      assert.ok(doorGroup.every(x=>x.getLabel().includes('Kabin')));
+      assert.ok(bowlGroup.every(x=>x.getLabel().startsWith('Klozet')));
+      assert.ok(doorGroup[0].labelPosition.x<bowlGroup[0].labelPosition.x-1);
+      assert.ok(bowlGroup.every(x=>!x.isAvailable()),'no through-door action');
+      doorGroup[0].activate();
+      assert.ok(bowlGroup.every(x=>x.isAvailable()),'inside bowl is now independently reachable');
+    }
+  } finally {f.dispose()}
 });
