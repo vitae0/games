@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { normalizeAvatar, SKIN_TONES } from '../avatar/AvatarConfig.js';
+import { normalizeAvatar, isSoftModel, SKIN_TONES } from '../avatar/AvatarConfig.js';
 import { softLoftGeometry } from '../avatar/SoftAvatar.js';
 
 /** Low-cost first-person hands with fingers. Cosmetic only: the physics grip stays in Player. */
@@ -47,7 +47,7 @@ export class HandRig {
   }
   setProfile(profile) {
     const p = normalizeAvatar(profile);
-    const soft = p.baseModel === 'soft';
+    const soft = isSoftModel(p.baseModel);
     this.skinMaterial.color.set(soft ? p.bodyColor : SKIN_TONES[p.skinTone]);
     this.sleeveMaterial.color.set(soft ? p.bodyColor : { neon:0xcac5bc, stealth:0x343d47, chrome:0x977c81 }[p.outfit]);
     for (const arm of Object.values(this.arms)) {
