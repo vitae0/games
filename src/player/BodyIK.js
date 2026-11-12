@@ -31,7 +31,7 @@ export function solveTwoBone(start, target, upperLength, lowerLength, pole) {
 export function footStepOffset(viewYaw, bodyYaw) {
   const difference = Math.atan2(Math.sin(viewYaw - bodyYaw), Math.cos(viewYaw - bodyYaw));
   const turn = clamp(difference, -.48, .48);
-  return { sideways: clamp(-Math.sin(turn) * .27, -.12, .12),
+  return { sideways: clamp(-Math.sin(turn) * .27, -.12, .12) || 0,
     forward: -.29 * Math.cos(turn), height: .095 };
 }
 
