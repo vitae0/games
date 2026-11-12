@@ -10,7 +10,7 @@
 <body>
   <div id="app">
     <canvas id="world" aria-label="VitaeWorld 3D dünyası"></canvas>
-    <div class="topbar"><div class="brand"><span class="signal"></span> VITAE<span>WORLD</span><small> / VITAE HOTEL · ALPHA 0.6</small></div><div class="top-controls"><span id="floor-status">47. KAT</span><span id="hand-status">LMB / RMB · ELLER</span><span id="fps">-- FPS</span><button id="settings-toggle" type="button" aria-label="Ayarlar">⚙ <span>AYARLAR</span></button><button id="avatar-toggle" type="button">KARAKTER [K]</button></div></div>
+    <div class="topbar"><div class="brand"><span class="signal"></span> VITAE<span>WORLD</span><small> / VITAE HOTEL · ALPHA 0.6</small></div><div class="top-controls"><span id="floor-status">47. KAT</span><span id="hand-status">LMB / RMB · ELLER</span><span id="fps">-- FPS</span><button id="fullscreen-toggle" type="button" title="Desteklenen tarayıcılarda Ctrl+W için klavye kilidi" aria-pressed="false">TAM EKRAN</button><button id="settings-toggle" type="button" aria-label="Ayarlar">⚙ <span>AYARLAR</span></button><button id="avatar-toggle" type="button">KARAKTER [K]</button></div></div>
     <div id="crosshair" aria-hidden="true"></div>
     <div class="bottom-left"><div id="movement-status">YÜRÜYÜŞ</div><div id="position-status">0.0, 0.0</div></div>
     <div id="leg-control-hint" class="leg-control-hint hidden" aria-live="off">
@@ -104,7 +104,9 @@
     <div class="touch-actions">
       <div id="touch-extra" class="touch-extra hidden">
         <button type="button" data-touch-action="sit" aria-label="Yere otur veya kalk">OTUR</button>
-        <button type="button" data-touch-action="kneel" aria-label="Diz çök veya kalk">DİZ ÇÖK</button>
+        <button type="button" data-touch-action="kneel" aria-label="İki dizin üzerine çök">DİZ ÇÖK</button>
+        <button type="button" data-touch-action="lie" aria-label="Yere uzan">YAT</button>
+        <button type="button" data-touch-action="rise" aria-label="Bir aşama kalk">KALK</button>
         <button type="button" data-touch-action="camera" aria-label="Kamerayı değiştir">KAMERA</button>
         <button type="button" data-touch-action="release" aria-label="Tutulan her şeyi bırak">BIRAK</button>
         <button type="button" data-touch-action="avatar" aria-label="Karakter düzenleyiciyi aç">KARAKTER</button>

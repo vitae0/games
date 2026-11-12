@@ -614,7 +614,7 @@ export class Hud {
       const label = legHint.querySelector('[data-leg-selection]');
       if (label) label.textContent = selected;
     }
-    $('#movement-status').textContent = precision ? 'BACAK KONTROLÜ' : player.posture === 'stand' && (player.postureControls.crouching || player.touchCrouch) ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'DİZ ÇÖKMÜŞ' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
+    $('#movement-status').textContent = precision ? 'BACAK KONTROLÜ' : player.posture === 'stand' && (player.postureControls.crouching || player.touchCrouch) ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'İKİ DİZ ÜSTÜNDE' : player.posture === 'floorLie' ? 'YERDE UZANIYOR' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
     $('#position-status').textContent = `${player.position.x.toFixed(1)} / ${player.position.z.toFixed(1)} m`;
     $('#fps').textContent = `${fps} FPS`;
   }

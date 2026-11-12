@@ -133,6 +133,8 @@ export class TouchControls {
       case 'jump': this.player.jump(); break;
       case 'sit': this.player.setFloorPosture('floorSit'); break;
       case 'kneel': this.player.setFloorPosture('kneel'); break;
+      case 'lie': this.player.setFloorPosture('floorLie'); break;
+      case 'rise': this.player.standUp(); break;
       case 'camera': this.player.toggleCamera(); break;
       case 'release': this.player.releaseHands(); break;
       case 'avatar': this.suspend(); this.onCustomizer(); break;
