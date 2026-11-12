@@ -457,3 +457,46 @@ test('v3 saved female defaults upgrade to v4 without overwriting user edits', ()
   assert.equal(edited.gluteSize,1.43);
   assert.equal(migrateSoftProfile(newer).chestRatio,.62);
 });
+
+test('female bust fullness moves only anterior vertices forward, never sideways or backward', () => {
+  const low = new Avatar(new THREE.Scene(), {
+    baseModel: 'softFemale', chestFullness: .75,
+  });
+  const high = new Avatar(new THREE.Scene(), {
+    baseModel: 'softFemale', chestFullness: 1.4,
+  });
+  const male = new Avatar(new THREE.Scene(), { baseModel: 'softMale' });
+  try {
+    const a = low.body.getObjectByName('soft-chest').geometry.getAttribute('position');
+    const b = high.body.getObjectByName('soft-chest').geometry.getAttribute('position');
+    assert.equal(a.count, b.count);
+    const S = 20;
+    const rings = low.body.getObjectByName('soft-chest').geometry.userData.loft.stationCount;
+    let movedForward = 0;
+    for (let ring = 0; ring < rings; ring++) {
+      for (let i = 0; i < S; i++) {
+        const index = ring * S + i;
+        assert.ok(Math.abs(a.getX(index) - b.getX(index)) < 1e-7,
+          'bust fullness must not widen any X coordinate');
+        assert.ok(Math.abs(a.getY(index) - b.getY(index)) < 1e-7,
+          'bust fullness must not alter the vertical chest silhouette');
+        if (i <= 10) {
+          assert.ok(Math.abs(a.getZ(index) - b.getZ(index)) < 1e-7,
+            'rear hemisphere must not grow with female bust fullness');
+        } else if (b.getZ(index) < a.getZ(index) - 1e-7) {
+          movedForward++;
+        }
+      }
+    }
+    assert.ok(movedForward > 5, 'several anterior vertices should move toward negative Z');
+    const left = 5 * S + 14, right = 5 * S + 16;
+    assert.ok(Math.abs(b.getZ(left) - b.getZ(right)) < 1e-6,
+      'paired bust lobes remain symmetric');
+    assert.equal(male.body.getObjectByName('soft-chest').geometry.userData.loft.stationCount, 8,
+      'male chest uses its original unmodified loft');
+  } finally {
+    low.dispose();
+    high.dispose();
+    male.dispose();
+  }
+});
