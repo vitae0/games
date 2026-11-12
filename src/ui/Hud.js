@@ -20,7 +20,8 @@ const FIELDS = {
     porcelain:'Açık', warm:'Doğal', honey:'Buğday', umber:'Esmer', deep:'Koyu',
   }),
   underwear: [['none', 'Düz ten / kıyafetsiz'], ['original', 'VRoid hazır beden dokusu (iç giyim çizimi)']],
-  outfit: [['none', 'Yok'], ['neon', 'VRoid orijinal hazır kıyafetleri']],
+  outfit: [['none', 'Yok'], ['neon', 'Katmanlı kıyafet']],
+  jacketVisible: [['true','Ceket açık'],['false','Ceket kapalı']],
   shirtVisible: [['true', 'VRoid hazır üst'], ['false', 'Yok']],
   pantsVisible: [['true', 'VRoid hazır pantolon'], ['false', 'Yok']],
   shoesVisible: [['true', 'VRoid hazır ayakkabı'], ['false', 'Yok']],
@@ -260,7 +261,7 @@ export class Hud {
           this.profile = switchSoftModel(this.profile, select.value);
           this.syncAvatarControls();
         } else {
-          this.profile[key] = ['shirtVisible','pantsVisible','shoesVisible'].includes(key)
+          this.profile[key] = ['shirtVisible','jacketVisible','pantsVisible','shoesVisible'].includes(key)
             ? select.value === 'true' : select.value;
         }
         this.preview();
@@ -341,7 +342,7 @@ export class Hud {
     base.append(description);
     selectField(base, 'baseModel', 'Modeli listeden seç');
 
-    const faceType = group('face','KAFA & İFADE');
+    const faceType = group('face','KAFA & İFADE','soft-avatar-field');
     selectField(faceType,'headShape','Kafa geometrisi');
     selectField(faceType,'faceExpression','Yüz ifadesi');
     rangeGroup('face', 'BAŞ & BOYUN', ['headScale','headAspect','cheekFullness','eyeSpacing','eyeLength','neckSize']);
@@ -386,6 +387,11 @@ export class Hud {
     });
     colorWrap.append(color);
     this.studioFieldsByTab.style = ['bodyColor'];
+    const softClothing = group('style','VITAE SOFT / KATMANLI GİYİM','soft-avatar-field');
+    for(const [field,label] of [
+      ['outfit','Kıyafet görünümü'], ['shirtVisible','Üst parça'],
+      ['jacketVisible','Ceket'],['pantsVisible','Pantolon'],['shoesVisible','Ayakkabı']
+    ]) selectField(softClothing,field,label);
 
     const sections = [
       ['YÜZ & HAZIR SAÇ', [['hair','Saç modeli'],['hairColor','Saç rengi'],
@@ -552,7 +558,7 @@ export class Hud {
     const keys = this.studioTab === 'style' && !isSoftModel(this.profile.baseModel)
       ? ['hair','hairColor','eyeColor','skinTone','underwear','outfit',
         'shirtVisible','jacketVisible','pantsVisible','shoesVisible']
-      : this.studioFieldsByTab[this.studioTab] || [];
+      : [...(this.studioFieldsByTab[this.studioTab] || [])];
     if (this.studioTab === 'face') keys.push('headShape','faceExpression');
     if (!keys.length) return;
     const preset = SOFT_MODEL_PRESETS[this.profile.baseModel] || AVATAR_DEFAULTS;
