@@ -274,10 +274,16 @@ export class Player {
           nextFeet=candidate;this.jumpOffset=0;this.verticalSpeed=0;
         }else this.jumpOffset=Math.max(0,feet-candidate);
       }else if(candidate<oldBase-.025){
-        // Falling off the edge must not teleport immediately to the floor.
-        this.jumpOffset+=oldBase-candidate;
-        if(this.verticalSpeed>=0)this.verticalSpeed=0;
-        nextFeet=candidate+this.jumpOffset;
+        if(this.jumpOffset<.0001&&this.verticalSpeed<=0&&oldBase-candidate<=.20){
+          // Small down-steps track the invisible ramp instead of triggering
+          // a tiny fall after every individual visual tread.
+          nextFeet=candidate;this.jumpOffset=0;this.verticalSpeed=0;
+        }else{
+          // Leaving a high surface still falls under gravity, never teleports.
+          this.jumpOffset+=oldBase-candidate;
+          if(this.verticalSpeed>=0)this.verticalSpeed=0;
+          nextFeet=candidate+this.jumpOffset;
+        }
       }
       this.position.y=nextFeet;
       this.floor=groundFloor(nextBase);
