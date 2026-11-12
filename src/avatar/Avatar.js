@@ -378,6 +378,9 @@ export class Avatar {
     if (!this.localPlayer) return;
     const limbs = [this.leftArm, this.rightArm, this.leftLeg, this.rightLeg];
     const isLimb = object => {
+      // Legacy/VRoid-preview procedural arms and legs use SkinnedMesh objects
+      // attached to the BODY for two-bone skinning rather than to their bones.
+      if (this.skinnedLayers?.includes(object)) return true;
       for (let parent = object.parent; parent; parent = parent.parent) {
         if (limbs.includes(parent)) return true;
         if (parent === this.body) break;
