@@ -134,6 +134,10 @@ export class TouchControls {
       case 'sit': this.player.setFloorPosture('floorSit'); break;
       case 'kneel': this.player.setFloorPosture('kneel'); break;
       case 'lie': this.player.setFloorPosture('floorLie'); break;
+      case 'pose-prev': this.player.changeFloorVariant(-1); break;
+      case 'pose-next': this.player.changeFloorVariant(1); break;
+      case 'lie-style': if (this.player.posture==='floorLie')
+        this.player.changeFloorVariant(1,true); break;
       case 'rise': this.player.standUp(); break;
       case 'camera': this.player.toggleCamera(); break;
       case 'release': this.player.releaseHands(); break;
