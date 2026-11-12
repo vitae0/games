@@ -24,14 +24,16 @@ export class Actors {
     const avatar = new Avatar(this.scene, profile);
     avatar.root.position.set(spec.x, 0, spec.z);
     avatar.root.rotation.y = spec.yaw;
-    // We do not render the obsolete geometric placeholder while real VRMs load.
-    avatar.body.visible = false;
+    // Soft characters are ready instantly. Only the optional legacy VRoid
+    // variants require distance-triggered network loading.
+    const procedural = profile.baseModel === 'soft';
+    avatar.body.visible = procedural;
     return {
       id: spec.id, name: spec.name, spec,
       avatar, anchored: spec.anchored,
       start: new THREE.Vector3(spec.x, 0, spec.z),
       position: new THREE.Vector3(spec.x, 0, spec.z),
-      yaw: spec.yaw, phase: 0, ready: false,
+      yaw: spec.yaw, phase: 0, ready: procedural,
       loading: false, error: null,
     };
   }
