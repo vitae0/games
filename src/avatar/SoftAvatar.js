@@ -363,7 +363,12 @@ export function buildSoftAvatar(avatar, p) {
   const thoracicParts = splitAnatomy(chest, chestRanges,
     ['lower-ribcage', 'pectoral-chest', 'upper-thorax']);
   stitchLoftSeam(abdominalParts.at(-1).geometry, thoracicParts[0].geometry);
-  stitchLoftSeam(thoracicParts.at(-1).geometry, clavicularMesh.geometry);
+  // Visible collar needs its own seam normals; keep reference collar normals
+  // aligned with the invisible full chest for legacy geometry consumers.
+  clavicularMesh.visible = false;
+  const collarSurface = add(root, softLoftGeometry(clavicular, S, torsoExponent,
+    {bottom:false,top:true}), material, 'clavicular-transition');
+  stitchLoftSeam(thoracicParts.at(-1).geometry, collarSurface.geometry);
 
   // A lightly faceted, almost spherical cranium, subtly tapered near the jaw.
   // Hair mounts remain empty until real hairstyle assets are supplied.
