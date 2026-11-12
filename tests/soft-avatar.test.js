@@ -573,3 +573,18 @@ test('glute profile stays adjustable but is subdued for both body models',()=>{
     } finally {low.dispose();high.dispose()}
   }
 });
+
+
+test('hair rig is an empty reusable set of attachment transforms',async()=>{
+  const {mountHairPiece,HAIR_SLOTS}=await import('../src/avatar/HairMounts.js');
+  const a=new Avatar(new THREE.Scene(),{baseModel:'softFemale'});
+  try{
+    const root=a.head.userData.hairMounts;
+    assert.equal(root.children.length,HAIR_SLOTS.length);
+    const attachment=new THREE.Group();
+    assert.strictEqual(mountHairPiece(a.head,'fringe',attachment),attachment);
+    assert.strictEqual(attachment.parent,a.head.getObjectByName('hair-slot-fringe'));
+    assert.throws(()=>mountHairPiece(a.head,'unknown',new THREE.Group()),TypeError);
+    assert.ok(a.head.getObjectByName('hair-slot-crown'));
+  } finally {a.dispose()}
+});
