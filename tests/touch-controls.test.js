@@ -39,14 +39,14 @@ function buildControls() {
   const knob = new FakeElement();
   const look = new FakeElement();
   const extra = new FakeElement();
-  const buttons = Object.fromEntries(['run','crouch','left-hand','right-hand','push','pull','jump','interact','sit','kneel','camera','release','avatar','more'].map(action => [action, new FakeElement(action)]));
+  const buttons = Object.fromEntries(['run','crouch','left-hand','right-hand','push','pull','jump','sit','kneel','camera','release','avatar','more'].map(action => [action, new FakeElement(action)]));
   root.querySelector = selector => ({'#touch-joystick':stick,'#touch-knob':knob,'#touch-look':look,'#touch-extra':extra,'[data-touch-action="more"]':buttons.more})[selector];
   root.querySelectorAll = selector => selector==='[data-touch-action]' ? Object.values(buttons) : [];
   const calls=[];
   let modal=false;
   const player={
     touchRun:false, touchCrouch:false, touchGripAdjustment:0, touchActive:false,
-    events:{isModalOpen:()=>modal,interact:()=>calls.push('interact')},
+    events:{isModalOpen:()=>modal},
     setTouchMove:(x,forward)=>calls.push(['move',x,forward]),
     lookBy:(dx,dy,s)=>calls.push(['look',dx,dy,s]),
     pressHand:side=>calls.push(['hand',side]),releaseHand:side=>calls.push(['release',side]),releaseHands:()=>calls.push('releaseHands'),
@@ -96,8 +96,7 @@ test('buttons work without keyboard/pointer-lock and can be used concurrently', 
     w.buttons.sit.dispatch('click');
     w.buttons.kneel.dispatch('click');
     w.buttons.camera.dispatch('click');
-    w.buttons.interact.dispatch('click');
-    assert.deepEqual(w.calls.filter(x=>typeof x==='string'&&['jump','floorSit','kneel','camera','interact'].includes(x)),['jump','floorSit','kneel','camera','interact']);
+    assert.deepEqual(w.calls.filter(x=>typeof x==='string'&&['jump','floorSit','kneel','camera'].includes(x)),['jump','floorSit','kneel','camera']);
   } finally {w.cleanup();}
 });
 
