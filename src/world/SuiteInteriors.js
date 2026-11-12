@@ -52,10 +52,10 @@ export function buildSuite(hotel, floor, side, z) {
   const y = baseY(floor);
   const box = (...args) => hotel.box(...args);
   const round = (...args) => hotel.rounded ? hotel.rounded(...args) : box(...args);
-  const interact = (position,label,activate,anchor=position) => hotel.interactables.push({
+  const interact = (position,label,activate,anchor=position,groupId=null) => hotel.interactables.push({
     floor,position:new THREE.Vector3(position.x,y+.95,position.z),
     labelPosition:new THREE.Vector3(anchor.x,y+(anchor.y??1.0),anchor.z),
-    getLabel:label,activate,
+    groupId,getLabel:label,activate,
   });
 
   // Warm layered flooring & timber acoustic wall panels.
@@ -94,14 +94,15 @@ export function buildSuite(hotel, floor, side, z) {
         nightDrawer.setOpen(drawerOpen);
       }, {x:nx,z:b.z+.48,y:.42});
   }
+  const bedActions = `bed:${floor}:${side}:${z}`;
   interact({ x: side * 7.18, z: b.z - .5 }, () => 'Yatak · Uzan', player => {
     player.useFurniture('rest', b.x, b.z - .18, side === -1 ? -Math.PI / 2 : Math.PI / 2, .62,
       {style:'sleep', onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
-  },{x:b.x,z:b.z,y:.65});
+  },{x:b.x,z:b.z,y:.65},bedActions);
   interact({ x: side * 8.10, z: b.z - 1.04 }, () => 'Yatak kenarı · Otur', player => {
     player.useFurniture('sit', b.x, b.z - .87, side * Math.PI / 2, .61,
       {style:'bedEdge', onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
-  });
+  },{x:b.x,z:b.z-.65,y:.66},bedActions);
 
   const sofa = q.sofa;
   round('black', sofa.x, y + .24, sofa.z, sofa.w + .06, .34, sofa.d + .12);
