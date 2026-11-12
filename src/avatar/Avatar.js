@@ -335,6 +335,8 @@ export class Avatar {
     style.keepSourceHair = !!ext.preserveSourceHair;
     applyVRoidColors(ext.vrm, this.profile, style);
     ext.wardrobeState = applyVRoidWardrobe(ext.group, this.profile);
+    // Wardrobe updates may attach new meshes after the owner mask was built.
+    if (this.localPlayer) this.setupFirstPersonVisibility();
 
     // Changing clothing, eyes or skin must not reload a hairstyle.
     const key = `${this.profile.baseModel}:${this.profile.hair}:${this.profile.hairColor}`;
@@ -363,6 +365,8 @@ export class Avatar {
       head.add(hair);
       style.hairRoot = hair;
       style.hairStatus = 'ready';
+      // Asynchronous hairstyles are also local-only FPS occluders.
+      if (this.localPlayer) this.setupFirstPersonVisibility();
       this.onStyleLoad?.();
     }).catch(error => {
       if (this.external !== ext || style.hairRequest !== ticket) return;
@@ -452,6 +456,8 @@ export class Avatar {
     });
     this.external = null;
     if (this.body) this.body.visible = true;
+    // Drop references to disposed external mesh instances in the mirror list.
+    if (this.localPlayer) this.setupFirstPersonVisibility();
   }
   applyExternal(model, source = 'upload') {
     this.clearExternal();
