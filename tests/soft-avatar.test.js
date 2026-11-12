@@ -243,7 +243,7 @@ test('abdomen, chest and clavicular collar have watertight shared loft seams', (
   }
 });
 
-test('hip width, rear glute and outward arm stance deform the intended axes', () => {
+test('glute fullness changes only posterior pelvic meshes and hip width stays independent', () => {
   const avatar = new Avatar(new THREE.Scene(), { baseModel: 'softFemale' });
   try {
     assert.ok(avatar.leftArm.rotation.z < 0);
@@ -251,20 +251,20 @@ test('hip width, rear glute and outward arm stance deform the intended axes', ()
     assert.ok(Math.abs(avatar.leftArm.rotation.z + avatar.rightArm.rotation.z) < 1e-9);
     const abdomen = () => avatar.body.getObjectByName('soft-abdomen').geometry.getAttribute('position');
     const thigh = () => avatar.leftLeg.getObjectByName('thigh').geometry.getAttribute('position');
-    const backIdx = 5 * 16 + 4;  // upper thigh, posterior (+Z)
-    const frontIdx = 5 * 16 + 12; // upper thigh, anterior (-Z)
-    const beforeBack = thigh().getZ(backIdx);
-    const beforeFront = thigh().getZ(frontIdx);
+    const glute = () => avatar.body.getObjectByName('left-glute').geometry.getAttribute('position');
+    const posterior = 4 * 24 + 6;
+    const beforeBack = glute().getZ(posterior);
+    const beforeThigh = Array.from(thigh().array);
     const beforeAbdomen = Array.from(abdomen().array);
-    const beforeHip = abdomen().getX(20); // pelvis ring, lateral (+X)
+    const beforeHip = abdomen().getX(24);
     avatar.updateStyle({ ...avatar.profile, gluteSize: 1.55 });
-    assert.ok(thigh().getZ(backIdx) > beforeBack, 'glute grows from upper thigh root to the rear');
-    assert.ok(Math.abs(thigh().getZ(frontIdx) - beforeFront) < 1e-6,
-      'glute setting does not bulge the anterior thigh');
+    assert.ok(glute().getZ(posterior) > beforeBack, 'rear glute depth increases');
+    assert.deepEqual(Array.from(thigh().array), beforeThigh,
+      'glute setting must not swell or reshape the animated thigh');
     assert.deepEqual(Array.from(abdomen().array), beforeAbdomen,
       'glute setting must not reshape the abdomen');
     avatar.updateStyle({ ...avatar.profile, hipSize: 1.4 });
-    assert.ok(abdomen().getX(20) > beforeHip, 'hips gain lateral width');
+    assert.ok(abdomen().getX(24) > beforeHip, 'hips gain lateral width');
     avatar.updateStyle({ ...avatar.profile, armSpread: 0 });
     assert.ok(Math.abs(avatar.leftArm.rotation.z) < 1e-12);
     assert.ok(Math.abs(avatar.rightArm.rotation.z) < 1e-12);
@@ -312,9 +312,9 @@ test('clavicular collar is above pectoral chest, reaches neck root and has disti
     assert.ok(p.neckBaseWidth > 0 && p.trapeziusVolume > 0);
     const position = () => avatar.body.getObjectByName('soft-clavicular')
       .geometry.getAttribute('position');
-    const ring = 2, sides = 20;
-    const front = ring * sides + 13; // anterior, left of the midline
-    const back = ring * sides + 7; // posterior, equally far from midline
+    const ring = 2, sides = 24;
+    const front = ring * sides + 16; // anterior, left of the midline
+    const back = ring * sides + 8; // posterior, equally far from midline
     const frontZ = position().getZ(front);
     const frontY = position().getY(front);
     const backZ = position().getZ(back);
@@ -365,13 +365,13 @@ test('female chest is longer and rounder, with paired anterior lobes, not a peak
   const oldDepth = new Avatar(new THREE.Scene(), { baseModel: 'softFemale', chestDepth: 1.12 });
   try {
     const chest = female.body.getObjectByName('soft-chest').geometry;
-    assert.ok(chest.getAttribute('position').count > 10 * 20,
+    assert.ok(chest.getAttribute('position').count > 10 * 24,
       'female chest has extra stations for a rounded shape');
     const vertex = chest.getAttribute('position');
-    const ring = 5 * 20; // broadest front section
-    assert.ok(Math.abs(vertex.getZ(ring + 14) - vertex.getZ(ring + 16)) < 1e-6,
+    const ring = 5 * 24; // broadest front section
+    assert.ok(Math.abs(vertex.getZ(ring + 17) - vertex.getZ(ring + 19)) < 1e-6,
       'left and right bust contours are symmetric');
-    assert.ok(vertex.getZ(ring + 14) < vertex.getZ(ring + 13),
+    assert.ok(vertex.getZ(ring + 17) < vertex.getZ(ring + 16),
       'a rounded lobe curves back toward the outer side');
     const depthOf = avatar => {
       const g = avatar.body.getObjectByName('soft-chest').geometry;
@@ -412,27 +412,45 @@ test('female clavicular collar stays tucked within chest and is a shorter transi
   } finally { female.dispose(); oldCollar.dispose(); }
 });
 
-test('female glute deformation stays below pelvis while male thigh contour is unchanged', () => {
-  const female = new Avatar(new THREE.Scene(), {baseModel:'softFemale'});
-  const male = new Avatar(new THREE.Scene(), {baseModel:'softMale'});
-  try {
-    const thigh = female.leftLeg.getObjectByName('thigh').geometry;
-    const abdomen = female.body.getObjectByName('soft-abdomen').geometry;
-    const oldMale = male.leftLeg.getObjectByName('thigh').geometry;
-    assert.equal(thigh.userData.loft.stationCount, 8);
-    assert.equal(oldMale.userData.loft.stationCount, 7,
-      'the original male taperedSegment implementation is preserved');
-    assert.ok(thigh.getAttribute('position').getY(5*16) < 0,
-      'rear glute lobe is attached below the hip joint');
-    assert.ok(abdomen.getAttribute('position').getY(5*20) > thigh.getAttribute('position').getY(5*16),
-      'rear glute is no longer midway up the abdomen');
-    const before = Array.from(thigh.getAttribute('position').array);
-    female.updateStyle({...female.profile, gluteSize:1.52});
-    assert.notDeepEqual(
-      Array.from(female.leftLeg.getObjectByName('thigh').geometry.getAttribute('position').array),
-      before);
-    assert.equal(male.body.getObjectByName('soft-clavicular')?.isMesh, true);
-  } finally { female.dispose(); male.dispose(); }
+test('pelvis-bound paired glutes blend into higher-resolution upper legs', () => {
+  for (const model of ['softFemale', 'softMale']) {
+    const avatar = new Avatar(new THREE.Scene(), { baseModel: model });
+    try {
+      const left = avatar.body.getObjectByName('left-glute');
+      const right = avatar.body.getObjectByName('right-glute');
+      assert.ok(left?.isMesh && right?.isMesh, 'both independent lobes exist');
+      assert.equal(left.parent, avatar.body, 'glutes follow pelvis, not leg bones');
+      assert.equal(right.parent, avatar.body);
+      assert.notEqual(left.geometry, right.geometry);
+      assert.equal(left.geometry.userData.loft.stationCount, 8);
+      assert.equal(left.geometry.userData.loft.sides, 24);
+      const leftPosition = left.geometry.getAttribute('position');
+      const rightPosition = right.geometry.getAttribute('position');
+      assert.ok(leftPosition.getX(0) < 0 && rightPosition.getX(0) > 0);
+      assert.ok(leftPosition.getY(0) < avatar.leftLeg.position.y,
+        'lower glute tip is tucked into the thigh below pelvis');
+      assert.ok(leftPosition.getY(7 * 24) > avatar.leftLeg.position.y,
+        'upper glute tip meets pelvis behind the abdomen');
+      assert.ok(leftPosition.getZ(4 * 24 + 6) > leftPosition.getZ(6),
+        'round rear bulge falls away smoothly toward the lower glute tip');
+      const thigh = avatar.leftLeg.getObjectByName('thigh').geometry;
+      const calf = avatar.leftLeg.userData.knee.getObjectByName('calf').geometry;
+      assert.equal(thigh.userData.loft.stationCount, 10);
+      assert.equal(calf.userData.loft.stationCount, 8);
+      assert.equal(thigh.userData.loft.sides, 20);
+      assert.equal(calf.userData.loft.sides, 20);
+      assert.ok(Math.abs(thigh.getAttribute('position').getX(0) -
+        calf.getAttribute('position').getX(7 * 20)) < 1e-6,
+      'knee-facing contour radii match between thigh and calf');
+      const before = Array.from(thigh.getAttribute('position').array);
+      const rearBefore = leftPosition.getZ(4 * 24 + 6);
+      avatar.updateStyle({ ...avatar.profile, gluteSize: 1.52 });
+      assert.deepEqual(Array.from(avatar.leftLeg.getObjectByName('thigh')
+        .geometry.getAttribute('position').array), before);
+      assert.ok(avatar.body.getObjectByName('left-glute')
+        .geometry.getAttribute('position').getZ(4 * 24 + 6) > rearBefore);
+    } finally { avatar.dispose(); }
+  }
 });
 
 test('v3 saved female defaults upgrade to v4 without overwriting user edits', () => {
@@ -470,7 +488,7 @@ test('female bust fullness moves only anterior vertices forward, never sideways 
     const a = low.body.getObjectByName('soft-chest').geometry.getAttribute('position');
     const b = high.body.getObjectByName('soft-chest').geometry.getAttribute('position');
     assert.equal(a.count, b.count);
-    const S = 20;
+    const S = 24;
     const rings = low.body.getObjectByName('soft-chest').geometry.userData.loft.stationCount;
     let movedForward = 0;
     for (let ring = 0; ring < rings; ring++) {
@@ -489,7 +507,7 @@ test('female bust fullness moves only anterior vertices forward, never sideways 
       }
     }
     assert.ok(movedForward > 5, 'several anterior vertices should move toward negative Z');
-    const left = 5 * S + 14, right = 5 * S + 16;
+    const left = 5 * S + 17, right = 5 * S + 19;
     assert.ok(Math.abs(b.getZ(left) - b.getZ(right)) < 1e-6,
       'paired bust lobes remain symmetric');
     assert.equal(male.body.getObjectByName('soft-chest').geometry.userData.loft.stationCount, 8,
