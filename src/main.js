@@ -62,6 +62,7 @@ function loadProfile() {
 }
 let hud;
 let player;
+let worldActions;
 const events = {
   toast: (message) => hud?.toast(message),
   openElevator: () => hud?.openElevator(),
@@ -71,7 +72,10 @@ const events = {
   toggleCustomizer: () => hud?.toggleCustomizer(),
   interact: () => {
     const target = hotel.closestInteraction(player, player.direction);
-    if (target) target.activate(player);
+    if (target) {
+      if (worldActions) worldActions.activate(target);
+      else target.activate(player);
+    }
   },
 };
 
@@ -140,7 +144,7 @@ hud = new Hud(canvas, {
   },
 });
 
-const worldActions = new WorldActionLabels({hotel,player,camera,touch:touchDevice});
+worldActions = new WorldActionLabels({hotel,player,camera,touch:touchDevice});
 let prev = performance.now();
 let frameCounter = 0;
 let lastHudUpdate = 0;
