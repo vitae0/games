@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { normalizeAvatar, SKIN_TONES, EYE_COLORS } from './AvatarConfig.js';
+import { normalizeAvatar, isSoftModel, SKIN_TONES, EYE_COLORS } from './AvatarConfig.js';
 import { createSkinnedLimb } from './SkinnedLimb.js';
 import { poseFor } from './PoseMath.js';
 import { visibleGarmentLayers } from './ClothingLayers.js';
@@ -62,13 +62,13 @@ export class Avatar {
     this.profile = normalizeAvatar(profile);
     // Returning from an imported VRoid to the procedural rig releases only
     // its live instance; the bundled asset files remain available.
-    if (this.profile.baseModel === 'soft') this.clearExternal();
+    if (isSoftModel(this.profile.baseModel)) this.clearExternal();
     this.root.clear();
     this.geometry.forEach(g => g.dispose());
     this.materials.forEach(m => m.dispose());
     this.geometry = []; this.materials = [];
     this.softAvatar = false;
-    if (this.profile.baseModel === 'soft') {
+    if (isSoftModel(this.profile.baseModel)) {
       buildSoftAvatar(this, this.profile);
       return;
     }
@@ -311,7 +311,7 @@ export class Avatar {
   }
   updateStyle(profile) {
     // Body sliders update the native model immediately without asset loading.
-    if (this.profile.baseModel === 'soft') {
+    if (isSoftModel(this.profile.baseModel)) {
       this.rebuild(profile);
       return;
     }
