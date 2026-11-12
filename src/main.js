@@ -8,6 +8,7 @@ import { WorldActionLabels } from './ui/WorldActionLabels.js';
 import { normalizeAvatar, migrateSoftProfile, isSoftModel } from './avatar/AvatarConfig.js';
 import { loadBundledCharacterModel } from './avatar/ModelImporter.js';
 import { isTouchCapable } from './input/TouchMath.js';
+import { installBrowserShortcutGuard } from './input/BrowserShortcutGuard.js';
 
 const PROFILE_KEY = 'vitaeworld.avatar.v2';
 const canvas = document.querySelector('#world');
@@ -145,6 +146,15 @@ hud = new Hud(canvas, {
 });
 
 worldActions = new WorldActionLabels({hotel,player,camera,touch:touchDevice});
+let sessionStarted = false;
+document.querySelector('#start-button')?.addEventListener('click', () => {
+  sessionStarted = true;
+}, { capture: true });
+const shortcutGuard = installBrowserShortcutGuard({
+  isPlaying: () => player.active,
+  hasEntered: () => sessionStarted,
+  button: document.querySelector('#fullscreen-toggle'),
+});
 let prev = performance.now();
 let frameCounter = 0;
 let lastHudUpdate = 0;
@@ -189,6 +199,9 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-window.addEventListener('beforeunload', () => {
+// 'beforeunload' can be cancelled by the user; disposing there would kill
+// the game even after choosing to stay. pagehide runs only on actual leave.
+window.addEventListener('pagehide', () => {
+  shortcutGuard.dispose();
   worldActions.dispose();hud?.dispose();player.dispose();hotel.dispose();renderer.dispose();
 });
