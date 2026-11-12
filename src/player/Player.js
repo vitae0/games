@@ -25,6 +25,10 @@ export class Player {
       right: { pressed: false, grip: null, distance: 1.55 },
     };
     this.savedStanding = null;
+    this.furnitureStyle = null;
+    this.furnitureExit = null;
+    this.sleepLean = 0;
+    this.avatar.root.rotation.order = 'YXZ';
     this.postureControls = new PostureControls();
     this.bindEvents();
   }
@@ -168,6 +172,9 @@ export class Player {
   }
   teleport(floor) {
     if (!Number.isInteger(floor) || floor < 0 || floor >= HOTEL.floors) return;
+    this.furnitureExit?.();
+    this.furnitureExit = null;
+    this.furnitureStyle = null;
     this.releaseHands();
     this.floor = floor;
     this.position.set(0, floor * HOTEL.floorHeight, 12.1);
@@ -177,23 +184,33 @@ export class Player {
     this.keys.clear(); this.setTouchMove(0, 0);
     this.yaw = Math.PI; this.bodyYaw = this.yaw; this.walkSpeed = 0;
   }
-  useFurniture(mode, x, z, yaw, surfaceHeight = 0) {
-    if (this.posture !== 'stand') return;
+  useFurniture(mode, x, z, yaw, surfaceHeight = 0, options = {}) {
+    if (this.posture !== 'stand' || !['sit', 'rest'].includes(mode)) return;
     this.releaseHands();
-    this.savedStanding = { x: this.position.x, y: this.position.y, z: this.position.z, yaw: this.yaw, bodyYaw: this.bodyYaw };
+    this.savedStanding = {
+      x: this.position.x, y: this.position.y, z: this.position.z,
+      yaw: this.yaw, bodyYaw: this.bodyYaw, pitch: this.pitch,
+    };
     this.posture = mode;
+    this.furnitureStyle = options.style ?? mode;
+    this.furnitureExit = typeof options.onExit === 'function' ? options.onExit : null;
     this.furnitureHeight = surfaceHeight;
     this.position.set(x, this.floor * HOTEL.floorHeight + surfaceHeight, z);
     this.yaw = yaw; this.bodyYaw = yaw; this.pitch = mode === 'rest' ? -.23 : 0;
     this.jumpOffset = 0; this.verticalSpeed = 0;
+    options.onEnter?.();
     this.events.toast(mode === 'sit' ? 'Oturuyorsun · E ile kalk' : 'Dinleniyorsun · E ile kalk');
   }
   standUp() {
     if (this.posture === 'stand') return;
+    this.furnitureExit?.();
+    this.furnitureExit = null;
+    this.furnitureStyle = null;
     if (this.savedStanding) {
       this.position.set(this.savedStanding.x, this.savedStanding.y, this.savedStanding.z);
       this.yaw = this.savedStanding.yaw;
       this.bodyYaw = this.savedStanding.bodyYaw;
+      this.pitch = this.savedStanding.pitch;
       this.floor = groundFloor(this.position.y);
     }
     this.posture = 'stand'; this.furnitureHeight = 0; this.savedStanding = null;
@@ -293,7 +310,16 @@ export class Player {
     }
     this.avatar.root.position.copy(this.position);
     this.avatar.root.rotation.y = this.bodyYaw;
-    this.avatar.update(dt, this.walkSpeed, this.posture === 'stand' && crouching ? 'crouch' : this.posture);
+    // A reclining guest transitions into a horizontal bed pose, rather than
+    // sitting upright on the mattress. Translate the rig toward the pillow
+    // to keep the head inside the bed's footprint.
+    this.sleepLean = THREE.MathUtils.damp(this.sleepLean,
+      this.posture === 'rest' && this.furnitureStyle === 'sleep' ? 1 : 0, 7, dt);
+    this.avatar.root.rotation.x = -1.24 * this.sleepLean;
+    this.avatar.root.position.x += Math.sin(this.bodyYaw) * .57 * this.sleepLean;
+    this.avatar.root.position.z += Math.cos(this.bodyYaw) * .57 * this.sleepLean;
+    this.avatar.update(dt, this.walkSpeed,
+      this.posture === 'stand' && crouching ? 'crouch' : this.posture, this.furnitureStyle);
     for (const side of ['left', 'right']) {
       const hand = this.hands[side];
       if (hand.grip) this.hotel.moveGrip(side, this.anchor(side, hand.distance));
@@ -301,14 +327,18 @@ export class Player {
       if (hand.pressed) arm.rotation.x = THREE.MathUtils.damp(arm.rotation.x, 1.28, 13, dt);
     }
     // Floor postures need a visible character even when the user normally plays in FPS.
-    const showingCharacter = this.thirdPerson || this.events.isCustomizerOpen() || isFloorPosture(this.posture);
+    const showingCharacter = this.thirdPerson || this.events.isCustomizerOpen() ||
+      isFloorPosture(this.posture) || this.savedStanding !== null;
     this.avatar.root.visible = showingCharacter;
     this.handRig.update(dt, this.hands.left, this.hands.right,
       !showingCharacter && this.posture === 'stand');
     if (showingCharacter) {
       const distance = this.events.isCustomizerOpen() ? 3.1 : 3.8;
       const head = this.avatar.headWorldHeight?.() ?? this.avatar.profile.height * .82;
-      const target = new THREE.Vector3(this.position.x, this.position.y + (isFloorPosture(this.posture) ? Math.max(.57, head - .20) : this.avatar.profile.height * .6), this.position.z);
+      const targetHeight = this.furnitureStyle === 'sleep' ? .49
+        : isFloorPosture(this.posture) ? Math.max(.57, head - .20)
+          : this.avatar.profile.height * .6;
+      const target = new THREE.Vector3(this.position.x, this.position.y + targetHeight, this.position.z);
       const behind = this.events.isCustomizerOpen() ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
       const camPos = target.clone();
       for (let d = .2; d < distance; d += .2) {
@@ -329,6 +359,8 @@ export class Player {
     return this.walkSpeed;
   }
   dispose() {
+    this.furnitureExit?.();
+    this.furnitureExit = null;
     this.releaseHands();
     document.removeEventListener('mousemove', this.mouseMove);
     document.removeEventListener('pointerlockchange', this.onUnlock);
