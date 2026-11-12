@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { HOTEL } from '../config.js';
 import { suitePlan, suiteTheme } from './SuitePlan.js';
 import { buildBathroom } from './SuiteBathroom.js';
+import { furnitureDoor, furnitureDrawer, furnitureSeat } from './FurnitureMotion.js';
 
 const baseY = floor => floor * HOTEL.floorHeight;
 
@@ -68,7 +69,10 @@ export function buildSuite(hotel, floor, side, z) {
   // Raised mattress is an actual walkable surface; the slab is NOT an impassable wall.
   round('wood', b.x, y + .165, b.z, b.w + .18, .33, b.d + .12);
   round('black', b.x, y + .33, b.z, b.w + .02, .12, b.d + .05);
-  round('fabric', b.x, y + .495, b.z, b.w - .20, .25, b.d - .18);
+  const mattress = furnitureSeat(hotel, {
+    x: b.x, y: y + .495, z: b.z, width: b.w - .20, height: .25,
+    depth: b.d - .18, name: 'bed-mattress', compression: .028,
+  });
   round('warm', b.x, y + .645, b.z + .83, b.w - .50, .07, .48);
   round('fabric', b.x, y + .66, b.z - .35, b.w - .25, .06, .96);
   box('darkWall', b.x, y + 1.03, b.z + b.d / 2 + .06, b.w + .34, 1.32, .18);
@@ -79,17 +83,32 @@ export function buildSuite(hotel, floor, side, z) {
     box('wood',nx,y+.27,b.z+.72,.44,.54,.48);
     hotel.addWalkSurface(floor,nx,b.z+.72,.39,.44,y+.54);
     box('warm', nx, y + .81, b.z + .68, .22, .32, .22);
+    const nightDrawer = furnitureDrawer(hotel, {
+      x: nx, y: y + .37, z: b.z + .72 - .255,
+      width: .34, height: .16, reach: .20, name: 'bedside-drawer',
+    });
+    let drawerOpen = false;
+    interact({ x: nx, z: b.z + .14 },
+      () => drawerOpen ? 'Komodin · Çekmeceyi kapat' : 'Komodin · Çekmeceyi aç', () => {
+        drawerOpen = !drawerOpen;
+        nightDrawer.setOpen(drawerOpen);
+      }, {x:nx,z:b.z+.48,y:.42});
   }
   interact({ x: side * 7.18, z: b.z - .5 }, () => 'Yatak · Uzan', player => {
-    player.useFurniture('rest', b.x, b.z - .18, side === -1 ? -Math.PI / 2 : Math.PI / 2, .62);
+    player.useFurniture('rest', b.x, b.z - .18, side === -1 ? -Math.PI / 2 : Math.PI / 2, .62,
+      {style:'sleep', onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
   },{x:b.x,z:b.z,y:.65});
   interact({ x: side * 8.10, z: b.z - 1.04 }, () => 'Yatak kenarı · Otur', player => {
-    player.useFurniture('sit', b.x, b.z - .87, side * Math.PI / 2, .61);
+    player.useFurniture('sit', b.x, b.z - .87, side * Math.PI / 2, .61,
+      {style:'bedEdge', onEnter:()=>mattress.setOccupied(true), onExit:()=>mattress.setOccupied(false)});
   });
 
   const sofa = q.sofa;
   round('black', sofa.x, y + .24, sofa.z, sofa.w + .06, .34, sofa.d + .12);
-  round('fabric', sofa.x, y + .49, sofa.z, sofa.w, .23, sofa.d);
+  const sofaSeat = furnitureSeat(hotel, {
+    x: sofa.x, y: y + .49, z: sofa.z, width: sofa.w,
+    height: .23, depth: sofa.d, name: 'sofa-cushion', compression: .042,
+  });
   // The back is on the -Z side, so the seat and avatar face the TV at +Z.
   round('fabric', sofa.x, y + .93, sofa.z - .31, sofa.w, .71, .17);
   hotel.climbable?.(floor,sofa.x,sofa.z+.12,sofa.w-.14,sofa.d-.21,y+.605,'Koltuk');
@@ -99,7 +118,8 @@ export function buildSuite(hotel, floor, side, z) {
   hotel.climbable?.(floor,ct.x,ct.z,ct.w-.08,ct.d-.06,y+.40,'Sehpa');
   box('trim', ct.x, y + .16, ct.z, .12, .30, .12);
   interact({ x: sofa.x, z: sofa.z - .75 }, () => 'Koltuk · Otur', player => {
-    player.useFurniture('sit', sofa.x, sofa.z - .03, Math.PI, .44);
+    player.useFurniture('sit', sofa.x, sofa.z - .03, Math.PI, .44,
+      {style:'lounge', onEnter:()=>sofaSeat.setOccupied(true), onExit:()=>sofaSeat.setOccupied(false)});
   },{x:sofa.x,z:sofa.z,y:.68});
 
   const tv = q.tv;
@@ -128,17 +148,32 @@ export function buildSuite(hotel, floor, side, z) {
   round('wood', d.x, y + .77, d.z, d.w, .11, d.d);
   hotel.climbable?.(floor,d.x,d.z,d.w-.12,d.d-.07,y+.825,'Çalışma masası');
   for (const dx of [-.57, .57]) box('trim', d.x + dx, y + .36, d.z, .075, .67, .51);
+  const deskDrawer = furnitureDrawer(hotel, {
+    x: d.x, y: y + .58, z: d.z - d.d / 2 - .055,
+    width: Math.min(.58, d.w * .48), height: .18, reach: .28, name: 'desk-drawer',
+  });
+  let deskOpen = false;
+  interact({x:d.x,z:d.z-.73},
+    () => deskOpen ? 'Masa çekmecesi · Kapat' : 'Masa çekmecesi · Aç', () => {
+      deskOpen = !deskOpen;
+      deskDrawer.setOpen(deskOpen);
+    },{x:d.x,z:d.z-d.d/2,y:.58});
   // Monitor normal points toward chair (the corridor-side -X or +X).
   box('black', d.x+side*.18, y+1.11, d.z, .75,.45,.06,null,false,side*Math.PI/2);
   box('glass', d.x+side*.142, y+1.11, d.z, .65,.35,.017,null,false,side*Math.PI/2);
   const ch = q.chair;
-  round('wood', ch.x, y + .39, ch.z, ch.w, .14, ch.d);
+  const chairSeat = furnitureSeat(hotel, {
+    x: ch.x, y: y + .39, z: ch.z, width: ch.w,
+    height: .14, depth: ch.d, material:'wood', name:'office-chair-seat',
+    compression: .032, swivel: side * -.10,
+  });
   // Chair back is behind the sitter, opposite the desk on ±X.
   round('fabric', ch.x-side*.29,y+.73,ch.z,.15,.65,ch.d);
   hotel.climbable?.(floor,ch.x,ch.z,ch.w-.1,ch.d-.1,y+.46,'Çalışma sandalyesi');
   box('trim', ch.x, y + .21, ch.z, .15, .36, .15);
   interact({ x: ch.x, z: ch.z + .7 }, () => 'Çalışma sandalyesi · Otur', player => {
-    player.useFurniture('sit', ch.x, ch.z, -side*Math.PI/2, .43);
+    player.useFurniture('sit', ch.x, ch.z, -side*Math.PI/2, .43,
+      {style:'desk', onEnter:()=>chairSeat.setOccupied(true), onExit:()=>chairSeat.setOccupied(false)});
   },{x:ch.x,z:ch.z,y:.55});
 
   // Separate minibar and hanging wardrobe. Their doors are functional and cheap to animate.
@@ -146,6 +181,11 @@ export function buildSuite(hotel, floor, side, z) {
   round('wood',mini.x,y+.54,mini.z,mini.w,1.08,mini.d);
   hotel.climbable?.(floor,mini.x,mini.z,mini.w-.09,mini.d-.09,y+1.08,'Minibar');
   box('black', mini.x, y + .55, mini.z - mini.d / 2 - .04, mini.w - .10, .92, .04);
+  const fridgeDoor = furnitureDoor(hotel, {
+    x:mini.x, y:y+.55, z:mini.z-mini.d/2-.074,
+    width:mini.w-.10, height:.92, material:'wood', hinge:'left',
+    angle:Math.PI*.49, name:'minibar-door',
+  });
   const glow = new THREE.Mesh(hotel.suiteMinibarGlowGeometry, hotel.materials.warm);
   glow.position.set(mini.x, y + .52, mini.z - mini.d / 2 - .075);
   glow.visible = false; hotel.scene.add(glow); hotel.suiteMeshes.push(glow);
@@ -155,18 +195,36 @@ export function buildSuite(hotel, floor, side, z) {
   let fridgeOpen = false, waterAvailable = true;
   interact({ x: mini.x, z: mini.z + .68 }, () => !fridgeOpen ? 'Minibar · Aç' :
     waterAvailable ? 'Minibar · Su al' : 'Minibar · Kapat', () => {
-    if (!fridgeOpen) { fridgeOpen = true; glow.visible = true; waterBottle.visible = true;
+    if (!fridgeOpen) { fridgeOpen = true; fridgeDoor.setOpen(true);
+      glow.visible = true; waterBottle.visible = waterAvailable;
       hotel.events.toast('Minibar açıldı'); }
     else if (waterAvailable) { waterAvailable = false; waterBottle.visible = false;
       hotel.events.toast('Minibardan su aldın'); }
-    else { fridgeOpen = false; glow.visible = false;
+    else { fridgeOpen = false; fridgeDoor.setOpen(false); glow.visible = false;
       hotel.events.toast('Minibar kapandı'); }
   },{x:mini.x,z:mini.z,y:1.05});
   const wardrobe = q.wardrobe;
   // Full-height wardrobe is a solid fixture, not a safe standing surface.
   round('wood', wardrobe.x, y + 1.32, wardrobe.z, wardrobe.w, 2.62, wardrobe.d, floor, true);
-  box('trim', wardrobe.x, y + 1.32, wardrobe.z - wardrobe.d / 2 - .016, wardrobe.w - .06, 2.48, .025);
-  box('warm', wardrobe.x, y + 1.28, wardrobe.z - wardrobe.d / 2 - .045, .06, .32, .04);
+  box('black', wardrobe.x, y + 1.32, wardrobe.z - wardrobe.d / 2 - .024, wardrobe.w - .08, 2.44, .024);
+  const wardrobeDoorWidth = (wardrobe.w - .08) * .5;
+  const wardrobeLeft = furnitureDoor(hotel, {
+    x: wardrobe.x-wardrobeDoorWidth*.5, y:y+1.32,
+    z:wardrobe.z-wardrobe.d/2-.048, width:wardrobeDoorWidth,
+    height:2.46, material:'wood', hinge:'left', angle:1.35, name:'wardrobe-left-door',
+  });
+  const wardrobeRight = furnitureDoor(hotel, {
+    x: wardrobe.x+wardrobeDoorWidth*.5, y:y+1.32,
+    z:wardrobe.z-wardrobe.d/2-.048, width:wardrobeDoorWidth,
+    height:2.46, material:'wood', hinge:'right', angle:1.35, name:'wardrobe-right-door',
+  });
+  let wardrobeOpen = false;
+  interact({x:wardrobe.x,z:wardrobe.z-.80},
+    () => wardrobeOpen ? 'Gardırop · Kapat' : 'Gardırop · Aç', () => {
+      wardrobeOpen = !wardrobeOpen;
+      wardrobeLeft.setOpen(wardrobeOpen);
+      wardrobeRight.setOpen(wardrobeOpen);
+    },{x:wardrobe.x,z:wardrobe.z-wardrobe.d/2,y:1.45});
 
   // Actual closed room, with a sculpted bathtub and one shared water shader.
   buildBathroom(hotel,floor,side,z);
