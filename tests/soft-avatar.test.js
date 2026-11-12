@@ -23,7 +23,7 @@ test('both soft models have exact spherical heads, two line eyes, and no hair', 
       const marks = avatar.head.children.filter(child => child.name.endsWith('-eye-line'));
       assert.deepEqual(marks.map(mark => mark.name).sort(), ['left-eye-line','right-eye-line']);
       assert.ok(marks.every(mark => mark.scale.y > mark.scale.x));
-      assert.equal(avatar.head.children.length, 4, 'head, two eyes and an empty hair attachment group');
+      assert.equal(avatar.head.children.length, 7, 'head, eyes, three lightweight mouth expressions and empty hair mounts');
       assert.equal(avatar.head.userData.hairMounts.name,'hair-root');
       assert.ok(avatar.head.userData.hairMounts.children.length>=7);
     } finally {
