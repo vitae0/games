@@ -67,7 +67,8 @@ export function furniturePart(hotel, material, x, y, z, w, h, d, name = '') {
 /** Actual hinged facade in a stable pivot group. Hinges on either edge. */
 export function furnitureDoor(hotel, {
   x, y, z, width, height, thickness = .045,
-  hinge = 'left', material = 'wood', angle = Math.PI * .48, name = 'furniture-door',
+  hinge = 'left', material = 'wood', angle = Math.PI * .48,
+  toward = -1, name = 'furniture-door',
 }) {
   const sign = hinge === 'left' ? -1 : 1;
   const pivot = new THREE.Group();
@@ -79,18 +80,19 @@ export function furnitureDoor(hotel, {
   leaf.name = name + '-leaf';
   pivot.add(leaf);
   const handle = new THREE.Mesh(unitCube(hotel), hotel.materials.warm ?? hotel.materials[material]);
-  handle.position.set(-sign * (width - .07), -.04, -thickness * .54);
+  handle.position.set(-sign * (width - .07), -.04, toward * thickness * .54);
   handle.scale.set(.025, Math.min(height * .24, .22), .025);
   pivot.add(handle);
   hotel.scene.add(pivot);
   hotel.suiteMeshes.push(pivot);
   const motion = hotel.furnitureMotion?.create(t => {
-    // Both edges swing toward the room (-Z) instead of clipping into the case.
-    pivot.rotation.y = (hinge === 'left' ? 1 : -1) * angle * t;
+    // The door may face either side of the cabinet; its far edge always
+    // swings outward from the case instead of clipping through the contents.
+    pivot.rotation.y = (hinge === 'left' ? -toward : toward) * angle * t;
   }, 10);
   return { pivot, motion, setOpen(open) {
     if (motion) motion.set(open ? 1 : 0);
-    else pivot.rotation.y = (hinge === 'left' ? 1 : -1) * angle * (open ? 1 : 0);
+    else pivot.rotation.y = (hinge === 'left' ? -toward : toward) * angle * (open ? 1 : 0);
   } };
 }
 
