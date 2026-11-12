@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { HOTEL } from '../config.js';
+import { furnitureSeat, furniturePart } from './FurnitureMotion.js';
 
 /** Public areas occupy reserved first-floor rooms, not hotel guest rooms. */
 export function buildBar(hotel) {
@@ -29,16 +30,24 @@ export function buildBar(hotel) {
   });
   for(const x of [6.25,8.35,10.45]){
     round('black',x,y+.31,-11.35,.55,.62,.55);
-    round('fabric',x,y+.66,-11.35,.64,.15,.60);
+    const stool=furnitureSeat(hotel,{
+      x,y:y+.66,z:-11.35,width:.64,height:.15,depth:.60,
+      name:'bar-stool-seat',compression:.022,
+    });
     hotel.addWalkSurface(0,x,-11.35,.56,.56,.74);
-    put(x,-10.65,()=> 'Bar taburesi · Otur',p=>p.useFurniture('sit',x,-11.35,0,.62));
+    put(x,-10.65,()=> 'Bar taburesi · Otur',p=>p.useFurniture('sit',x,-11.35,0,.62,
+      {style:'stool',onEnter:()=>stool.setOccupied(true),onExit:()=>stool.setOccupied(false)}));
 
   }
   // Lounge zone along the north side, leaving a clear public entrance x=2..4.
-  round('fabric',7.0,y+.41,-8.38,2.8,.72,.80);
+  const loungeSeat=furnitureSeat(hotel,{
+    x:7.0,y:y+.41,z:-8.38,width:2.8,height:.72,depth:.80,
+    name:'bar-lounge-seat',compression:.045,
+  });
   round('fabric',7.0,y+.85,-8.72,2.8,.59,.18);
   hotel.addWalkSurface(0,7.0,-8.38,2.72,.76,.54);
-  put(6.9,-9.10,()=> 'Bar kanepesi · Otur',p=>p.useFurniture('sit',7,-8.40,Math.PI,.52));
+  put(6.9,-9.10,()=> 'Bar kanepesi · Otur',p=>p.useFurniture('sit',7,-8.40,Math.PI,.52,
+    {style:'lounge',onEnter:()=>loungeSeat.setOccupied(true),onExit:()=>loungeSeat.setOccupied(false)}));
 
   const lamp=hotel.roomLighting?.register(0,8.15,3.08,-10.9,'Bar');
   if(lamp)put(4.45,-12.30,lamp.getLabel,()=>{
@@ -55,6 +64,7 @@ export function buildPublicRestrooms(hotel) {
   box('slab',6.8,.037,-3.5,10.45,.045,6.95);
   box('darkWall',10.99,1.47,-6.70,.12,2.9,.16);
   // Sink bank is against the north wall; access lane remains clear.
+  const waterStreams=[];
   for(const z of [-5.25,-3.55,-1.85]){
     round('ceramic',5.38,.69,z,.88,.23,.52);
     round('glass',5.38,.86,z,.66,.045,.35);
@@ -64,6 +74,9 @@ export function buildPublicRestrooms(hotel) {
     box('trim',6.04,1.73,z,.032,1.06,.80);
     box('black',6.00,1.73,z,.017,.98,.73);
     hotel.mirrors?.register(0,5.983,1.73,z,-Math.PI/2);
+    const stream=furniturePart(hotel,'glass',5.38,.885,z,.016,.17,.016,'public-sink-water');
+    stream.visible=false;
+    waterStreams.push(stream);
   }
   const stalls=[-5.20,-1.80];
   for(const z of stalls){
@@ -86,8 +99,18 @@ export function buildPublicRestrooms(hotel) {
     hotel.animations.push(dt=>{door.position.z=THREE.MathUtils.damp(door.position.z,z-(open ? 1.03 : 0),8,dt)});
   }
   let taps=false;
+  const tapMotion=hotel.furnitureMotion?.create(level=>{
+    for(const mesh of waterStreams){
+      mesh.visible=level>.004;
+      mesh.scale.y=.17*level;
+      mesh.position.y=.97-.085*level;
+    }
+  },11);
   put(9.3,-3.40,()=>`Lavabolar · Suyu ${taps?'kapat':'aç'}`,()=>{
-    taps=!taps;hotel.events.toast(taps?'Musluklar açıldı':'Musluklar kapatıldı');
+    taps=!taps;
+    if(tapMotion)tapMotion.set(taps?1:0);
+    else for(const mesh of waterStreams)mesh.visible=taps;
+    hotel.events.toast(taps?'Musluklar açıldı':'Musluklar kapatıldı');
   });
   const lamp=hotel.roomLighting?.register(0,6.8,3.05,-3.5,'Ortak tuvalet');
   if(lamp)put(4.25,-3.85,lamp.getLabel,()=>{
