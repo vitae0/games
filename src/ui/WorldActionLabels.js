@@ -35,7 +35,31 @@ export function collectWorldActions(interactables, player, camera, limit = MAX_A
   return result.sort((a, b) => a.score - b.score || a.distance - b.distance).slice(0, limit);
 }
 
-/** Each in-world KULLAN button activates the action it actually labels.
+/** Consolidate explicitly related actions without changing their exact targets. */
+export function groupWorldActions(items, limit = MAX_ACTIONS) {
+  const groups = [], keyed = new Map();
+  for (const item of items) {
+    const id = item.action.groupId;
+    let group = id ? keyed.get(id) : null;
+    if (group) {
+      group.actions.push(item.action);
+      if (item.score < group.score) {
+        group.action = item.action;
+        group.x = item.x;
+        group.y = item.y;
+        group.score = item.score;
+        group.distance = item.distance;
+      }
+    } else {
+      group = { ...item, actions: [item.action] };
+      groups.push(group);
+      if (id) keyed.set(id, group);
+    }
+  }
+  return groups.sort((a,b)=>a.score-b.score).slice(0,limit);
+}
+
+/** Each in-world action badge opens the *clicked object*, never a nearby one.
  * DOM buttons keep their object identity across frames, so a moving camera cannot
  * silently turn a press on one object into a press on another one.
  */
@@ -46,6 +70,25 @@ export class WorldActionLabels {
     this.camera = camera;
     this.touch = touch;
     this.pressed = new Map();
+    this.choiceActions = null;
+    this.choicePanel = document.createElement('div');
+    this.choicePanel.className = 'world-action-choices hidden';
+    this.choicePanel.setAttribute('role','group');
+    this.choicePanel.setAttribute('aria-label','Nesne işlemlerini seç');
+    root.appendChild(this.choicePanel);
+    this.onChoiceKey = event => {
+      if (!this.choiceActions || !/^Digit[1-9]$/.test(event.code)) return;
+      const index = Number(event.code.slice(5)) - 1;
+      if (index >= this.choiceActions.length) return;
+      event.preventDefault(); event.stopImmediatePropagation?.();
+      this.choose(index);
+    };
+    window.addEventListener('keydown', this.onChoiceKey, true);
+    this.onOutsideClick = event => {
+      if (this.choiceActions && !this.choicePanel.contains(event.target) &&
+          !event.target.closest?.('.world-action-button')) this.closeChoices();
+    };
+    window.addEventListener('pointerdown', this.onOutsideClick, true);
     this.root = document.createElement('div');
     this.root.className = 'world-action-layer';
     this.root.setAttribute('aria-label', 'Nesne üzerindeki kullan düğmeleri');
@@ -60,7 +103,7 @@ export class WorldActionLabels {
         if (event.button !== 0 || !button.action || !this.player.active) return;
         event.preventDefault();
         this.pressed.set(event.pointerId, {
-          button, action: button.action, x: event.clientX, y: event.clientY,
+          button, action: button.action, actions: button.actions, x: event.clientX, y: event.clientY,
         });
         try { button.setPointerCapture?.(event.pointerId); } catch { /* pointer lock */ }
       });
@@ -72,7 +115,7 @@ export class WorldActionLabels {
         if (!press || press.button !== button) return;
         this.pressed.delete(event.pointerId);
         if (Math.hypot(event.clientX - press.x, event.clientY - press.y) <= 45) {
-          this.activate(press.action);
+          this.activate(press.action, press.actions, press.button);
         }
       });
       button.addEventListener('pointercancel', event => {
@@ -86,20 +129,64 @@ export class WorldActionLabels {
       button.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        if (event.detail === 0) this.activate(button.action);
+        if (event.detail === 0) this.activate(button.action, button.actions, button);
       });
       this.root.appendChild(button);
       return button;
     });
   }
 
-  activate(action) {
-    if (action && this.player.active && !this.player.events.isModalOpen() &&
-        action.isAvailable?.() !== false) action.activate(this.player);
+  closeChoices() {
+    this.choiceActions = null;
+    this.choicePanel.classList.add('hidden');
+    this.choicePanel.replaceChildren();
+  }
+
+  choose(index) {
+    const choice = this.choiceActions?.[index];
+    this.closeChoices();
+    if (choice && this.player.active && !this.player.events.isModalOpen() &&
+        choice.isAvailable?.() !== false) choice.activate(this.player);
+  }
+
+  activate(action, actions = null, anchor = null) {
+    if (!action || !this.player.active || this.player.events.isModalOpen()) return;
+    const available = (actions ?? (action.groupId
+      ? this.hotel.interactables.filter(item => item.groupId === action.groupId &&
+          item.floor === this.player.floor &&
+          Math.hypot(item.position.x - this.player.position.x,
+            item.position.z - this.player.position.z) <= MAX_REACH)
+      : [action])).filter(item=>item?.isAvailable?.() !== false);
+    if (available.length < 2) {
+      this.closeChoices();
+      available[0]?.activate(this.player);
+      return;
+    }
+    this.choiceActions = available.slice(0,9);
+    this.choicePanel.replaceChildren();
+    for (let i = 0; i < this.choiceActions.length; i++) {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'world-action-choice';
+      option.textContent = (i + 1) + ' · ' + this.choiceActions[i].getLabel();
+      option.addEventListener('pointerdown', event => event.stopPropagation());
+      option.addEventListener('click', event => {
+        event.preventDefault(); event.stopPropagation(); this.choose(i);
+      });
+      this.choicePanel.appendChild(option);
+    }
+    const x = anchor ? parseFloat(anchor.style.left) : window.innerWidth / 2;
+    const y = anchor ? parseFloat(anchor.style.top) : window.innerHeight * .62;
+    this.choicePanel.style.left = Math.max(110,Math.min(window.innerWidth-110,x)) + 'px';
+    this.choicePanel.style.top = Math.max(105,Math.min(window.innerHeight-100,y-20)) + 'px';
+    this.choicePanel.classList.remove('hidden');
   }
 
   position(button, item, placed, reserved, viewportWidth, viewportHeight) {
-    button.textContent = 'KULLAN · ' + item.action.getLabel();
+    const label = item.action.getLabel();
+    const prefix = label.split(' · ')[0];
+    button.textContent = item.actions.length > 1 ? prefix + ' · ' + item.actions.length + ' işlem'
+      : label;
     button.setAttribute('aria-label', button.textContent);
     button.classList.remove('hidden');
     const width = button.offsetWidth;
@@ -133,23 +220,26 @@ export class WorldActionLabels {
   update() {
     const player = this.player;
     if (!player.active || player.events.isModalOpen()) {
+      this.closeChoices();
       for (const button of this.buttons) button.classList.add('hidden');
       return;
     }
     // Don't move/remap the target while a finger is pressing its button.
-    if (this.pressed.size) return;
+    if (this.pressed.size || this.choiceActions) return;
     this.camera.updateMatrixWorld();
 
     // There is no permanent bottom KULLAN button: standing back up must also
     // be possible from the contextual action surface on touch devices.
-    const actions = player.posture !== 'stand'
+    const raw = player.posture !== 'stand'
       ? [{ action: this.hotel.closestInteraction(player, player.direction), x: .5, y: .65, distance: 0, score: 0 }]
-      : collectWorldActions(this.hotel.interactables, player, this.camera, this.buttons.length);
+      : collectWorldActions(this.hotel.interactables, player, this.camera, this.buttons.length * 3);
+    const actions = groupWorldActions(raw.filter(item=>item.action),this.buttons.length);
 
     const visible = new Set(actions.map(item => item.action));
     for (const button of this.buttons) {
       if (!visible.has(button.action)) {
         button.action = null;
+        button.actions = null;
         button.classList.add('hidden');
       }
     }
@@ -167,12 +257,17 @@ export class WorldActionLabels {
       if (!button) button = this.buttons.find(candidate => !candidate.action);
       if (!button) continue;
       button.action = item.action;
+      button.actions = item.actions;
       this.position(button, item, placed, reserved, viewportWidth, viewportHeight);
     }
   }
 
   dispose() {
     this.pressed.clear();
+    this.closeChoices();
+    window.removeEventListener('keydown', this.onChoiceKey, true);
+    window.removeEventListener('pointerdown', this.onOutsideClick, true);
+    this.choicePanel.remove();
     this.root.remove();
     this.buttons.length = 0;
   }
