@@ -57,12 +57,15 @@ export function buildBar(hotel) {
 export function buildPublicRestrooms(hotel) {
   const floor=0,y=0,box=(...args)=>hotel.box(...args);
   const round=(...args)=>hotel.rounded?hotel.rounded(...args):box(...args);
-  const put=(x,z,label,activate)=>hotel.interactables.push({
-    floor,position:new THREE.Vector3(x,y+1,z),getLabel:label,activate,
+  const put=(x,z,label,activate,groupId=null)=>hotel.interactables.push({
+    floor,position:new THREE.Vector3(x,y+1,z),getLabel:label,activate,groupId,
   });
   // Separate public WC area behind bar; room door is open at x=1.7,z=-3.5.
   box('slab',6.8,.037,-3.5,10.45,.045,6.95);
-  box('darkWall',10.99,1.47,-6.70,.12,2.9,.16);
+  // The previous tiny dark block was not a wall. Opaque full-height
+  // privacy panels now separate the public WC from the adjacent space.
+  box('innerWall',10.02,1.48,-6.81,3.95,2.95,.14,0,true);
+  box('innerWall',7.70,1.48,-3.50,.12,2.95,.79,0,true);
   // Sink bank is against the north wall; access lane remains clear.
   const waterStreams=[];
   for(const z of [-5.25,-3.55,-1.85]){
@@ -92,10 +95,15 @@ export function buildPublicRestrooms(hotel) {
     hotel.scene.add(door);hotel.suiteMeshes.push(door);
     const collider=hotel.collisions.add(0,8.16,z,.12,1.06);
     let open=false;
+    const groupId = 'public-wc:' + z;
     put(7.15,z,()=>`Ortak tuvalet · Kapıyı ${open?'kapat':'aç'}`,()=>{
       open=!open;hotel.collisions.setActive(collider,!open);
       hotel.events.toast(open?'Tuvalet kabini açıldı':'Tuvalet kabini kapandı');
-    });
+    },groupId);
+    put(7.15,z,()=> 'Ortak tuvalet · Kullan', player => {
+      if (!open) { hotel.events.toast('Önce kabin kapısını aç'); return; }
+      player?.useFurniture?.('sit',10.53,z,Math.PI/2,.42,{style:'stool'});
+    },groupId);
     hotel.animations.push(dt=>{door.position.z=THREE.MathUtils.damp(door.position.z,z-(open ? 1.03 : 0),8,dt)});
   }
   let taps=false;
