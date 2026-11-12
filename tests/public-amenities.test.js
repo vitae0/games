@@ -2,13 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { buildBar, buildPublicRestrooms } from '../src/world/PublicAmenities.js';
+import { FurnitureMotion } from '../src/world/FurnitureMotion.js';
 
 function fakeHotel(){
   const geometry=[],states=new Map(),surfaces=[],events=[];
   let id=0;
   const hotel={
     scene:new THREE.Scene(),suiteMeshes:[],
-    materials:{black:new THREE.MeshBasicMaterial()},
+    materials:Object.fromEntries(['black','fabric','wood','warm','glass','trim'].map(name=>
+      [name,new THREE.MeshBasicMaterial()])),
+    propGeometry:new THREE.BoxGeometry(1,1,1),
+    furnitureMotion:new FurnitureMotion(),
     suiteBathroomDoorGeometry:new THREE.BoxGeometry(.06,2.33,1.12),
     animations:[],interactables:[],
     box:(mat,x,y,z,w,h,d,floor,solid)=>geometry.push({mat,x,y,z,w,h,d,floor,solid}),
@@ -21,7 +25,9 @@ function fakeHotel(){
     events:{toast:msg=>events.push(msg)}
   };
   return {hotel,geometry,states,surfaces,events,dispose(){
-    hotel.suiteBathroomDoorGeometry.dispose();hotel.materials.black.dispose();
+    hotel.suiteBathroomDoorGeometry.dispose();
+    hotel.propGeometry.dispose(); hotel.furnitureMotion.dispose();
+    Object.values(hotel.materials).forEach(material=>material.dispose());
   }};
 }
 
@@ -58,7 +64,30 @@ test('public toilet cabins independently open and washbasins respond',()=>{
     const taps=f.hotel.interactables.find(x=>x.getLabel().startsWith('Lavabolar'));
     taps.activate();
     assert.ok(taps.getLabel().includes('kapat'));
-    assert.equal(f.hotel.suiteMeshes.length,2);
+    const streams=f.hotel.suiteMeshes.filter(mesh=>mesh.name==='public-sink-water');
+    assert.equal(streams.length,3);
+    for(let i=0;i<12;i++)f.hotel.furnitureMotion.update(.075);
+    assert.ok(streams.every(mesh=>mesh.visible && mesh.scale.y>.12));
     assert.ok(f.surfaces.length>=3);
+  }finally{f.dispose()}
+});
+
+test('bar seating triggers a compressing cushion with stool-specific animation style',()=>{
+  const f=fakeHotel();
+  try{
+    buildBar(f.hotel);
+    const chair=f.hotel.interactables.find(o=>o.getLabel()==='Bar taburesi · Otur');
+    const calls=[];
+    chair.activate({useFurniture:(...args)=>calls.push(args)});
+    const options=calls[0][5];
+    assert.equal(options.style,'stool');
+    const seat=f.hotel.suiteMeshes.find(mesh=>mesh.name==='bar-stool-seat');
+    const previous=seat.scale.y;
+    options.onEnter();
+    for(let i=0;i<15;i++)f.hotel.furnitureMotion.update(.075);
+    assert.ok(seat.scale.y<previous);
+    options.onExit();
+    for(let i=0;i<25;i++)f.hotel.furnitureMotion.update(.075);
+    assert.ok(Math.abs(seat.scale.y-previous)<.001);
   }finally{f.dispose()}
 });
