@@ -37,7 +37,8 @@ export function buildBar(hotel) {
     });
     hotel.addWalkSurface(0,x,-11.35,.56,.56,.74);
     put(x,-10.65,()=> 'Bar taburesi · Otur',p=>p.useFurniture('sit',x,-11.35,0,.62,
-      {style:'stool',onEnter:()=>stool.setOccupied(true),onExit:()=>stool.setOccupied(false)}));
+      {style:'stool',getSurfaceHeight:()=>stool.surfaceY()-y,
+    onEnter:()=>stool.setOccupied(true),onExit:()=>stool.setOccupied(false)}));
 
   }
   // Lounge zone along the north side, leaving a clear public entrance x=2..4.
@@ -48,7 +49,8 @@ export function buildBar(hotel) {
   round('fabric',7.0,y+.85,-8.72,2.8,.59,.18);
   hotel.addWalkSurface(0,7.0,-8.38,2.72,.76,.54);
   put(6.9,-9.10,()=> 'Bar kanepesi · Otur',p=>p.useFurniture('sit',7,-8.40,Math.PI,.52,
-    {style:'lounge',onEnter:()=>loungeSeat.setOccupied(true),onExit:()=>loungeSeat.setOccupied(false)}));
+    {style:'lounge',getSurfaceHeight:()=>loungeSeat.surfaceY()-y,
+    onEnter:()=>loungeSeat.setOccupied(true),onExit:()=>loungeSeat.setOccupied(false)}));
 
   const lamp=hotel.roomLighting?.register(0,8.15,3.08,-10.9,'Bar');
   if(lamp)put(4.45,-12.30,lamp.getLabel,()=>{

@@ -247,7 +247,7 @@ export function buildPublicRestroom(hotel) {
         hotel.events.toast('Kullanmak için boş kabinin kapısını aç');
         return;
       }
-      player?.useFurniture?.('sit', 10.63, z, Math.PI / 2, .50, {
+      player?.useFurniture?.('sit', 10.63, z, Math.PI / 2, .626, {
         style: 'stool',
         onEnter: () => {
           occupied = true; locked = true;
