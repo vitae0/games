@@ -3,7 +3,8 @@ import { PLAYER, HOTEL } from '../config.js';
 import { Avatar } from '../avatar/Avatar.js';
 import { HandRig } from './HandRig.js';
 import { BodyIK } from './BodyIK.js';
-import { scrollZoomDistance, orbitFocusHeight, orbitVerticalOffset } from './CameraOrbit.js';
+import { scrollZoomDistance, orbitFocusHeight, orbitVerticalOffset, orbitHorizontalDistance } from './CameraOrbit.js';
+import { alignAvatarToFurniture } from './FurnitureFit.js';
 import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw, yawFromDisplacement, approachYaw } from './Orientation.js';
 import { isFloorPosture, nextFloorPosture, nextRisePosture } from './Postures.js';
 import { PostureControls } from './PostureControls.js';
@@ -32,6 +33,7 @@ export class Player {
     this.savedStanding = null;
     this.furnitureStyle = null;
     this.furnitureExit = null;
+    this.furnitureSurfaceHeight = null;
     this.sleepLean = 0;
     this.floorLieLean = 0;
     this.avatar.root.rotation.order = 'YXZ';
@@ -44,7 +46,7 @@ export class Player {
   /** CSS pixel deltas, shared by mouse and mobile swipe gestures. */
   lookBy(dx, dy, multiplier = 1) {
     this.yaw -= dx * .00245 * multiplier;
-    this.pitch = clamp(this.pitch - dy * .0022 * multiplier, -1.43, 1.43);
+    this.pitch = clamp(this.pitch - dy * .0022 * multiplier, -1.54, 1.54);
   }
   setTouchMove(right, forward) {
     this.touchMove.x = clamp(right, -1, 1);
@@ -233,6 +235,7 @@ export class Player {
     this.furnitureExit?.();
     this.furnitureExit = null;
     this.furnitureStyle = null;
+    this.furnitureSurfaceHeight = null;
     this.releaseHands();
     this.bodyIK.clearSteps();
     this.bodyIK.cancelKicks();
@@ -258,8 +261,11 @@ export class Player {
     this.posture = mode;
     this.furnitureStyle = options.style ?? mode;
     this.furnitureExit = typeof options.onExit === 'function' ? options.onExit : null;
-    this.furnitureHeight = surfaceHeight;
-    this.position.set(x, this.floor * HOTEL.floorHeight + surfaceHeight, z);
+    this.furnitureSurfaceHeight = typeof options.getSurfaceHeight === 'function'
+      ? options.getSurfaceHeight : null;
+    const measuredSurface = this.furnitureSurfaceHeight?.();
+    this.furnitureHeight = Number.isFinite(measuredSurface) ? measuredSurface : surfaceHeight;
+    this.position.set(x, this.floor * HOTEL.floorHeight + this.furnitureHeight, z);
     this.yaw = yaw; this.bodyYaw = yaw; this.pitch = mode === 'rest' ? -.23 : 0;
     this.jumpOffset = 0; this.verticalSpeed = 0;
     options.onEnter?.();
@@ -280,6 +286,7 @@ export class Player {
     this.furnitureExit?.();
     this.furnitureExit = null;
     this.furnitureStyle = null;
+    this.furnitureSurfaceHeight = null;
     if (this.savedStanding) {
       this.position.set(this.savedStanding.x, this.savedStanding.y, this.savedStanding.z);
       this.yaw = this.savedStanding.yaw;
@@ -365,7 +372,11 @@ export class Player {
       }
       this.position.y=nextFeet;
       this.floor=groundFloor(nextBase);
-    }else this.position.y=this.floor*HOTEL.floorHeight+(this.furnitureHeight||0);
+    }else {
+      const measuredSurface = this.furnitureSurfaceHeight?.();
+      if (Number.isFinite(measuredSurface)) this.furnitureHeight = measuredSurface;
+      this.position.y = this.floor * HOTEL.floorHeight + (this.furnitureHeight || 0);
+    }
     // A held touch control adjusts the grip continuously; short taps nudge it.
     if (active && this.touchGripAdjustment) this.adjustGripDistance(this.touchGripAdjustment * dt * 1.05);
     // Pulling on a wall/railing moves the player, not the static world.
@@ -404,21 +415,19 @@ export class Player {
     }
     this.avatar.root.position.copy(this.position);
     this.avatar.root.rotation.y = this.bodyYaw;
-    // A reclining guest transitions into a horizontal bed pose, rather than
-    // sitting upright on the mattress. Translate the rig toward the pillow
-    // to keep the head inside the bed's footprint.
+    // Furniture poses turn around the real hip/back contact, not around the
+    // foot-level player controller, so small/tall avatars rest on the surface.
     this.sleepLean = THREE.MathUtils.damp(this.sleepLean,
       this.posture === 'rest' && this.furnitureStyle === 'sleep' ? 1 : 0, 7, dt);
     this.floorLieLean = THREE.MathUtils.damp(this.floorLieLean,
       this.posture === 'floorLie' ? 1 : 0, 8, dt);
     // Roll the entire skeleton onto the back; keep shoulders and head above
     // the floor without changing their bone lengths or the foot planting logic.
-    this.avatar.root.rotation.x = -1.24 * this.sleepLean + 1.47 * this.floorLieLean;
+    this.avatar.root.rotation.x = -1.52 * this.sleepLean + 1.47 * this.floorLieLean;
     this.avatar.root.position.y += .19 * this.floorLieLean;
-    this.avatar.root.position.x += Math.sin(this.bodyYaw) * .57 * this.sleepLean;
-    this.avatar.root.position.z += Math.cos(this.bodyYaw) * .57 * this.sleepLean;
     this.avatar.update(dt, this.walkSpeed,
       this.posture === 'stand' && crouching ? 'crouch' : this.posture, this.furnitureStyle);
+    if (this.savedStanding) alignAvatarToFurniture(this.avatar, this.position, this.furnitureStyle);
     for (const side of ['left', 'right']) {
       const hand = this.hands[side];
       if (hand.grip) this.hotel.moveGrip(side, this.anchor(side, hand.distance));
@@ -442,21 +451,29 @@ export class Player {
       const distance = this.events.isCustomizerOpen() ? 3.1
         : this.thirdPerson ? this.cameraDistance : this.lastThirdPersonDistance;
       const head = this.avatar.headWorldHeight?.() ?? this.avatar.profile.height * .82;
-      const targetHeight = this.furnitureStyle === 'sleep' ? .49
+      const targetHeight = this.posture === 'floorLie' ? .24
         : isFloorPosture(this.posture) ? Math.max(.57, head - .20)
           : orbitFocusHeight(this.avatar.profile.height,
             this.avatar.profile.height - .12, distance);
-      const target = new THREE.Vector3(this.position.x, this.position.y + targetHeight, this.position.z);
-      const behind = this.events.isCustomizerOpen() ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
+      // Furniture pivots around the visible torso, not the avatar's old foot origin.
+      const target = this.savedStanding
+        ? this.avatar.body.localToWorld(new THREE.Vector3(0,
+          this.avatar.profile.height * (this.furnitureStyle === 'sleep' ? .63 : .69), 0))
+        : new THREE.Vector3(this.position.x, this.position.y + targetHeight, this.position.z);
+      const behind = this.events.isCustomizerOpen()
+        ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
+      const horizontal = orbitHorizontalDistance(distance, this.pitch);
+      const vertical = orbitVerticalOffset(distance, this.pitch);
       const camPos = target.clone();
-      for (let d = .2; d < distance; d += .2) {
-        const test = target.clone().addScaledVector(behind, d);
+      const floorBound = this.floor * HOTEL.floorHeight + .10;
+      const ceiling = (this.floor + 1) * HOTEL.floorHeight - .18;
+      for (let d = .2; d <= distance + .2; d += .2) {
+        const ratio = Math.min(1, d / Math.max(.01, distance));
+        const test = target.clone().addScaledVector(behind, horizontal * ratio);
+        test.y = clamp(target.y + vertical * ratio, floorBound, ceiling);
         if (this.hotel.collisions.blocked(this.floor, test.x, test.z, .19)) break;
         camPos.copy(test);
       }
-      camPos.y += orbitVerticalOffset(distance, this.pitch, isFloorPosture(this.posture));
-      const ceiling = (this.floor + 1) * HOTEL.floorHeight - .32;
-      camPos.y = Math.min(camPos.y, ceiling);
       this.camera.position.copy(camPos);
       this.camera.lookAt(target);
     } else {

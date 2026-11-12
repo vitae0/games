@@ -192,10 +192,11 @@ export class BodyIK {
           upper.position.x + step.sideways,
           Math.max(step.height, .40 * bend + .02),
           THREE.MathUtils.lerp(step.forward, .12, bend * .72)));
-        // Keep the knee predominantly forward, with slight outward bias at wide splits.
+        // Reverse the previously incorrect manual knee bend plane without
+        // inverting the seated/posture animation angles.
         const bendPole = new THREE.Vector3(
           (side === 'left' ? -1 : 1) * .15 + step.sideways * .38,
-          .12, -1).normalize();
+          .12, 1).normalize();
         const pole = bendPole.applyQuaternion(avatar.root.getWorldQuaternion(new THREE.Quaternion()));
         const length = foot ? -foot.position.y :
           avatar.profile.height * avatar.profile.legRatio + knee.position.y;
