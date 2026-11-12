@@ -276,6 +276,34 @@ export function buildPublicRestroom(hotel) {
     updateStatus();
   }
 
+  // A real corridor-facing sign rather than another unlabeled door mesh.
+  // Browser-only CanvasTexture, with one shared draw call and tracked cleanup.
+  if (typeof document !== 'undefined' && hotel.dynamic) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#242628'; ctx.fillRect(0, 0, 512, 160);
+      ctx.strokeStyle = '#c7ae84'; ctx.lineWidth = 8;
+      ctx.strokeRect(7, 7, 498, 146);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f6efe1'; ctx.font = 'bold 88px sans-serif';
+      ctx.fillText('WC', 130, 78);
+      ctx.fillStyle = '#d6c4a6'; ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('UMUMİ', 352, 83);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = new THREE.MeshBasicMaterial({map:texture});
+      const geometry = new THREE.PlaneGeometry(1.26, .40);
+      const sign = new THREE.Mesh(geometry, material);
+      sign.name = 'public-restroom-wayfinding';
+      sign.position.set(1.594, 2.81, -3.50);
+      sign.rotation.y = -Math.PI / 2;
+      hotel.scene.add(sign); hotel.suiteMeshes.push(sign);
+      hotel.dynamic.push({geometry,material,texture});
+    }
+  }
+
   // The dryer, towel unit, bin and wall switch form a compact service zone
   // opposite the sinks, clear of the central entrance and cubicle aisle.
   box('black', 3.45, 1.43, -.42, .53, .77, .22);
