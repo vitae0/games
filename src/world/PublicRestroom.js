@@ -52,6 +52,9 @@ export function buildPublicRestroom(hotel) {
   // Solid privacy wall against the exterior window, uninterrupted partition
   // above all three doors, an actual ceiling, and hygienic stone floor.
   box('slab', 6.76, .029, -3.50, 10.06, .045, 6.83);
+  // The tile top is 0.0515 m above the structural floor. Register that
+  // exact contact plane so the character's toes do not shimmer IN the tiles.
+  hotel.addWalkSurface?.(floor,6.76,-3.50,10.06,6.83,.0515);
   // Drop the new ceiling beneath the existing structural soffit, avoiding
   // z-fighting with the upper floor's underside.
   box('ceiling', 6.76, 3.075, -3.50, 10.06, .034, 6.83);
