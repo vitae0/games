@@ -4,9 +4,9 @@ import * as THREE from 'three';
 import { Avatar } from '../src/avatar/Avatar.js';
 import { poseFor } from '../src/avatar/PoseMath.js';
 
-test('default anime figure has real skinning, two leg joints and detachable cloth layers', () => {
+test('legacy anime figure retains its skinning and detachable cloth layers', () => {
   const scene = new THREE.Scene();
-  const avatar = new Avatar(scene, { skinTone: 'honey', outfit: 'stealth' });
+  const avatar = new Avatar(scene, { baseModel: 'vroidMale', skinTone: 'honey', outfit: 'stealth' });
   assert.equal(avatar.leftLeg.isBone, true);
   assert.equal(avatar.rightLeg.userData.knee.isBone, true);
   assert.ok(avatar.skinnedLayers.length >= 8);

@@ -1,10 +1,10 @@
 import { TouchControls } from '../input/TouchControls.js';
 import { isTouchCapable, clampTouchSensitivity } from '../input/TouchMath.js';
-import { AVATAR_DEFAULTS, normalizeAvatar } from '../avatar/AvatarConfig.js';
+import { AVATAR_DEFAULTS, AVATAR_RANGES, SOFT_AVATAR_FIELDS, normalizeAvatar } from '../avatar/AvatarConfig.js';
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
-  baseModel: [['vroidMale', 'Erkek • VRoid CC0'], ['vroidFemale', 'Kadın • VRoid CC0']],
+  baseModel: [['soft', 'Vitae Soft • yeni karakter'], ['vroidMale', 'VRoid erkek • eski asset'], ['vroidFemale', 'VRoid kadın • eski asset']],
   hair: [['sample', 'Hazır VRoid HairSample (CC0)'], ['none', 'Yok']],
   hairColor: Object.entries({
     original:'Orijinal saç dokusu', black:'Siyah', chestnut:'Kestane', brown:'Koyu kahve', blonde:'Sarı',
@@ -122,22 +122,103 @@ export class Hud {
   }
   closeSettings() { this.settings.classList.add('hidden'); this.refreshStartScreen(); }
   refreshModelStatus() {
+    const status = $('#avatar-load-status');
+    if (!status) return;
     const key = this.profile.baseModel;
+    if (key === 'soft') {
+      status.textContent = 'Vitae Soft • hazır · harici model veya saç dosyası yüklenmiyor';
+      return;
+    }
     const label = key === 'vroidFemale' ? 'Kadın' : 'Erkek';
     const loaded = this.options.isBaseReady?.(key);
     const hair = this.options.getHairStatus?.() || 'unknown';
     const hairText = this.profile.hair === 'none' ? 'saçsız' :
       hair === 'ready' ? 'hazır saç yüklendi' : hair === 'error' ?
       'hazır saç yüklenemedi' : 'hazır saç yükleniyor';
-    const status = $('#avatar-load-status');
-    if (status) status.textContent = `VRoid CC0 • ${label} ${loaded ? 'yüklendi' : 'yükleniyor'} · ${hairText}`;
+    status.textContent = 'VRoid CC0 • ' + label + (loaded ? ' yüklendi' : ' yükleniyor') + ' · ' + hairText;
   }
   buildAvatarFields() {
     const parent = $('#avatar-fields');
     parent.replaceChildren();
+
+    const heading = (title, cssClass = '') => {
+      const el = document.createElement('h3');
+      el.className = 'character-section-title ' + cssClass;
+      el.textContent = title;
+      parent.append(el);
+    };
+    const wrapField = (key, label, cssClass = '') => {
+      const wrap = document.createElement('div');
+      wrap.className = 'field ' + cssClass;
+      const caption = document.createElement('label');
+      caption.htmlFor = 'avatar-' + key;
+      caption.textContent = label;
+      wrap.append(caption);
+      parent.append(wrap);
+      return wrap;
+    };
+    const selectField = (key, label, legacy = false) => {
+      const wrap = wrapField(key, label, legacy ? 'legacy-avatar-field' : '');
+      const select = document.createElement('select');
+      select.id = 'avatar-' + key;
+      for (const [value, name] of FIELDS[key]) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = name;
+        select.append(option);
+      }
+      select.addEventListener('change', () => {
+        this.profile[key] = ['shirtVisible','pantsVisible','shoesVisible'].includes(key)
+          ? select.value === 'true' : select.value;
+        this.preview();
+        this.updateConditionalControls();
+      });
+      wrap.append(select);
+    };
+    heading('Karakter türü');
+    selectField('baseModel', 'Model');
+
+    const groupFields = (title, keys) => {
+      heading(title, 'soft-avatar-field');
+      for (const key of keys) {
+        const [ , label, unit, step] = SOFT_AVATAR_FIELDS.find(field => field[0] === key);
+        const wrap = wrapField(key, label, 'soft-avatar-field');
+        const [min, max] = AVATAR_RANGES[key];
+        const out = document.createElement('output');
+        out.id = 'avatar-' + key + '-value';
+        out.htmlFor = 'avatar-' + key;
+        const range = document.createElement('input');
+        range.id = 'avatar-' + key;
+        range.type = 'range';
+        range.min = String(min);
+        range.max = String(max);
+        range.step = String(step);
+        range.addEventListener('input', () => {
+          this.profile[key] = Number(range.value);
+          out.textContent = Number(range.value).toFixed(step < .01 ? 3 : 2) + (unit ? ' ' + unit : '');
+          this.preview();
+        });
+        wrap.append(out, range);
+      }
+    };
+
+    heading('Renk', 'soft-avatar-field');
+    const colorWrap = wrapField('bodyColor', 'Gövde, kafa ve uzuv rengi', 'soft-avatar-field');
+    const color = document.createElement('input');
+    color.id = 'avatar-bodyColor';
+    color.type = 'color';
+    color.addEventListener('input', () => {
+      this.profile.bodyColor = color.value;
+      this.preview();
+    });
+    colorWrap.append(color);
+
+    groupFields('Baş ve gövde', ['height','headScale','shoulders','waist','hips','torsoDepth']);
+    groupFields('Kollar', ['armRatio','shoulderSize','upperArmSize','forearmSize','handSize']);
+    groupFields('Bacaklar', ['legRatio','thighSize','calfSize','footSize']);
+
     const sections = [
-      ['Temel karakter', [['baseModel', 'Karakter']]],
-      ['Yüz ve saç', [
+      ['Yüz ve hazır saç', [
         ['hair', 'Saç modeli'], ['hairColor', 'Saç rengi'],
         ['eyeColor', 'Göz rengi'], ['skinTone', 'Ten tonu'],
       ]],
@@ -149,48 +230,48 @@ export class Hud {
         ['shirtVisible', 'Üst parça'], ['pantsVisible', 'Alt parça'], ['shoesVisible', 'Ayakkabı'],
       ]],
     ];
-    for(const [title,fields] of sections) {
-      const heading=document.createElement('h3');
-      heading.className='character-section-title'; heading.textContent=title;
-      parent.append(heading);
-      for(const [key,label] of fields) {
-        const wrap=document.createElement('div');wrap.className='field';
-        const caption=document.createElement('label');
-        caption.htmlFor=`avatar-${key}`;caption.textContent=label;
-        const sel=document.createElement('select'); sel.id=`avatar-${key}`;
-        for(const [value,name] of FIELDS[key]){
-          const opt=document.createElement('option');opt.value=value;opt.textContent=name;sel.append(opt);
-        }
-        sel.addEventListener('change',()=>{
-          this.profile[key]=['shirtVisible', 'pantsVisible', 'shoesVisible'].includes(key)
-            ? sel.value === 'true' : sel.value;
-          this.preview();
-          this.updateConditionalControls();
-        });
-        wrap.append(caption,sel);parent.append(wrap);
-      }
+    for (const [title, fields] of sections) {
+      heading(title, 'legacy-avatar-field');
+      for (const [key, label] of fields) selectField(key, label, true);
     }
-    const layerNote=document.createElement('p');
-    layerNote.className='small character-info';
-    layerNote.textContent='Saçlar eski VRoid HairSample CC0 modellerinden hazır alınır. Dış giysiler VRoid’un kendi üst, pantolon ve ayakkabı mesh’leridir. İç giyim seçeneği orijinal beden dokusudur; ayrı bir iç giyim mesh’i değildir. Eksik gövde yüzeyleri otomatik oluşmaz.';
-    parent.append(layerNote);
+    const note = document.createElement('p');
+    note.className = 'small character-info legacy-avatar-field';
+    note.textContent = 'Eski VRoid/HairSample CC0 varlıkları korunuyor. Sadece eski model seçildiğinde yüklenir.';
+    parent.append(note);
     this.syncAvatarControls();
   }
   updateConditionalControls() {
-    const showClothes = this.profile.outfit !== 'none';
-    for (const field of ['shirtVisible','pantsVisible','shoesVisible']) {
-      $('#avatar-' + field)?.closest('.field')?.classList.toggle('hidden', !showClothes);
+    const soft = this.profile.baseModel === 'soft';
+    for (const element of document.querySelectorAll('#avatar-fields .soft-avatar-field')) {
+      element.classList.toggle('hidden', !soft);
+    }
+    for (const element of document.querySelectorAll('#avatar-fields .legacy-avatar-field')) {
+      element.classList.toggle('hidden', soft);
+    }
+    if (!soft) {
+      const showClothes = this.profile.outfit !== 'none';
+      for (const field of ['shirtVisible','pantsVisible','shoesVisible']) {
+        $('#avatar-' + field)?.closest('.field')?.classList.toggle('hidden', !showClothes);
+      }
     }
   }
   syncAvatarControls() {
-    for(const key of CHARACTER_CONTROL_IDS) {
-      const input=$(`#avatar-${key}`);
-      if(input)input.value=String(this.profile[key]);
+    for (const key of CHARACTER_CONTROL_IDS) {
+      const input = $('#avatar-' + key);
+      if (input) input.value = String(this.profile[key]);
     }
+    for (const [key, , unit, step] of SOFT_AVATAR_FIELDS) {
+      const input = $('#avatar-' + key);
+      if (input) input.value = String(this.profile[key]);
+      const output = $('#avatar-' + key + '-value');
+      if (output) output.textContent = this.profile[key].toFixed(step < .01 ? 3 : 2) + (unit ? ' ' + unit : '');
+    }
+    const color = $('#avatar-bodyColor');
+    if (color) color.value = this.profile.bodyColor;
     this.updateConditionalControls();
   }
   preview() {
-    this.profile=normalizeAvatar(this.profile);
+    this.profile = normalizeAvatar(this.profile);
     this.options.previewProfile(this.profile);
     this.refreshModelStatus();
   }

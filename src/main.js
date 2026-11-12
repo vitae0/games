@@ -79,7 +79,7 @@ player = new Player(canvas, camera, scene, hotel, loadProfile(), events);
 let modelRequest = 0;
 async function syncBaseModel({ force = false } = {}) {
   const request = ++modelRequest;
-  if (player.avatar.profile.baseModel === 'procedural') {
+  if (player.avatar.profile.baseModel === 'soft') {
     // Uploaded models remain until reset, unless the user explicitly changes bases.
     if (player.avatar.external && (force || player.avatar.external.source !== 'upload')) {
       player.avatar.clearExternal();

@@ -24,14 +24,16 @@ export class Actors {
     const avatar = new Avatar(this.scene, profile);
     avatar.root.position.set(spec.x, 0, spec.z);
     avatar.root.rotation.y = spec.yaw;
-    // We do not render the obsolete geometric placeholder while real VRMs load.
-    avatar.body.visible = false;
+    // Soft characters are ready instantly. Only the optional legacy VRoid
+    // variants require distance-triggered network loading.
+    const procedural = profile.baseModel === 'soft';
+    avatar.body.visible = procedural;
     return {
       id: spec.id, name: spec.name, spec,
       avatar, anchored: spec.anchored,
       start: new THREE.Vector3(spec.x, 0, spec.z),
       position: new THREE.Vector3(spec.x, 0, spec.z),
-      yaw: spec.yaw, phase: 0, ready: false,
+      yaw: spec.yaw, phase: 0, ready: procedural,
       loading: false, error: null,
     };
   }
@@ -67,6 +69,13 @@ export class Actors {
   }
 
   handPoint(person, side) {
+    // Procedural actors expose actual animated hand anchors, so grabbing them
+    // remains aligned even after changing arm length or shoulder width.
+    if (person.avatar.profile.baseModel === 'soft') {
+      const arm = side === 'left' ? person.avatar.leftArm : person.avatar.rightArm;
+      const hand = arm?.userData.hand;
+      if (hand) return hand.getWorldPosition(new THREE.Vector3());
+    }
     const sign = side === 'left' ? -1 : 1;
     const local = new THREE.Vector3(sign * .45, person.avatar.profile.height * .69, -.32);
     local.applyAxisAngle(UP, person.yaw);

@@ -8,7 +8,7 @@ import {
 } from '../src/world/NpcModelPool.js';
 import { Avatar } from '../src/avatar/Avatar.js';
 
-test('four named hotel NPCs have distinct ready-made VRoid outfits and palette', () => {
+test('four named hotel NPCs use soft shapes with distinct colours and retain VRoid assets', () => {
   assert.equal(validateNpcCast(), true);
   assert.equal(NPC_CAST.length, 4);
   assert.equal(new Set(NPC_CAST.map(c => c.asset)).size, 4);
@@ -20,7 +20,8 @@ test('four named hotel NPCs have distinct ready-made VRoid outfits and palette',
     const profile=npcProfile(spec);
     assert.equal(profile.outfit,'neon');
     assert.equal(profile.hair,'sample');
-    assert.equal(profile.baseModel,spec.baseModel);
+    assert.equal(profile.baseModel,'soft');
+    assert.equal(profile.bodyColor,spec.bodyColor);
     assert.equal(profile.shirtVisible,true);
     assert.equal(profile.pantsVisible,true);
     assert.equal(profile.shoesVisible,true);
