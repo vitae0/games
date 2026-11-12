@@ -24,23 +24,23 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
   softFemale: Object.freeze({
     height: 1.73, shoulders: .44, waist: .335, hips: .47,
     legRatio: .515, armRatio: .355, headScale: 1.10,
-    torsoDepth: .99, chestWidth: 1.10, chestDepth: 1.12,
-    chestFullness: 1.15, abdomenWidth: .91, abdomenDepth: 1.02,
-    abdomenFullness: 1, chestRatio: .585, neckSize: .91,
+    torsoDepth: .99, chestWidth: 1.10, chestDepth: 1.08,
+    chestFullness: 1.13, abdomenWidth: .91, abdomenDepth: 1.02,
+    abdomenFullness: 1, chestRatio: .62, neckSize: .91,
     upperArmSize: .89, forearmSize: .9, handSize: .9,
     upperArmRatio: .49, thighSize: 1.07, calfSize: .95,
     thighRatio: .55, legSpacing: 1, footSize: .89, footLength: .93,
     eyeSpacing: 1, eyeLength: 1,
-    upperChestWidth: .98, upperChestDepth: 1.0, upperChestFullness: 1.03,
-    hipSize: 1.08, gluteSize: 1.12, armSpread: .15,
-    clavicleDefinition: .49, trapeziusVolume: .96, neckBaseWidth: .95,
+    upperChestWidth: .88, upperChestDepth: .84, upperChestFullness: .88,
+    hipSize: 1.08, gluteSize: 1.06, armSpread: .15,
+    clavicleDefinition: .32, trapeziusVolume: .82, neckBaseWidth: .92,
   }),
 });
 
 /** Keep old CC0 VRoid models accessible; no asset removal/migration. */
 export const AVATAR_DEFAULTS = Object.freeze({
   ...SOFT_MODEL_PRESETS.softMale,
-  bodyColor: '#a9c4fb', profileVersion: 3,
+  bodyColor: '#a9c4fb', profileVersion: 4,
   baseModel: 'softMale', outfit: 'none', hair: 'sample', hairColor: 'original', visor: false,
   skinTone: 'warm', eyeColor: 'brown', underwear: 'none',
   shirtVisible: true, jacketVisible: true, pantsVisible: true, shoesVisible: true,
@@ -160,22 +160,34 @@ export function normalizeAvatar(input = {}) {
   return p;
 }
 
-/** Upgrade untouched v2 female defaults while retaining hand-edited settings.
- * Applied only when loading old localStorage profiles, never during slider edits.
+/** Upgrade female presets across v2/v3 -> v4 without touching custom sliders.
+ * Each generation upgrades only exact former defaults; edited values survive.
+ * Male and VRoid profiles are normalized unchanged.
  */
 export function migrateSoftProfile(input = {}) {
   if (!input || typeof input !== 'object') return normalizeAvatar();
-  if (input.profileVersion >= 3 || input.baseModel !== 'softFemale')
+  if (input.profileVersion >= 4 || input.baseModel !== 'softFemale')
     return normalizeAvatar(input);
-  const oldFemale = {
+
+  const v2Female = {
     height: 1.68, shoulders: .435, hips: .46,
     legRatio: .52, headScale: 1.12, torsoDepth: .97,
     chestWidth: .97, chestDepth: 1.03,
     chestFullness: 1.08, chestRatio: .52,
   };
+  const v3Female = {
+    height: 1.73, shoulders: .44, hips: .47,
+    legRatio: .515, headScale: 1.10, torsoDepth: .99,
+    chestWidth: 1.10, chestDepth: 1.12,
+    chestFullness: 1.15, chestRatio: .585,
+    upperChestWidth: .98, upperChestDepth: 1,
+    upperChestFullness: 1.03, gluteSize: 1.12,
+    clavicleDefinition: .49, trapeziusVolume: .96, neckBaseWidth: .95,
+  };
   const replacement = {};
-  for (const [key, value] of Object.entries(oldFemale)) {
-    if (Object.hasOwn(input, key) && input[key] === value)
+  for (const [key, current] of Object.entries(input)) {
+    const oldValue = input.profileVersion >= 3 ? v3Female[key] : v2Female[key];
+    if (oldValue !== undefined && current === oldValue)
       replacement[key] = SOFT_MODEL_PRESETS.softFemale[key];
   }
   return normalizeAvatar({ ...input, ...replacement });
