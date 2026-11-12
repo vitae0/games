@@ -265,7 +265,11 @@ export class Player {
         :resolveGround(this.position.x,this.position.z,oldBase,this.floor));
       let nextBase=candidate, nextFeet=feet;
       if(candidate>oldBase+.025){
-        if(Math.max(oldFeet,feet)+.025<candidate)nextBase=oldBase;
+        // Invisible stair ramps and tiny thresholds are walked, not jumped.
+        // The step allowance is deliberately lower than chairs/mattresses.
+        if(this.jumpOffset<.0001&&this.verticalSpeed<=0&&candidate-oldBase<=.20){
+          nextFeet=candidate;this.jumpOffset=0;this.verticalSpeed=0;
+        }else if(Math.max(oldFeet,feet)+.025<candidate)nextBase=oldBase;
         else if(this.verticalSpeed<=0&&feet<=candidate){
           nextFeet=candidate;this.jumpOffset=0;this.verticalSpeed=0;
         }else this.jumpOffset=Math.max(0,feet-candidate);
