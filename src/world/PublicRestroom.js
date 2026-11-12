@@ -140,7 +140,9 @@ export function buildPublicRestroom(hotel) {
 
   for (const [index, spec] of PUBLIC_WC.stalls.entries()) {
     const z = spec.z;
-    const groupId = 'public-wc:stall:' + spec.id;
+    // Door and toilet are distinct click targets; no shared action menu.
+    const doorGroup = 'public-wc:door:' + spec.id;
+    const toiletGroup = 'public-wc:toilet:' + spec.id;
     const doorX = PUBLIC_WC.stallDoorX;
     // Proper opaque entrance, door header and unobstructed 1.10 m opening.
     box('innerWall', doorX, 1.49, z - .79, .14, 2.97, .45, floor, true);
@@ -224,6 +226,7 @@ export function buildPublicRestroom(hotel) {
       }
     }
     const name = spec.accessible ? 'Erişilebilir kabin' : `Kabin ${spec.id}`;
+    const toiletName = 'Klozet ' + spec.id;
     action(doorX - .12, z, () => `${name} · Kapıyı ${open ? 'kapat' : 'aç'}`, () => {
       if (occupied || locked) {
         hotel.events.toast('Kabin kilitli');
@@ -231,15 +234,15 @@ export function buildPublicRestroom(hotel) {
       }
       setOpen(!open);
       hotel.events.toast(open ? name + ' açıldı' : name + ' kapatıldı');
-    }, { groupId, anchorX: doorX -.07, anchorZ: z, anchorY: 1.60 });
+    }, { groupId:doorGroup, anchorX: doorX -.07, anchorZ: z, anchorY: 1.60 });
     action(doorX + .09, z, () => `${name} · ${locked ? 'Kilidi aç' : 'Kilitle'}`, () => {
       if (occupied) { hotel.events.toast('Kabin kullanımda'); return; }
       if (open) { hotel.events.toast('Kilitlemek için kapıyı kapat'); return; }
       locked = !locked;
       updateStatus();
       hotel.events.toast(locked ? 'Kapı kilitlendi' : 'Kapı kilidi açıldı');
-    }, { groupId, anchorX: doorX -.07, anchorZ: z, anchorY: 1.60 });
-    action(doorX + .12, z, () => `${name} · Kullan`, player => {
+    }, { groupId:doorGroup, anchorX: doorX -.07, anchorZ: z, anchorY: 1.60 });
+    action(9.92, z, () => `${toiletName} · Kullan`, player => {
       if (!open || locked || occupied) {
         hotel.events.toast('Kullanmak için boş kabinin kapısını aç');
         return;
@@ -255,8 +258,9 @@ export function buildPublicRestroom(hotel) {
           setOpen(true); updateStatus(); setLid(false);
         },
       });
-    }, { groupId, anchorX: doorX -.07, anchorZ: z, anchorY: 1.60 });
-    action(doorX + .15, z, () => `${name} · Sifonu çek`, () => {
+    }, { groupId:toiletGroup, anchorX: 10.43, anchorZ: z, anchorY: .77,
+      available:()=>open || occupied });
+    action(9.94, z, () => `${toiletName} · Sifonu çek`, () => {
       if (!open && !occupied) {
         hotel.events.toast('Sifon için kabine gir');
         return;
@@ -265,14 +269,16 @@ export function buildPublicRestroom(hotel) {
       if (flushMotion) flushMotion.set(1);
       else ripple.visible = true;
       hotel.events.toast('Sifon çalışıyor');
-    }, { groupId, anchorX: doorX -.07, anchorZ: z, anchorY: 1.60 });
-    action(doorX + .17, z, () => `${name} · Kapağı ${lidRaised ? 'indir' : 'kaldır'}`, () => {
+    }, { groupId:toiletGroup, anchorX: 10.43, anchorZ: z, anchorY: .77,
+      available:()=>open || occupied });
+    action(9.96, z, () => `${toiletName} · Kapağı ${lidRaised ? 'indir' : 'kaldır'}`, () => {
       if (!open && !occupied) {
         hotel.events.toast('Kapağa ulaşmak için kabini aç');
         return;
       }
       setLid(!lidRaised);
-    }, { groupId, anchorX: doorX -.07, anchorZ: z, anchorY: 1.60 });
+    }, { groupId:toiletGroup, anchorX: 10.43, anchorZ: z, anchorY: .77,
+      available:()=>open || occupied });
     updateStatus();
   }
 
