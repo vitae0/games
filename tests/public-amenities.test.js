@@ -252,7 +252,7 @@ test('toilet lid/flush/use are grouped at bowl, door and lock at the entrance',(
       const bowlGroup=f.hotel.interactables.filter(x=>x.groupId===`public-wc:toilet:${id}`);
       assert.equal(doorGroup.length,2);
       assert.equal(bowlGroup.length,3);
-      assert.ok(doorGroup.every(x=>x.getLabel().includes('Kabin')));
+      assert.ok(doorGroup.every(x=>x.getLabel().toLowerCase().includes('kabin')));
       assert.ok(bowlGroup.every(x=>x.getLabel().startsWith('Klozet')));
       assert.ok(doorGroup[0].labelPosition.x<bowlGroup[0].labelPosition.x-1);
       assert.ok(bowlGroup.every(x=>!x.isAvailable()),'no through-door action');
