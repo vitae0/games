@@ -20,16 +20,22 @@ export class MirrorPool {
     const render = this.reflection.onBeforeRender;
     this.reflection.onBeforeRender = (...args) => {
       // Reflect the player in first person, too. Restore visibility afterwards.
-      const avatar = this.player?.avatar?.root;
+      const owner = this.player?.avatar;
+      const avatar = owner?.root;
       const previous = avatar?.visible;
-      const occluders = this.player?.avatar?.firstPersonOccluders || [];
+      const bodyVisible = owner?.body?.visible;
+      const occluders = owner?.firstPersonOccluders || [];
       const layerMasks = occluders.map(mesh => mesh.layers.mask);
       if (avatar) avatar.visible = true;
+      // The local FPS fallback limb rig must not overlap a complete imported
+      // character in a reflection. A real mirror shows the full external model.
+      if (owner?.external && owner.body) owner.body.visible = false;
       // Reflector's virtual camera renders layer 0: temporarily show the complete face.
       for (const mesh of occluders) mesh.layers.enable(0);
       try { render.call(this.reflection, ...args); }
       finally {
         occluders.forEach((mesh, index) => { mesh.layers.mask = layerMasks[index]; });
+        if (owner?.body && bodyVisible !== undefined) owner.body.visible = bodyVisible;
         if (avatar) avatar.visible = previous;
       }
     };
