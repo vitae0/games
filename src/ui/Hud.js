@@ -33,7 +33,6 @@ export class Hud {
     this.settings = $('#settings');
     this.startScreen = $('#start-screen');
     this.toastNode = $('#toast');
-    this.prompt = $('#interact-prompt');
     this.lastToastTimeout = 0;
     this.profile = normalizeAvatar(options.getProfile());
     this.touchMode = isTouchCapable(window);
@@ -317,9 +316,6 @@ export class Hud {
     this.lastToastTimeout = setTimeout(() => this.toastNode.classList.add('hidden'), 2700);
   }
   update(target, player, speed, fps) {
-    this.prompt.classList.toggle('hidden', !target || !player.active);
-    if (target && player.active) this.prompt.innerHTML = `<kbd>${this.touchMode ? 'KULLAN' : 'E'}</kbd><span></span>`;
-    if (target && player.active) this.prompt.querySelector('span').textContent = target.getLabel();
     $('#floor-status').textContent = `${player.floor + 47}. KAT`;
     const held = ['left', 'right'].filter(side => player.hands[side].grip);
     $('#hand-status').textContent = held.length ? `TUTUŞ: ${held.join(' + ').toUpperCase()}` : 'LMB / RMB · ELLER';
