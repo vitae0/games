@@ -128,7 +128,7 @@ export function furnitureDrawer(hotel, {
 /** Reusable compression tween for a movable rounded seat or mattress segment. */
 export function furnitureSeat(hotel, {
   x, y, z, width, height, depth, material = 'fabric', name = 'seat',
-  compression = .055,
+  compression = .055, swivel = 0,
 }) {
   const part = new THREE.Mesh(
     hotel.roundedBatch?.geometry ?? unitCube(hotel), hotel.materials[material],
@@ -141,12 +141,14 @@ export function furnitureSeat(hotel, {
   const motion = hotel.furnitureMotion?.create(t => {
     part.position.y = y - compression * t * .52;
     part.scale.y = height - compression * t;
+    part.rotation.y = swivel * t;
   }, 8);
   return { part, motion, setOccupied(occupied) {
     if (motion) motion.set(occupied ? 1 : 0);
     else {
       part.position.y = y - compression * (occupied ? .52 : 0);
       part.scale.y = height - compression * (occupied ? 1 : 0);
+      part.rotation.y = swivel * (occupied ? 1 : 0);
     }
   } };
 }
