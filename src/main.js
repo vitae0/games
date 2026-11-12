@@ -4,7 +4,7 @@ import { Hotel } from './world/Hotel.js';
 import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
 import { WorldActionLabels } from './ui/WorldActionLabels.js';
-import { normalizeAvatar, isSoftModel } from './avatar/AvatarConfig.js';
+import { normalizeAvatar, migrateSoftProfile, isSoftModel } from './avatar/AvatarConfig.js';
 import { loadBundledCharacterModel } from './avatar/ModelImporter.js';
 import { isTouchCapable } from './input/TouchMath.js';
 
@@ -56,7 +56,7 @@ window.addEventListener('orientationchange', resize);
 resize();
 
 function loadProfile() {
-  try { return normalizeAvatar(JSON.parse(localStorage.getItem(PROFILE_KEY) ?? '{}')); }
+  try { return migrateSoftProfile(JSON.parse(localStorage.getItem(PROFILE_KEY) ?? '{}')); }
   catch { return normalizeAvatar(); }
 }
 let hud;
