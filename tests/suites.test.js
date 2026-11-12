@@ -80,7 +80,7 @@ test('minibar and bath doors, shower and water each toggle their state',()=>{
     s.fake.animations.forEach(fn=>fn(1/60));
     bath.activate(); assert.ok([...s.doors.values()].every(Boolean));
     const tub=s.fake.interactables.find(o=>o.getLabel().startsWith('Küvet · Suyu'));
-    const water=s.fake.suiteMeshes.find(mesh=>mesh.material.isShaderMaterial);
+    const water=s.fake.suiteMeshes.find(mesh=>mesh.material?.isShaderMaterial);
     assert.ok(water && water.visible===false);
     tub.activate(); assert.ok(tub.getLabel().includes('boşalt'));
     assert.equal(water.visible,true);
