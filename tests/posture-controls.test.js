@@ -9,9 +9,11 @@ test('double Ctrl only counts two distinct presses and can repeat after reset', 
   p.release('ControlLeft');
   assert.equal(p.press('ControlLeft', 1200), 'floorSit');
   p.release('ControlLeft');
-  assert.equal(p.press('ControlLeft', 1400), null);
+  assert.equal(p.press('ControlLeft', 1400), 'floorLie');
   p.release('ControlLeft');
-  assert.equal(p.press('ControlLeft', 1600), 'floorSit');
+  assert.equal(p.press('ControlLeft', 1600), null);
+  p.release('ControlLeft');
+  assert.equal(p.press('ControlLeft', 1750), 'floorSit');
 });
 
 test('Ctrl + Space and Space then Ctrl both kneel without jumping', () => {
@@ -38,4 +40,29 @@ test('ordinary Space still jumps, Ctrl crouch toggles with keyup', () => {
   assert.equal(p.crouching, false);
   p.reset();
   assert.equal(p.crouching, false);
+});
+
+test('triple Ctrl within the same sequence reclines and starts a fresh sequence',()=>{
+  const p=new PostureControls();
+  assert.equal(p.press('ControlRight',1000),null);
+  p.release('ControlRight');
+  assert.equal(p.press('ControlRight',1150),'floorSit');
+  p.release('ControlRight');
+  assert.equal(p.press('ControlRight',1300),'floorLie');
+  p.release('ControlRight');
+  assert.equal(p.press('ControlRight',1450),null);
+  p.release('ControlRight');
+  assert.equal(p.press('ControlRight',1620),'floorSit');
+});
+
+test('held key repeats and Ctrl+Space cancel the triple-tap sequence',()=>{
+  const p=new PostureControls();
+  p.press('ControlLeft',1000); p.release('ControlLeft');
+  assert.equal(p.press('ControlLeft',1160),'floorSit');
+  assert.equal(p.press('ControlLeft',1190),null,'holding key cannot count third tap');
+  assert.equal(p.press('Space',1200),'kneel');
+  p.release('Space');p.release('ControlLeft');
+  assert.equal(p.press('ControlLeft',1250),null,'kneeling clears previous Ctrl history');
+  p.release('ControlLeft');
+  assert.equal(p.press('ControlLeft',1500),'floorSit');
 });
