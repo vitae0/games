@@ -29,7 +29,14 @@ test('floor poses bend joints rather than scaling the entire avatar', () => {
   const kneeling = poseFor('kneel', 0, 1.3);
   const crouched = poseFor('crouch', 0, 1.3);
   assert.ok(seated.drop > crouched.drop);
-  assert.notEqual(kneeling.hip[0], kneeling.hip[1]);
+  assert.equal(kneeling.hip[0], kneeling.hip[1], 'both knees rest symmetrically');
+  assert.equal(kneeling.knee[0], kneeling.knee[1]);
+  assert.ok(seated.drop > kneeling.drop, 'pelvis must rest lower when sitting on the floor');
+  assert.ok(seated.knee[0] > -0.4, 'floor-seated shins extend forward, not vertically');
+  assert.ok(kneeling.knee[0] < -1.5, 'both shins fold back behind ground-contact knees');
+  const lying=poseFor('floorLie',0,1.3);
+  assert.deepEqual(lying.hip,[.055,.055]);
+  assert.ok(lying.drop<.001);
   assert.ok(crouched.knee[0] < -.5);
 });
 
