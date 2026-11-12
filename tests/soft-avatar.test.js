@@ -588,3 +588,26 @@ test('hair rig is an empty reusable set of attachment transforms',async()=>{
     assert.ok(a.head.getObjectByName('hair-slot-crown'));
   } finally {a.dispose()}
 });
+
+test('both feet have inset soles and toe clearance to prevent z-fighting',()=>{
+  for(const baseModel of ['softMale','softFemale']){
+    const avatar=new Avatar(new THREE.Scene(),{baseModel});
+    try{
+      for(const leg of [avatar.leftLeg,avatar.rightLeg]){
+        const foot=leg.getObjectByName('hemisphere-foot');
+        const dome=foot.getObjectByName('hemisphere-dome');
+        const sole=foot.getObjectByName('flat-sole');
+        assert.ok(sole.position.y>.004,'sole must not share dome equator or floor plane');
+        assert.ok(sole.scale.x<dome.scale.x*.98,'sole edge stays inside the curved foot');
+        assert.ok(sole.scale.y<dome.scale.z*.98);
+        assert.ok(foot.position.y+(-leg.userData.knee.position.y)>0,
+          'foot rig is lifted slightly above geometric zero');
+        for(const name of ['medial-toes','central-toes','lateral-toes']){
+          const toe=foot.getObjectByName(name);
+          assert.ok(toe.position.y-toe.scale.y>.001,
+            'toe pads may not share flat-sole/floor coplanar faces');
+        }
+      }
+    }finally{avatar.dispose()}
+  }
+});
