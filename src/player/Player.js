@@ -197,14 +197,14 @@ export class Player {
       if (event.code === 'KeyZ') {
         this.releaseHands();
         this.postureControls.reset();
-        this.events.toast('Z+A/D bacak · Z+W+A/D kol · Z+S+A/D el · Ctrl bük');
+        this.events.toast('Z+W+A/D bacak · Z+S+A/D kol · Z+Q+A/D el · Ctrl bük');
         return;
       }
       if (this.keys.has('KeyZ')) {
         const precisionKeys = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ',
           'KeyE', 'KeyR', 'KeyF', 'Space', 'ControlLeft', 'ControlRight'];
         if (precisionKeys.includes(event.code)) {
-          const legSelection = !this.keys.has('KeyW') && !this.keys.has('KeyS');
+          const legSelection = !this.keys.has('KeyS') && !this.keys.has('KeyQ');
           if (event.code === 'Space' && legSelection && this.posture === 'stand') {
             if (this.keys.has('KeyA')) this.bodyIK.kick('left', this.viewDirection, this.bodyYaw);
             if (this.keys.has('KeyD')) this.bodyIK.kick('right', this.viewDirection, this.bodyYaw);
@@ -487,8 +487,9 @@ export class Player {
       this.posture === 'floorLie' ? this.lyingQuarterTurns*Math.PI/2 : 0,8,dt);
     // Rotating around the reclining body's longitudinal local Y axis rolls
     // 90° onto either side and 180° completely face-down.
-    this.avatar.root.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0,1,0),this.lyingRoll));
+    if (Math.abs(this.lyingRoll)>1e-7)
+      this.avatar.root.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0,1,0),this.lyingRoll));
     this.avatar.root.position.y += .19 * this.floorLieLean;
     this.avatar.update(dt, this.walkSpeed,
       this.posture === 'stand' && crouching ? 'crouch' : this.posture,
