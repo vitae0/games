@@ -14,6 +14,7 @@ import { createBathAssets } from './BathAssets.js';
 import { MirrorPool } from './MirrorPool.js';
 import { RoomLighting } from './RoomLighting.js';
 import { buildBar, buildPublicRestrooms } from './PublicAmenities.js';
+import { FurnitureMotion } from './FurnitureMotion.js';
 
 const HALF = HOTEL.corridorHalfWidth;
 const Y = (floor) => floor * HOTEL.floorHeight;
@@ -25,6 +26,7 @@ export class Hotel {
     this.collisions = new CollisionWorld();
     this.interactables = [];
     this.animations = [];
+    this.furnitureMotion = new FurnitureMotion();
     this.dynamic = [];
     this.materials = this.createMaterials();
     this.media = makeSuiteMedia();
@@ -467,10 +469,13 @@ export class Hotel {
     this.bathAssets.waterMaterial.uniforms.uTime.value =
       (this.bathAssets.waterMaterial.uniforms.uTime.value + Math.max(0,dt)) % 4096;
     for (const fn of this.animations) fn(dt);
+    this.furnitureMotion.update(dt);
     this.physics.step(dt);
     this.actors.update(dt, player);
   }
   dispose() {
+    this.furnitureMotion.dispose();
+    this._furnitureUnitCube?.dispose();
     this.batch.dispose();
     this.roundedBatch.dispose();
     this.bathAssets.dispose();
