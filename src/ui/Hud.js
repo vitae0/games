@@ -249,7 +249,10 @@ export class Hud {
     const selectField = (section, key, label) => {
       const wrap = wrapField(section, key, label);
       const select = document.createElement('select');
-      select.id = 'avatar-' + key;
+      // Soft and VRM wardrobes share keys, not duplicate DOM IDs.
+      const legacySuffix = section.classList.contains('legacy-avatar-field') ? '-legacy' : '';
+      select.id = 'avatar-' + key + legacySuffix;
+      wrap.querySelector('label').htmlFor = select.id;
       for (const [value, name] of FIELDS[key]) {
         const option = document.createElement('option');
         option.value = value;
@@ -475,8 +478,10 @@ export class Hud {
 
   syncAvatarControls() {
     for (const key of CHARACTER_CONTROL_IDS) {
-      const input = $('#avatar-' + key);
-      if (input) input.value = String(this.profile[key]);
+      for (const input of document.querySelectorAll(
+        '#avatar-' + key + ', #avatar-' + key + '-legacy')) {
+        input.value = String(this.profile[key]);
+      }
     }
     for (const [key, , unit, step] of SOFT_AVATAR_FIELDS) {
       const input = $('#avatar-' + key);
@@ -560,6 +565,8 @@ export class Hud {
         'shirtVisible','jacketVisible','pantsVisible','shoesVisible']
       : [...(this.studioFieldsByTab[this.studioTab] || [])];
     if (this.studioTab === 'face') keys.push('headShape','faceExpression');
+    if (this.studioTab === 'style' && isSoftModel(this.profile.baseModel))
+      keys.push('outfit','shirtVisible','jacketVisible','pantsVisible','shoesVisible');
     if (!keys.length) return;
     const preset = SOFT_MODEL_PRESETS[this.profile.baseModel] || AVATAR_DEFAULTS;
     const updates = {};
