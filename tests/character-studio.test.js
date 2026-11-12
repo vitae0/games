@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { studioFrameBounds, STUDIO_VIEWS } from '../src/ui/CharacterStage.js';
+import { CharacterStage, studioFrameBounds, STUDIO_VIEWS, STUDIO_INITIAL_VIEW } from '../src/ui/CharacterStage.js';
 import { STUDIO_TABS, CHARACTER_CONTROL_IDS } from '../src/ui/Hud.js';
 import { SOFT_AVATAR_FIELDS, AVATAR_RANGES } from '../src/avatar/AvatarConfig.js';
 
@@ -54,4 +54,26 @@ test('scissored viewport clips to mobile browser canvas bounds', () => {
     canvas, 390, 840,
   );
   assert.equal(hidden.width,0);
+});
+
+test('studio opens in three-quarter view while Front stays straight ahead', () => {
+  assert.equal(STUDIO_INITIAL_VIEW.yaw, -.55);
+  assert.equal(STUDIO_INITIAL_VIEW.pitch, -.16);
+  assert.equal(STUDIO_VIEWS.front.yaw, 0);
+  assert.equal(STUDIO_VIEWS.front.pitch, 0);
+  const stage = {
+    active: false, targetYaw: 2, yaw: 2, pitch: .4,
+    focusRatio: 0, targetDistance: 5, distance: 5,
+    onZoom() {}, setProfile(profile) { this.currentProfile = profile; },
+  };
+  CharacterStage.prototype.open.call(stage, { baseModel: 'softFemale' });
+  assert.equal(stage.active, true);
+  assert.equal(stage.targetYaw, STUDIO_INITIAL_VIEW.yaw);
+  assert.equal(stage.yaw, STUDIO_INITIAL_VIEW.yaw);
+  assert.equal(stage.pitch, STUDIO_INITIAL_VIEW.pitch);
+  assert.equal(stage.targetDistance, STUDIO_INITIAL_VIEW.distance);
+  assert.equal(stage.currentProfile.baseModel, 'softFemale');
+  CharacterStage.prototype.setView.call(stage, 'front');
+  assert.ok(Math.abs(stage.targetYaw) < 1e-9);
+  assert.equal(stage.pitch, 0);
 });
