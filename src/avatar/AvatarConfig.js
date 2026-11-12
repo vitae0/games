@@ -17,6 +17,8 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     upperArmRatio: .49, thighSize: 1.05, calfSize: 1,
     thighRatio: .53, legSpacing: 1, footSize: .96, footLength: 1,
     eyeSpacing: 1, eyeLength: 1,
+    headAspect: 1.035, cheekFullness: 1, abdomenDefinition: 1,
+    gluteProjection: 1, legContour: 1,
     upperChestWidth: 1.04, upperChestDepth: 1.0, upperChestFullness: 1.0,
     hipSize: 1.0, gluteSize: .96, armSpread: .11,
     clavicleDefinition: .66, trapeziusVolume: 1.08, neckBaseWidth: 1,
@@ -31,6 +33,8 @@ export const SOFT_MODEL_PRESETS = Object.freeze({
     upperArmRatio: .49, thighSize: 1.07, calfSize: .95,
     thighRatio: .55, legSpacing: 1, footSize: .89, footLength: .93,
     eyeSpacing: 1, eyeLength: 1,
+    headAspect: 1.035, cheekFullness: 1, abdomenDefinition: 1,
+    gluteProjection: 1, legContour: 1,
     upperChestWidth: .88, upperChestDepth: .84, upperChestFullness: .88,
     hipSize: 1.08, gluteSize: 1.06, armSpread: .15,
     clavicleDefinition: .32, trapeziusVolume: .82, neckBaseWidth: .92,
@@ -51,6 +55,7 @@ export const SOFT_STRUCTURAL_PROFILES = Object.freeze({
     thighOuterFlare: .004, thighInnerFlare: .002,
     thighRearPad: .004, calfRearPad: .013,
     armContour: .045, palmDepth: 1.04,
+    jawBias: -.012, cheekBias: .002,
   }),
   softFemale: Object.freeze({
     chestType: 'paired-soft-tissue', bustEmphasis: 1.48, pectoralPad: .002,
@@ -59,13 +64,15 @@ export const SOFT_STRUCTURAL_PROFILES = Object.freeze({
     thighOuterFlare: .014, thighInnerFlare: .007,
     thighRearPad: .008, calfRearPad: .008,
     armContour: -.025, palmDepth: .96,
+    jawBias: -.024, cheekBias: .012,
   }),
 });
 
 /** Keep old CC0 VRoid models accessible; no asset removal/migration. */
 export const AVATAR_DEFAULTS = Object.freeze({
   ...SOFT_MODEL_PRESETS.softMale,
-  bodyColor: '#a9c4fb', profileVersion: 4,
+  bodyColor: '#a9c4fb', profileVersion: 5,
+  headShape: 'soft', faceExpression: 'neutral',
   baseModel: 'softMale', outfit: 'none', hair: 'sample', hairColor: 'original', visor: false,
   skinTone: 'warm', eyeColor: 'brown', underwear: 'none',
   shirtVisible: true, jacketVisible: true, pantsVisible: true, shoesVisible: true,
@@ -74,20 +81,23 @@ export const AVATAR_DEFAULTS = Object.freeze({
 export const AVATAR_RANGES = Object.freeze({
   height: [1.45, 2.08], shoulders: [.32, .67], waist: [.25, .56],
   hips: [.30, .64], legRatio: [.42, .56], armRatio: [.30, .42],
-  headScale: [.82, 1.30], torsoDepth: [.70, 1.45],
+  headScale: [.82, 1.30], headAspect: [.90, 1.13],
+  cheekFullness: [.70, 1.45], torsoDepth: [.70, 1.45],
   chestWidth: [.72, 1.43], chestDepth: [.70, 1.44],
   chestFullness: [.70, 1.4], backFullness: [.70, 1.45], abdomenWidth: [.67, 1.45],
   abdomenDepth: [.70, 1.5], abdomenFullness: [.72, 1.45],
+  abdomenDefinition: [.6, 1.4],
   chestRatio: [.40, .68], neckSize: [.72, 1.4],
   upperChestWidth: [.70, 1.45], upperChestDepth: [.70, 1.45],
   upperChestFullness: [.75, 1.45], hipSize: [.70, 1.50],
-  gluteSize: [.65, 1.65], armSpread: [0, .34],
+  gluteSize: [.65, 1.65], gluteProjection: [.65, 1.5], armSpread: [0, .34],
   clavicleDefinition: [0, 1.5], trapeziusVolume: [.55, 1.6],
   neckBaseWidth: [.70, 1.45],
   upperArmSize: [.65, 1.55], forearmSize: [.65, 1.55],
   handSize: [.70, 1.50], upperArmRatio: [.40, .60],
   thighSize: [.65, 1.55], calfSize: [.65, 1.55],
   thighRatio: [.44, .63], legSpacing: [.75, 1.30],
+  legContour: [.65, 1.45],
   footSize: [.55, 1.45], footLength: [.68, 1.55],
   eyeSpacing: [.70, 1.40], eyeLength: [.65, 1.45],
 });
@@ -95,6 +105,8 @@ export const AVATAR_RANGES = Object.freeze({
 export const SOFT_AVATAR_FIELDS = Object.freeze([
   ['height', 'Boy', 'm', .01],
   ['headScale', 'Kafa büyüklüğü', '×', .01],
+  ['headAspect', 'Kafa dikey oranı', '×', .01],
+  ['cheekFullness', 'Yanak / çene yumuşaklığı', '×', .01],
   ['eyeSpacing', 'Göz aralığı', '×', .01],
   ['eyeLength', 'Göz çizgisi uzunluğu', '×', .01],
   ['shoulders', 'Omuzlar arası genişlik', 'm', .01],
@@ -117,6 +129,7 @@ export const SOFT_AVATAR_FIELDS = Object.freeze([
   ['abdomenWidth', 'Karın genişliği', '×', .01],
   ['abdomenDepth', 'Karın derinliği', '×', .01],
   ['abdomenFullness', 'Karın dolgunluğu', '×', .01],
+  ['abdomenDefinition', 'Dört bölge form yoğunluğu', '×', .01],
   ['neckSize', 'Boyun kalınlığı', '×', .01],
   ['armRatio', 'Kol uzunluğu', '', .005],
   ['armSpread', 'Kolların yana açıklığı', 'rad', .01],
@@ -127,10 +140,12 @@ export const SOFT_AVATAR_FIELDS = Object.freeze([
   ['legRatio', 'Bacak uzunluğu', '', .005],
   ['hipSize', 'Kalça yan genişliği (hip)', '×', .01],
   ['gluteSize', 'Kalça arkası dolgunluğu (glute)', '×', .01],
+  ['gluteProjection', 'Kalça arka projeksiyonu', '×', .01],
   ['legSpacing', 'Bacak aralığı', '×', .01],
   ['thighRatio', 'Uyluk / bacak oranı', '', .005],
   ['thighSize', 'Uyluk kalınlığı', '×', .01],
   ['calfSize', 'Baldır kalınlığı', '×', .01],
+  ['legContour', 'Bacak yumuşak geçişi', '×', .01],
   ['footSize', 'Ayak büyüklüğü', '×', .01],
   ['footLength', 'Ayak uzunluğu', '×', .01],
 ]);
@@ -174,6 +189,9 @@ export function normalizeAvatar(input = {}) {
   if (['softMale', 'softFemale', 'vroidMale', 'vroidFemale'].includes(incomingModel))
     p.baseModel = incomingModel;
   if (['none', 'neon'].includes(input.outfit)) p.outfit = input.outfit;
+  if (['sphere','soft','classic'].includes(input.headShape)) p.headShape = input.headShape;
+  if (['neutral','happy','sad','surprised'].includes(input.faceExpression))
+    p.faceExpression = input.faceExpression;
   if (['none', 'original'].includes(input.underwear)) p.underwear = input.underwear;
   for (const key of ['shirtVisible', 'jacketVisible', 'pantsVisible', 'shoesVisible']) {
     if (typeof input[key] === 'boolean') p[key] = input[key];

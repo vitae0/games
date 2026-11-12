@@ -113,6 +113,7 @@ export class Player {
     this.releaseHand(side);
     const hand = this.hands[side];
     hand.pressed = true;
+    this.avatar?.setHandDetail(true,side);
     const result = this.hotel.tryGrab(side, this.eyePosition(), this.viewDirection, this.floor);
     if (result) {
       hand.grip = result;
@@ -123,6 +124,7 @@ export class Player {
   releaseHand(side) {
     const hand = this.hands[side];
     hand.pressed = false; hand.grip = null;
+    this.avatar?.setHandDetail(false,side);
     this.hotel.releaseGrip(side);
   }
   releaseHands() { this.releaseHand('left'); this.releaseHand('right'); }

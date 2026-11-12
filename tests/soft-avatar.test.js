@@ -23,7 +23,7 @@ test('both soft models have exact spherical heads, two line eyes, and no hair', 
       const marks = avatar.head.children.filter(child => child.name.endsWith('-eye-line'));
       assert.deepEqual(marks.map(mark => mark.name).sort(), ['left-eye-line','right-eye-line']);
       assert.ok(marks.every(mark => mark.scale.y > mark.scale.x));
-      assert.equal(avatar.head.children.length, 4, 'head, two eyes and an empty hair attachment group');
+      assert.equal(avatar.head.children.length, 7, 'head, eyes, three lightweight mouth expressions and empty hair mounts');
       assert.equal(avatar.head.userData.hairMounts.name,'hair-root');
       assert.ok(avatar.head.userData.hairMounts.children.length>=7);
     } finally {
@@ -293,7 +293,7 @@ test('saved v2 female profiles receive new baseline without erasing user edits',
   assert.equal(migrated.forearmSize, 1.32);
   assert.equal(migrated.abdomenFullness, 1.20);
   assert.equal(migrated.bodyColor, '#44aacc');
-  assert.equal(migrated.profileVersion, 4);
+  assert.equal(migrated.profileVersion, 5);
   const edited = migrateSoftProfile({ ...old, height: 1.65, chestDepth: 1.25 });
   assert.equal(edited.height, 1.65);
   assert.equal(edited.chestDepth, 1.25);
@@ -470,7 +470,7 @@ test('v3 saved female defaults upgrade to v4 without overwriting user edits', ()
     abdomenFullness:1.23, bodyColor:'#4488cc',
   };
   const newer = migrateSoftProfile(v3);
-  assert.equal(newer.profileVersion, 4);
+  assert.equal(newer.profileVersion, 5);
   assert.equal(newer.chestDepth, 1.08);
   assert.equal(newer.chestRatio, .62);
   assert.equal(newer.upperChestWidth, .88);
@@ -549,8 +549,8 @@ test('anatomical chest and abdominal regions form real open-ended visible meshes
         }
       }
       const cranium=avatar.head.userData.headMesh.geometry;
-      assert.equal(cranium.parameters.widthSegments,14);
-      assert.equal(cranium.parameters.heightSegments,9);
+      assert.equal(cranium.parameters.widthSegments,20);
+      assert.equal(cranium.parameters.heightSegments,14);
       assert.equal(avatar.head.userData.hairMounts.children.every(g=>g.children.length===0),true);
     } finally {avatar.dispose();}
   }

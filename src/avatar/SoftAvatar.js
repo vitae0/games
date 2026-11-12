@@ -56,6 +56,11 @@ export function softLoftGeometry(stations, sides = 16, exponent = 2.4, caps = { 
         Math.max(0, 1 - Math.abs(u) * .9);
       const lowerAbdomen = (ring.lowerAbdomenPad ?? 0) * front *
         Math.max(0, 1 - Math.abs(u) * .65);
+      // Anatomical four-quadrant abdomen: two broad, subtle paired
+      // regions at lower and upper heights, NEVER four attached spheres.
+      const quadrant = (ring.abdominalFour ?? 0) * front * (
+        Math.exp(-Math.pow((u - .34) / .31, 2)) +
+        Math.exp(-Math.pow((u + .34) / .31, 2)));
       const legSign = ring.outerSign ?? 0;
       const outside = Math.max(0, u * legSign);
       const inside = Math.max(0, -u * legSign);
@@ -66,7 +71,8 @@ export function softLoftGeometry(stations, sides = 16, exponent = 2.4, caps = { 
       const z = (ring.z || 0)
         + ring.rz * v * (v >= 0 ? (ring.backScale ?? 1) : (ring.frontScale ?? 1))
         - ridge * .32 - bust - pectoralPad + sternumInset +
-        scapulaPad - lumbarHollow - lowerAbdomen + (ring.rearPad ?? 0) * rear;
+        scapulaPad - lumbarHollow - lowerAbdomen - quadrant +
+        (ring.rearPad ?? 0) * rear;
       vertices.push(x, y, z);
     }
   }
@@ -162,6 +168,18 @@ export function buildSoftAvatar(avatar, p) {
   const luminance = contrast.r * .2126 + contrast.g * .7152 + contrast.b * .0722;
   const eye = avatar.mat(luminance < .20 ? 0xf5f5ff : 0x171a27, .95);
   avatar.material = { skin: material, eye };
+  const dressed = p.outfit !== 'none';
+  const fabric = dressed ? {
+    shirt: avatar.mat(0xdce3e7, .97), jacket: avatar.mat(0x778b9f, .88),
+    pants: avatar.mat(0x4a566a, .94), shoes: avatar.mat(0xbec9d3, .8),
+  } : null;
+  const garmentRings = (rings, clearance, smoothBust = .86) => rings.map(r => ({
+    ...r, rx: r.rx + clearance, rz: r.rz + clearance,
+    bustBulge: (r.bustBulge ?? 0) * smoothBust,
+    pectoralPad: (r.pectoralPad ?? 0) * .78,
+    abdominalFour: (r.abdominalFour ?? 0) * .25,
+    lowerAbdomenPad: (r.lowerAbdomenPad ?? 0) * .9,
+  }));
   const add = (parent, geometry, mat = material, name = '') => {
     avatar.geometry.push(geometry);
     const mesh = new THREE.Mesh(geometry, mat);
@@ -211,7 +229,8 @@ export function buildSoftAvatar(avatar, p) {
   const joinRx = p.waist * .49 * p.abdomenWidth;
   const joinRz = depth * .90 * p.abdomenDepth;
   const join = station(splitY, joinRx, joinRz, .002);
-  const torsoExponent = female ? 2.83 : 3.03;
+  // Near-elliptical rounded body contours, not the boxy old superellipses.
+  const torsoExponent = female ? 2.29 : 2.36;
   // A small topology increase keeps the silhouette smooth in close-up.
   const S = 24;
   const hipRadius = p.hips * p.hipSize;
@@ -238,6 +257,13 @@ export function buildSoftAvatar(avatar, p) {
   abdomen[2].lumbarHollow = anatomy.lumbarHollow * anatomicalUnit;
   abdomen[2].lowerAbdomenPad = anatomy.lowerAbdomenPad * anatomicalUnit;
   abdomen[3].lumbarHollow = anatomy.lumbarHollow * .65 * anatomicalUnit;
+  const fourStrength = .006 * p.abdomenDefinition * anatomicalUnit;
+  abdomen[1].abdominalFour = fourStrength * .58;
+  abdomen[2].abdominalFour = fourStrength * 1.00;
+  abdomen[3].abdominalFour = fourStrength * .64;
+  root.userData.abdomenRegions = Object.freeze([
+    'upper-left','upper-right','lower-left','lower-right',
+  ]);
   const abdomenMesh = add(root,
     softLoftGeometry(abdomen, S, torsoExponent, { bottom: true, top: false }),
     material, 'soft-abdomen');
@@ -330,6 +356,10 @@ export function buildSoftAvatar(avatar, p) {
     ring.pectoralPad = anatomy.pectoralPad * anatomicalUnit * fade;
     ring.sternumInset = anatomy.sternumInset * anatomicalUnit * fade;
   }
+  root.userData.surfaceMasks = Object.freeze({
+    anteriorChest: 'paired-or-pectoral', posteriorBack: 'scapular-and-lumbar',
+    abdominalWall: 'four-smooth-quadrants',
+  });
   const chestMesh = add(root,
     softLoftGeometry(chest, S, torsoExponent, { bottom: false, top: false }),
     material, 'soft-chest');
@@ -416,23 +446,50 @@ export function buildSoftAvatar(avatar, p) {
     {bottom:false,top:true}), material, 'clavicular-transition');
   stitchLoftSeam(thoracicParts.at(-1).geometry, collarSurface.geometry);
 
+  if (fabric) {
+    // Both fabric shells are generated from the SAME anatomical lofts.
+    // Clearance accounts for morphs; fabric smooths muscle micro-contours.
+    const fullRings = [...abdomen.slice(0,-1), ...chest, ...clavicular.slice(1,4)];
+    const shirt = add(root, softLoftGeometry(garmentRings(fullRings,.013,.89),
+      S, torsoExponent, {bottom:false,top:false}), fabric.shirt, 'soft-shirt');
+    avatar.layerMeshes.shirt.push(shirt);
+    const coatRings = [...abdomen.slice(2,-1), ...chest, ...clavicular.slice(1,4)];
+    const coat = add(root, softLoftGeometry(garmentRings(coatRings,.026,.79),
+      S, torsoExponent, {bottom:false,top:false}), fabric.jacket, 'soft-jacket');
+    avatar.layerMeshes.jacket.push(coat);
+  }
+
   // A lightly faceted, almost spherical cranium, subtly tapered near the jaw.
   // Hair mounts remain empty until real hairstyle assets are supplied.
   const head = avatar.head = new THREE.Group();
   head.name = 'soft-head';
   head.position.y = headCenterY;
   root.add(head);
-  const cranium = new THREE.SphereGeometry(1, 14, 9);
+  const shape = p.headShape;
+  // The unmodified sphere remains a real option. Soft has gentle cheek/jaw
+  // taper; Classic uses a mild rounded-cuboid superellipse, never a square.
+  // All three modes share the same root, eyes, clothing and hair mounts.
+  const headPoint = (x,y,z) => {
+    if (shape === 'sphere') return new THREE.Vector3(x,y,z);
+    const pow = shape === 'classic' ? .89 : 1;
+    const rounded = n => Math.sign(n)*Math.pow(Math.abs(n),pow);
+    const jaw = Math.max(0,-y);
+    const cheek = Math.exp(-Math.pow((y + .13) / .40, 2));
+    const jawTaper = 1 + anatomy.jawBias * jaw - .043*jaw;
+    const cheekPad = (.023 + anatomy.cheekBias + (p.cheekFullness-1)*.042)*cheek;
+    return new THREE.Vector3(
+      rounded(x)*(jawTaper+cheekPad),
+      rounded(y)*p.headAspect,
+      rounded(z)*(1-.045*jaw+.012*cheek)
+    );
+  };
+  const cranium = new THREE.SphereGeometry(1, 20, 14);
   const headPositions = cranium.getAttribute('position');
   for (let i = 0; i < headPositions.count; i++) {
-    const x = headPositions.getX(i), y = headPositions.getY(i), z = headPositions.getZ(i);
-    const jaw = Math.max(0, -y);
-    const cheek = Math.exp(-Math.pow((y + .12) / .42, 2));
-    headPositions.setXYZ(i,
-      x * (1 - .095 * jaw + .026 * cheek),
-      y * .973,
-      z * (1 - .072 * jaw + .018 * cheek));
+    const q = headPoint(headPositions.getX(i),headPositions.getY(i),headPositions.getZ(i));
+    headPositions.setXYZ(i,q.x,q.y,q.z);
   }
+  headPositions.needsUpdate = true;
   cranium.computeVertexNormals();
   avatar.geometry.push(cranium);
   const headMesh = ball(head, cranium, 0, 0, 0,
@@ -445,13 +502,49 @@ export function buildSoftAvatar(avatar, p) {
     const x = sign * headRadius * .37 * p.eyeSpacing;
     const y = headRadius * .055;
     const halfHeight = headRadius * .235 * p.eyeLength;
-    const z = -Math.sqrt(headRadius ** 2 - x ** 2 - (y + halfHeight) ** 2) - .006;
+    const q = headPoint(x/headRadius,y/headRadius,
+      -Math.sqrt(Math.max(.05, 1-(x/headRadius)**2-((y+halfHeight)/headRadius)**2)));
+    const z = q.z * headRadius - .007;
     const mark = new THREE.Mesh(eyeGeometry, eye);
     mark.name = sign < 0 ? 'left-eye-line' : 'right-eye-line';
-    mark.position.set(x, y, z);
+    mark.position.set(q.x * headRadius, q.y * headRadius, z);
     mark.scale.set(headRadius * .07, halfHeight * 2, headRadius * .032);
     head.add(mark);
+    avatar.eyeParts.push([{mesh:mark,y:mark.scale.y}]);
   }
+  // Low-cost optional line expressions, invisible for the signature neutral
+  // two-line face. Mouth curves follow the same head morph.
+  head.userData.mouths = {};
+  const mouthPoint = (x,y) => {
+    const z=-Math.sqrt(Math.max(.10,1-x*x-y*y));
+    const q=headPoint(x,y,z);
+    return new THREE.Vector3(q.x*headRadius,q.y*headRadius,
+      q.z*headRadius-.0045);
+  };
+  for(const expression of ['happy','sad','surprised']) {
+    const points=[];
+    const count=12;
+    for(let i=0;i<=count;i++){
+      const t=i/count;
+      if(expression==='surprised'){
+        const angle=t*Math.PI*2;
+        points.push(mouthPoint(.026*Math.cos(angle),
+          -.36+.038*Math.sin(angle)));
+      } else {
+        const x=(t-.5)*.19;
+        const ends=Math.pow(Math.abs(t-.5)*2,2);
+        const y=-.355+(expression==='happy'?.036:-.026)*ends;
+        points.push(mouthPoint(x,y));
+      }
+    }
+    const path=new THREE.CatmullRomCurve3(points,expression==='surprised');
+    const geometry=new THREE.TubeGeometry(path,16,headRadius*.008,4,
+      expression==='surprised');
+    const mouth=add(head,geometry,eye,'mouth-'+expression);
+    mouth.visible=p.faceExpression===expression;
+    head.userData.mouths[expression]=mouth;
+  }
+  head.userData.faceExpression=p.faceExpression;
 
   // Both arms use real parent-child joints so the old pose system remains valid.
   function arm(sign) {
@@ -484,8 +577,10 @@ export function buildSoftAvatar(avatar, p) {
     const handRadius = .064 * p.handSize;
     ball(hand, sphere, 0, -.027, 0,
       handRadius * .89, handRadius * .76, handRadius * .48 * anatomy.palmDepth, 'palm');
-    // Five recognisable digits. Two stylised phalanges per finger, attached
-    // under named groups to support later grasp/finger animations.
+    // Four fingers read as one resting silhouette. The original four named
+    // finger chains remain in the rig for picking up objects and precise IK.
+    const relaxedFingers = ball(hand, sphere, 0, -handRadius*.83, -handRadius*.10,
+      handRadius*.72, handRadius*.47, handRadius*.33, 'relaxed-finger-group');
     const digits = ['index', 'middle', 'ring', 'little'];
     hand.userData.fingers = [];
     digits.forEach((name, i) => {
@@ -499,8 +594,14 @@ export function buildSoftAvatar(avatar, p) {
         handRadius * .126, length * .44, handRadius * .13, 'proximal-phalanx');
       ball(finger, sphere, 0, -length * .94, -.003,
         handRadius * .112, length * .29, handRadius * .12, 'distal-phalanx');
+      finger.visible = false;
       hand.userData.fingers.push(finger);
     });
+    hand.userData.relaxedFingers = relaxedFingers;
+    hand.userData.setGripDetail = active => {
+      relaxedFingers.visible = !active;
+      for (const finger of hand.userData.fingers.slice(0,4)) finger.visible = !!active;
+    };
     const thumb = new THREE.Group();
     thumb.name = 'thumb';
     thumb.position.set(-handRadius * .77, -handRadius * .30, -handRadius * .20);
@@ -559,15 +660,25 @@ export function buildSoftAvatar(avatar, p) {
       thigh[i].innerFlare = anatomy.thighInnerFlare * anatomicalUnit * weight;
       thigh[i].rearPad = anatomy.thighRearPad * anatomicalUnit * weight;
     }
-    add(upper, softLoftGeometry(thigh, 20, 2.3), material, 'thigh');
+    for (const [i, weight] of [[3,.25],[4,.5],[5,.84],[6,1],[7,.7]]) {
+      thigh[i].rx *= 1 + (p.legContour - 1) * .17 * weight;
+      thigh[i].rz *= 1 + (p.legContour - 1) * .1 * weight;
+    }
+    const thighMesh = add(upper, softLoftGeometry(thigh, 20, 2.22), material, 'thigh');
+    if (fabric) {
+      const pant = add(upper, softLoftGeometry(garmentRings(thigh,.012,.80),
+        20, 2.22), fabric.pants, 'soft-pants-thigh');
+      avatar.layerMeshes.pants.push(pant);
+    }
 
     const knee = new THREE.Bone();
     knee.rotation.order = 'YXZ'; // calf yaw follows the actual bent knee
     knee.name = sign < 0 ? 'leftLowerLeg' : 'rightLowerLeg';
     knee.position.y = -thighLength;
     upper.add(knee);
-    ball(knee, sphere, 0, 0, 0, jointRadius * 1.065,
-      jointRadius * 1.065, jointRadius * 1.065, 'knee');
+    // Tucked joint bridge; the previous oversized ball read as a hinge.
+    ball(knee, sphere, 0, 0, 0, jointRadius * .975,
+      jointRadius * .985, jointRadius * .975, 'knee');
     const calf = [
       station(-calfLength, calfRadius * .69, calfRadius * .65),
       station(-calfLength * .94, calfRadius * .77, calfRadius * .73),
@@ -581,12 +692,35 @@ export function buildSoftAvatar(avatar, p) {
     for (const [i, weight] of [[2,.30],[3,.85],[4,1],[5,.50]]) {
       calf[i].rearPad = anatomy.calfRearPad * anatomicalUnit * weight;
     }
-    add(knee, softLoftGeometry(calf, 20, 2.25), material, 'calf');
+    for (const [i, weight] of [[1,.15],[2,.48],[3,1],[4,.95],[5,.4]]) {
+      calf[i].rz *= 1 + (p.legContour - 1) * .12 * weight;
+      calf[i].rx *= 1 + (p.legContour - 1) * .09 * weight;
+    }
+    add(knee, softLoftGeometry(calf, 20, 2.18), material, 'calf');
+    if (fabric) {
+      const pant = add(knee, softLoftGeometry(garmentRings(calf,.012,.80),
+        20, 2.18), fabric.pants, 'soft-pants-calf');
+      avatar.layerMeshes.pants.push(pant);
+      const kneeCloth = ball(knee,sphere,0,0,0,jointRadius*1.11,
+        jointRadius*1.11,jointRadius*1.11,'soft-pants-knee');
+      kneeCloth.material = fabric.pants;
+      avatar.layerMeshes.pants.push(kneeCloth);
+    }
     const foot = new THREE.Group();
     foot.name = 'hemisphere-foot';
     foot.position.set(0, -calfLength + .008, -.036);
     knee.add(foot);
     const footGeometry = new THREE.SphereGeometry(1, 18, 9, 0, 2 * Math.PI, 0, Math.PI / 2);
+    // Single organic footprint: narrower rear heel, shallow rounded forefoot.
+    const fp = footGeometry.getAttribute('position');
+    for (let i=0;i<fp.count;i++) {
+      const x=fp.getX(i), y=fp.getY(i), z=fp.getZ(i);
+      const fore=Math.max(0,-z), heel=Math.max(0,z);
+      fp.setXYZ(i, x*(1-heel*.24+fore*.08),
+        y*(1-fore*.24+heel*.05), z);
+    }
+    fp.needsUpdate=true;
+    footGeometry.computeVertexNormals();
     const footDisc = new THREE.CircleGeometry(1, 18);
     // The original hemispheres were oversized. Their default footprint is
     // roughly 25-30% smaller; footLength only stretches the forward axis.
@@ -605,16 +739,25 @@ export function buildSoftAvatar(avatar, p) {
     sole.position.z = -.018;
     // Heel / midfoot / three broad toe pads preserve the simple cartoony
     // silhouette but make the foot read as an articulated anatomical unit.
-    ball(foot, sphere, 0, .036, radiusZ * .37,
+    const heelPad = ball(foot, sphere, 0, .036, radiusZ * .37,
       radiusX * .77, .030 * p.footSize, radiusZ * .39, 'heel-pad');
+    heelPad.visible = false; // preserved reference, not a glued-on surface sphere
     // Reduce the instep overlap: geometry remains rounded but distinct from
     // the dome rather than two near-coincident curved surfaces flickering.
-    ball(foot, sphere, 0, .049, -.008,
+    const instepPad = ball(foot, sphere, 0, .049, -.008,
       radiusX * .62, .035 * p.footSize, radiusZ * .59, 'instep');
+    instepPad.visible = false;
     for (let toe = -1; toe <= 1; toe++) {
-      ball(foot, sphere, toe * radiusX * .52, .028, -radiusZ * .79,
+      const toePad = ball(foot, sphere, toe * radiusX * .52, .028, -radiusZ * .79,
         radiusX * (toe === 0 ? .32 : .27), .018 * p.footSize,
         radiusZ * .29, toe === -1 ? 'medial-toes' : toe === 0 ? 'central-toes' : 'lateral-toes');
+      toePad.visible = false; // soft dome supplies the visible toe contour
+    }
+    if (fabric) {
+      const shoe = add(foot, footGeometry.clone(), fabric.shoes, 'soft-shoe');
+      shoe.scale.set(radiusX*1.10, radiusY*1.13, radiusZ*1.11);
+      shoe.position.z = -.018;
+      avatar.layerMeshes.shoes.push(shoe);
     }
     upper.userData.knee = knee;
     return upper;
@@ -635,10 +778,11 @@ export function buildSoftAvatar(avatar, p) {
     const x = sign * p.hips * .285 * p.legSpacing;
     // Reduced for both bodies: posterior volume should read as pelvis rather
     // than a pair of conspicuous spherical attachments.
-    const width = thighRadius * (female ? .91 : .86) * Math.sqrt(p.hipSize);
+    const width = thighRadius * (female ? .91 : .86) *
+      Math.sqrt(p.hipSize) * (1 + (p.legContour - 1) * .07);
     const rearDepth = thighRadius * (female ? 1.08 : .90) *
-      (.34 + .66 * p.gluteSize);
-    const rearBias = thighRadius * (female ? .40 : .34);
+      (.34 + .66 * p.gluteSize) * p.gluteProjection;
+    const rearBias = thighRadius * (female ? .40 : .34) * p.gluteProjection;
     const gluteStation = (y, rx, rz, z) =>
       Object.assign(station(y, rx, rz, z, 1, .48), { x });
     const rings = [
@@ -651,8 +795,14 @@ export function buildSoftAvatar(avatar, p) {
       gluteStation(legs + .09, width * .53, rearDepth * .47, rearBias * .49),
       gluteStation(legs + .125, width * .08, rearDepth * .075, rearBias * .12),
     ];
-    add(root, softLoftGeometry(rings, 24, 2.55), material,
+    add(root, softLoftGeometry(rings, 24, 2.32), material,
       sign < 0 ? 'left-glute' : 'right-glute');
+    if(fabric) {
+      const gluteCloth = add(root,
+        softLoftGeometry(garmentRings(rings,.014,.65),24,2.32),
+        fabric.pants, sign < 0 ? 'soft-pants-left-glute' : 'soft-pants-right-glute');
+      avatar.layerMeshes.pants.push(gluteCloth);
+    }
   }
   addGlute(-1);
   addGlute(1);
