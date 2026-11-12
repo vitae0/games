@@ -36,6 +36,11 @@ export function stairProgress(floor,x){
   const t=Math.max(0,Math.min(1,(STAIR.xNear-x)/(STAIR.xNear-STAIR.xFar)));
   return f.forward?t:1-t;
 }
+/** Invisible walkable ramp under the visible treads. Smooth, reversible height. */
+export function stairRampHeight(floor,x,z){
+  if(!inStairLane(floor,x,z))return null;
+  return floor*HOTEL.floorHeight+stairProgress(floor,x)*HOTEL.floorHeight;
+}
 export function stairStepIndex(floor,x){
   const t=stairProgress(floor,x);
   return t===null?null:Math.max(0,Math.min(STAIR.steps,Math.ceil(t*STAIR.steps-1e-9)));
@@ -62,21 +67,21 @@ export function stairSupports(x,z,radius=0){
     if(flatSupport(f,x,z))found.push({y:f*HOTEL.floorHeight,floor:f,type:'deck'});
   for(let f=0;f<HOTEL.floors-1;f++)
     if(inStairLane(f,x,z,radius))
-      found.push({y:stairHeight(f,x,z),floor:f,type:'step'});
+      found.push({y:stairRampHeight(f,x,z),floor:f,type:'ramp'});
   return found;
 }
 export function pickStairSupport(x,z,previousHeight,radius=0,maxRise=.24,maxDrop=.24){
   const candidates=stairSupports(x,z,radius);
   for(let f=0;f<HOTEL.floors-1;f++){
     if(!inStairLane(f,x,z,radius))continue;
-    const tread=stairHeight(f,x,z),base=f*HOTEL.floorHeight;
+    const tread=stairRampHeight(f,x,z),base=f*HOTEL.floorHeight;
     if(previousHeight>=base-.035&&previousHeight<=tread+.035&&
        tread-previousHeight>maxRise+TOLERANCE)return null;
   }
   return candidates
     .filter(s=>s.y-previousHeight<=maxRise+TOLERANCE&&
       previousHeight-s.y<=maxDrop+TOLERANCE)
-    .sort((a,b)=>(a.type==='step'?-1:1)-(b.type==='step'?-1:1)||
+    .sort((a,b)=>(a.type==='ramp'?-1:1)-(b.type==='ramp'?-1:1)||
       Math.abs(a.y-previousHeight)-Math.abs(b.y-previousHeight))[0]??null;
 }
 export function resolveGround(x,z,priorHeight){
