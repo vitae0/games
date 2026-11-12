@@ -78,6 +78,7 @@ export class CharacterStage {
     this.active = false;
     this.requestId = 0;
     this.currentModel = null;
+    this.pendingModel = null;
     this.targetYaw = 0;
     this.yaw = 0;
     this.pitch = 0;
@@ -173,10 +174,12 @@ export class CharacterStage {
     }
     if (isSoftModel(model)) {
       this.requestId++;
+      this.pendingModel = null;
       this.onStatus('VITAE SOFT / REAL-TIME');
     } else if (this.avatar.external?.source === 'studio:' + model) {
       this.onStatus('VRM / HAZIR');
-    } else {
+    } else if (this.pendingModel !== model) {
+      this.pendingModel = model;
       const request = ++this.requestId;
       this.onStatus('VRM / YÜKLENİYOR');
       void loadBundledCharacterModel(model).then(asset => {
@@ -194,10 +197,14 @@ export class CharacterStage {
           materials.forEach(m => m.dispose());
           return;
         }
+        this.pendingModel = null;
         this.avatar.applyExternal(asset, 'studio:' + model);
         this.onStatus('VRM / HAZIR');
       }).catch(() => {
-        if (request === this.requestId && this.active) this.onStatus('VRM / ÖNİZLEME YÜKLENEMEDİ');
+        if (request === this.requestId && this.active) {
+          this.pendingModel = null;
+          this.onStatus('VRM / ÖNİZLEME YÜKLENEMEDİ');
+        }
       });
     }
   }
@@ -206,6 +213,7 @@ export class CharacterStage {
     this.active = false;
     this.requestId++;
     this.currentModel = null;
+    this.pendingModel = null;
     this.pointer = null;
     this.viewport.classList.remove('is-dragging');
     if (this.avatar) {
