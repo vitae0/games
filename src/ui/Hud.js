@@ -1,10 +1,10 @@
 import { TouchControls } from '../input/TouchControls.js';
 import { isTouchCapable, clampTouchSensitivity } from '../input/TouchMath.js';
-import { AVATAR_DEFAULTS, AVATAR_RANGES, SOFT_AVATAR_FIELDS, normalizeAvatar } from '../avatar/AvatarConfig.js';
+import { AVATAR_DEFAULTS, AVATAR_RANGES, SOFT_AVATAR_FIELDS, normalizeAvatar, switchSoftModel, isSoftModel } from '../avatar/AvatarConfig.js';
 
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
-  baseModel: [['soft', 'Vitae Soft • yeni karakter'], ['vroidMale', 'VRoid erkek • eski asset'], ['vroidFemale', 'VRoid kadın • eski asset']],
+  baseModel: [['softMale', 'Vitae Soft • erkek'], ['softFemale', 'Vitae Soft • kadın'], ['vroidMale', 'VRoid erkek • eski asset'], ['vroidFemale', 'VRoid kadın • eski asset']],
   hair: [['sample', 'Hazır VRoid HairSample (CC0)'], ['none', 'Yok']],
   hairColor: Object.entries({
     original:'Orijinal saç dokusu', black:'Siyah', chestnut:'Kestane', brown:'Koyu kahve', blonde:'Sarı',
@@ -125,8 +125,8 @@ export class Hud {
     const status = $('#avatar-load-status');
     if (!status) return;
     const key = this.profile.baseModel;
-    if (key === 'soft') {
-      status.textContent = 'Vitae Soft • hazır · harici model veya saç dosyası yüklenmiyor';
+    if (isSoftModel(key)) {
+      status.textContent = 'Vitae Soft • ' + (key === 'softFemale' ? 'kadın' : 'erkek') + ' · hazır · harici model yüklenmiyor';
       return;
     }
     const label = key === 'vroidFemale' ? 'Kadın' : 'Erkek';
@@ -168,8 +168,15 @@ export class Hud {
         select.append(option);
       }
       select.addEventListener('change', () => {
-        this.profile[key] = ['shirtVisible','pantsVisible','shoesVisible'].includes(key)
-          ? select.value === 'true' : select.value;
+        if (key === 'baseModel') {
+          // Selecting the other soft model starts from its own anatomy,
+          // while retaining the chosen colour and legacy wardrobe settings.
+          this.profile = switchSoftModel(this.profile, select.value);
+          this.syncAvatarControls();
+        } else {
+          this.profile[key] = ['shirtVisible','pantsVisible','shoesVisible'].includes(key)
+            ? select.value === 'true' : select.value;
+        }
         this.preview();
         this.updateConditionalControls();
       });
@@ -213,9 +220,12 @@ export class Hud {
     });
     colorWrap.append(color);
 
-    groupFields('Baş ve gövde', ['height','headScale','shoulders','waist','hips','torsoDepth']);
-    groupFields('Kollar', ['armRatio','shoulderSize','upperArmSize','forearmSize','handSize']);
-    groupFields('Bacaklar', ['legRatio','thighSize','calfSize','footSize']);
+    groupFields('Baş ve yüz', ['height','headScale','eyeSpacing','eyeLength','neckSize']);
+    groupFields('Genel vücut oranları', ['shoulders','waist','hips','torsoDepth']);
+    groupFields('Göğüs (ayrı mesh)', ['chestWidth','chestDepth','chestFullness','chestRatio']);
+    groupFields('Karın (ayrı mesh)', ['abdomenWidth','abdomenDepth','abdomenFullness']);
+    groupFields('Kollar', ['armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
+    groupFields('Bacaklar ve ayaklar', ['legRatio','legSpacing','thighRatio','thighSize','calfSize','footSize','footLength']);
 
     const sections = [
       ['Yüz ve hazır saç', [
@@ -241,7 +251,7 @@ export class Hud {
     this.syncAvatarControls();
   }
   updateConditionalControls() {
-    const soft = this.profile.baseModel === 'soft';
+    const soft = isSoftModel(this.profile.baseModel);
     for (const element of document.querySelectorAll('#avatar-fields .soft-avatar-field')) {
       element.classList.toggle('hidden', !soft);
     }
