@@ -2,6 +2,15 @@
 
 **Tarayıcıda çalışan, performans öncelikli, modüler birinci/üçüncü şahıs 3D dünya.** Mevcut GitHub deposu public; üretim için ticari/kişisel modellere ait lisanslara dikkat edilmelidir.
 
+## Alpha 0.12: anatomik mesh, akıcı merdiven ve kesin hedefli etkileşimler
+
+- **Vitae Soft:** Göğüs ve karın, açık uçlu ve aynı dikiş normalini paylaşan anatomik bölgelere ayrıldı. Glute hacmi her iki temel modelde azaltıldı. Hafif köşeli kranyum, parmak kemikleri, topuk/ayak tarağı ve ayak ucu formları eklendi.
+- **Saç için hazır iskelet:** Boş kafa bağlantı noktaları ve modüler yükleme API'si eklendi. Henüz bir saç modeli eklenmedi; ayrıntılar [Hair Rig V1](docs/HAIR_RIG_V1.md) belgesinde.
+- **Merdiven:** Görünür basamakların altında yalnızca fizik hesabında kullanılan sürekli bir rampa vardır. Yürüyüşte yukarı/aşağı zıplama gereksinimi yoktur; alçak eşikler otomatik aşılır. Gerçek basamaklar görünür kalır ve üst-alt yüzeylerin çakışması azaltıldı.
+- **Ortak tuvalet:** Fiziksel ve opak mahremiyet duvarı yeniden kuruldu; kabin kapısı ve kullanım eylemleri aynı nesnede seçilebilir.
+- **Proximity etkileşimleri:** Küçük nesne etiketine tıklama doğrudan hedeflenen eylemi çalıştırır. Pointer-lock sırasında merkez işaretinin tam altındaki yakın etiket kontrol edilir, başka bir nesneye en yakın olma kuralı uygulanmaz. Çoklu eylemlerde 1/2/3 ile seçim yapılır.
+- **Performans:** Görünmez referans anatomisi GPU'da render edilmez, saç slotları sıfır draw call üretir. Yüzey segmentleri tutarlı görünecek biçimde stitch edilir.
+
 ## Alpha 0.11: fiziksel mobilyalar ve 90° merdivenler
 
 - **Tırmanma düzeltmesi:** E ile mobilyanın üstüne aniden taşınma kaldırıldı. Yükseklik destekleri zıplama sırasında ayağın üst yüzeye ulaşıp ulaşmadığına göre hesaplanır. Alçak nesneler artık zeminde görünmez 2D engel olarak yer almaz.
