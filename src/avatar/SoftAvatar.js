@@ -34,9 +34,15 @@ export function softLoftGeometry(stations, sides = 16, exponent = 2.4, caps = { 
       const ridge = (ring.clavicleRidge ?? 0) * front * collarBand;
       const y = ring.y - (ring.shoulderDrop ?? 0) * u * u
         + ridge * .55 + (ring.trapeziusRise ?? 0) * rear * (1 - Math.abs(u));
+      // Optional paired rounded lobes affect the anterior female chest only.
+      // A smooth lateral Gaussian is combined with a vertical envelope from
+      // successive loft stations. No disconnected spheres or sharp apexes.
+      const pairedLobes = Math.exp(-Math.pow((u - .46) / .43, 2)) +
+        Math.exp(-Math.pow((u + .46) / .43, 2));
+      const bust = (ring.bustBulge ?? 0) * front * pairedLobes;
       const z = (ring.z || 0)
         + ring.rz * v * (v >= 0 ? (ring.backScale ?? 1) : (ring.frontScale ?? 1))
-        - ridge * .32;
+        - ridge * .32 - bust;
       vertices.push((ring.x || 0) + ring.rx * u, y, z);
     }
   }
@@ -164,7 +170,11 @@ export function buildSoftAvatar(avatar, p) {
   // The clavicular collar starts just below the collarbones and extends
   // through the shoulder-to-neck transition. It is NOT an upper pectoral
   // or bust segment: most of the vertical chest belongs to soft-chest.
-  const clavicleHeight = Math.min(.108, Math.max(.064, chestHeight * .27));
+  // Leave the male collar untouched. On women it is merely a narrow transition
+  // between the longer chest and the neck base, not another full chest segment.
+  const clavicleHeight = female
+    ? Math.min(.072, Math.max(.042, chestHeight * .18))
+    : Math.min(.108, Math.max(.064, chestHeight * .27));
   const clavicleY = shouldersY - clavicleHeight;
   const chestBodyHeight = clavicleY - splitY;
   const bridge = Math.min(.029, abdomenHeight * .14, chestBodyHeight * .22);
@@ -177,14 +187,14 @@ export function buildSoftAvatar(avatar, p) {
 
   const abdomen = [
     station(legs + .008, hipRadius * .36, depth * p.abdomenDepth * .74,
-      .002, .90 + .12 * p.gluteSize),
+      .002, female ? 1 : .90 + .12 * p.gluteSize),
     station(legs + abdomenHeight * .16, hipRadius * .49 * p.abdomenWidth,
-      depth * p.abdomenDepth * .98, .004, p.gluteSize),
+      depth * p.abdomenDepth * .98, .004, female ? 1 : p.gluteSize),
     station(legs + abdomenHeight * .44,
       (p.hips * (female ? .44 : .41) + p.waist * .08) *
         p.abdomenWidth * p.abdomenFullness,
       depth * p.abdomenDepth * p.abdomenFullness * (female ? 1.04 : 1),
-      .010, 1 + (p.gluteSize - 1) * .26),
+      .010, female ? 1 : 1 + (p.gluteSize - 1) * .26),
     station(legs + abdomenHeight * .73, p.waist * .52 * p.abdomenWidth,
       depth * p.abdomenDepth * .93, .007),
     station(splitY - bridge, joinRx * 1.025, joinRz * 1.015, .003),
@@ -198,17 +208,57 @@ export function buildSoftAvatar(avatar, p) {
   const chestDepth = depth * p.chestDepth;
   // The chest-collar seam is shared exactly, preserving the smooth join
   // when users customize pectoral dimensions or shoulder/neck dimensions.
-  const upperJoinRx = p.shoulders *
+  const upperJoinRxRaw = p.shoulders *
     (.33 * p.upperChestWidth + .15 * p.chestWidth);
-  const upperJoinRz = depth *
+  const upperJoinRzRaw = depth *
     (.62 * p.upperChestDepth + .30 * p.chestDepth);
+  // Female clavicle is a tucked-in transition. It must never exceed the chest
+  // volume even at the highest configurable collar settings.
+  const upperJoinRx = female ? Math.min(upperJoinRxRaw, chestWidth * .80) : upperJoinRxRaw;
+  const upperJoinRz = female ? Math.min(upperJoinRzRaw, chestDepth * .82) : upperJoinRzRaw;
   const upperJoin = station(clavicleY, upperJoinRx, upperJoinRz, -.003);
-  const shoulderWidth = p.shoulders * .49 * p.upperChestWidth;
+  const shoulderWidth = female
+    ? Math.min(p.shoulders * .49 * p.upperChestWidth, chestWidth * .78)
+    : p.shoulders * .49 * p.upperChestWidth;
 
   // Breast/pectoral fullness spans both horizontal and vertical space.
   // Female preset increases width, depth AND the allocated chest height.
   // Adjacent bridge stations let the chest and abdomen meet tangentially.
-  const chest = [
+  // Female torso uses a broad, rounded, twin-lobed anterior surface. The
+  // horizontal lobes are subtle and do not change the independent pectoral
+  // mesh structure or produce protruding caps underneath clothing.
+  const bustStation = (y, rx, rz, z, bulge = 0) =>
+    Object.assign(station(y, rx, rz, z), { bustBulge: bulge * p.chestFullness });
+  const chest = female ? [
+    join,
+    station(splitY + bridge, joinRx * 1.025, joinRz * 1.027, -.001),
+    bustStation(splitY + chestBodyHeight * .16,
+      joinRx * .70 + chestWidth * .30,
+      joinRz * .65 + chestDepth * .35, -.003),
+    bustStation(splitY + chestBodyHeight * .31,
+      chestWidth * .77 * p.chestFullness,
+      chestDepth * .87 * p.chestFullness, -.006, .012),
+    bustStation(splitY + chestBodyHeight * .45,
+      chestWidth * .88 * p.chestFullness,
+      chestDepth * .94 * p.chestFullness, -.009, .021),
+    bustStation(splitY + chestBodyHeight * .57,
+      chestWidth * .94 * p.chestFullness,
+      chestDepth * .97 * p.chestFullness, -.010, .024),
+    bustStation(splitY + chestBodyHeight * .71,
+      chestWidth * .97 * p.chestFullness,
+      chestDepth * .95 * p.chestFullness, -.008, .020),
+    bustStation(splitY + chestBodyHeight * .82,
+      chestWidth * .94 * (1 + (p.chestFullness - 1) * .72),
+      chestDepth * .91 * (1 + (p.chestFullness - 1) * .70), -.006, .011),
+    bustStation(splitY + chestBodyHeight * .92,
+      upperJoinRx * .55 + chestWidth * .45,
+      upperJoinRz * .55 + chestDepth * .45, -.004, .003),
+    station(splitY + chestBodyHeight * .97,
+      upperJoinRx * .86 + chestWidth * .14,
+      upperJoinRz * .86 + chestDepth * .14, -.003),
+    upperJoin,
+  ] : [
+
     join,
     station(splitY + bridge, joinRx * 1.025, joinRz * 1.027, -.001),
     station(splitY + chestBodyHeight * .26,
@@ -239,11 +289,17 @@ export function buildSoftAvatar(avatar, p) {
   // raised neck root in the middle and softly descending lateral shoulders.
   // No shoulder balls, no independent clavicle props or hollow neck collar.
   const collarVolume = p.upperChestFullness;
-  const ridge = .013 * p.clavicleDefinition;
-  const trap = .013 * p.trapeziusVolume;
+  const ridge = (female ? .008 : .013) * p.clavicleDefinition;
+  const trap = (female ? .009 : .013) * p.trapeziusVolume;
   const neckWidth = p.neckSize * p.neckBaseWidth;
-  const clavicleStation = (y, rx, rz, z, opts = {}) =>
-    Object.assign(station(y, rx, rz, z), opts);
+  const clavicleStation = (y, rx, rz, z, opts = {}) => {
+    if (female) {
+      // Keep collar radius safely inside the widest breast/chest contour.
+      rx = Math.min(rx, chestWidth * .80);
+      rz = Math.min(rz, chestDepth * .82);
+    }
+    return Object.assign(station(y, rx, rz, z), opts);
+  };
   const clavicular = [
     upperJoin,
     clavicleStation(clavicleY + clavicleHeight * .18,
@@ -255,14 +311,16 @@ export function buildSoftAvatar(avatar, p) {
       depth * p.upperChestDepth * .96 * collarVolume, -.002, {
         clavicleRidge: ridge, trapeziusRise: trap * .8,
         shoulderDrop: .008 * p.trapeziusVolume,
-        backScale: 1 + (p.trapeziusVolume - 1) * .28,
+        backScale: female ? 1 + (p.trapeziusVolume - 1) * .14
+          : 1 + (p.trapeziusVolume - 1) * .28,
       }),
     clavicleStation(clavicleY + clavicleHeight * .73,
       shoulderWidth * .95, depth * p.upperChestDepth * .82, -.001, {
         clavicleRidge: ridge * .55,
         trapeziusRise: trap,
         shoulderDrop: .013 * p.trapeziusVolume,
-        backScale: 1 + (p.trapeziusVolume - 1) * .24,
+        backScale: female ? 1 + (p.trapeziusVolume - 1) * .12
+          : 1 + (p.trapeziusVolume - 1) * .24,
       }),
     clavicleStation(shouldersY + .004, shoulderWidth * .79,
       depth * p.upperChestDepth * .55, 0, {
@@ -347,7 +405,30 @@ export function buildSoftAvatar(avatar, p) {
     const calfRadius = .090 * p.calfSize;
     ball(upper, sphere, 0, -.027, .005, thighRadius * 1.02 * p.hipSize,
       thighRadius * .88, thighRadius * .97, 'hip');
-    add(upper, taperedSegment(thighLength, thighRadius * 1.05, thighRadius * .82, 1.03), material, 'thigh');
+    if (female) {
+      // Gluteal volume belongs to the posterior pelvis / upper-thigh root,
+      // not halfway up the abdomen. The front remains unchanged by gluteSize.
+      // It follows the animated upper-leg bone with no additional seam mesh.
+      const rearBase = 1.05 + (p.gluteSize - 1) * .65;
+      const thigh = [
+        station(-thighLength, thighRadius * .82, thighRadius * .77),
+        station(-thighLength * .88, thighRadius * .91, thighRadius * .86),
+        station(-thighLength * .62, thighRadius * .99, thighRadius * .94),
+        station(-thighLength * .34, thighRadius * 1.03, thighRadius * .96),
+        station(-thighLength * .19, thighRadius * 1.06, thighRadius * 1.01,
+          .008, 1 + (rearBase - 1) * .56),
+        station(-thighLength * .09, thighRadius * 1.11, thighRadius * 1.02,
+          .012, rearBase),
+        station(-thighLength * .022, thighRadius * .94, thighRadius * .92,
+          .011, 1 + (rearBase - 1) * .88),
+        station(.012, thighRadius * .70, thighRadius * .69,
+          .008, 1 + (rearBase - 1) * .56),
+      ];
+      add(upper, softLoftGeometry(thigh, 16, 2.35), material, 'thigh');
+    } else {
+      add(upper, taperedSegment(thighLength, thighRadius * 1.05,
+        thighRadius * .82, 1.03), material, 'thigh');
+    }
     const knee = new THREE.Bone();
     knee.name = sign < 0 ? 'leftLowerLeg' : 'rightLowerLeg';
     knee.position.y = -thighLength;
