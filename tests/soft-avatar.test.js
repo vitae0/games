@@ -23,7 +23,9 @@ test('both soft models have exact spherical heads, two line eyes, and no hair', 
       const marks = avatar.head.children.filter(child => child.name.endsWith('-eye-line'));
       assert.deepEqual(marks.map(mark => mark.name).sort(), ['left-eye-line','right-eye-line']);
       assert.ok(marks.every(mark => mark.scale.y > mark.scale.x));
-      assert.equal(avatar.head.children.length, 3, 'head + two eyes, no hair, ears or facial details');
+      assert.equal(avatar.head.children.length, 4, 'head, two eyes and an empty hair attachment group');
+      assert.equal(avatar.head.userData.hairMounts.name,'hair-root');
+      assert.ok(avatar.head.userData.hairMounts.children.length>=7);
     } finally {
       avatar.dispose();
     }
@@ -78,8 +80,11 @@ test('upper/lower arms and legs articulate without shoulder and elbow ball meshe
       assert.equal(arm.getObjectByName('shoulder'), undefined);
       assert.equal(arm.getObjectByName('elbow'), undefined);
       const hand = arm.userData.hand;
-      assert.equal(hand.children.length, 1);
-      assert.equal(hand.children[0].geometry.type, 'SphereGeometry');
+      assert.ok(hand.getObjectByName('palm')?.isMesh);
+      assert.equal(hand.userData.fingers.length,5);
+      assert.equal(hand.getObjectByName('thumb')?.children.length,2);
+      for(const finger of hand.userData.fingers)
+        assert.equal(finger.children.length,2);
     }
     for (const leg of [avatar.leftLeg, avatar.rightLeg]) {
       assert.ok(leg.userData.knee.isBone);
@@ -88,6 +93,8 @@ test('upper/lower arms and legs articulate without shoulder and elbow ball meshe
       const foot = leg.getObjectByName('hemisphere-foot');
       assert.equal(foot.getObjectByName('hemisphere-dome').geometry.parameters.thetaLength, Math.PI / 2);
       assert.ok(foot.getObjectByName('flat-sole'));
+      for(const part of ['heel-pad','instep','medial-toes','central-toes','lateral-toes'])
+        assert.ok(foot.getObjectByName(part)?.isMesh,part+' exists');
       assert.ok(foot.getObjectByName('hemisphere-dome').scale.x < .113 * avatar.profile.footSize);
       assert.ok(foot.getObjectByName('hemisphere-dome').scale.z < .155 * avatar.profile.footSize);
     }
@@ -516,5 +523,53 @@ test('female bust fullness moves only anterior vertices forward, never sideways 
     low.dispose();
     high.dispose();
     male.dispose();
+  }
+});
+
+test('anatomical chest and abdominal regions form real open-ended visible meshes',()=>{
+  for(const baseModel of ['softMale','softFemale']){
+    const avatar=new Avatar(new THREE.Scene(),{baseModel});
+    try{
+      const names=['pelvic-girdle','abdominal-wall','upper-abdomen',
+        'lower-ribcage','pectoral-chest','upper-thorax'];
+      const parts=names.map(n=>avatar.body.getObjectByName(n));
+      assert.ok(parts.every(p=>p?.isMesh&&p.visible),'all anatomy regions render');
+      assert.equal(avatar.body.getObjectByName('soft-chest').visible,false,
+        'legacy geometry reference must not z-fight visible anatomy');
+      assert.equal(avatar.body.getObjectByName('soft-abdomen').visible,false);
+      for(let i=1;i<parts.length;i++){
+        const a=parts[i-1].geometry,b=parts[i].geometry;
+        const count=a.userData.loft.stationCount,sides=a.userData.loft.sides;
+        const ap=a.getAttribute('position'),bp=b.getAttribute('position');
+        for(let j=0;j<sides;j++){
+          const k=(count-1)*sides+j;
+          assert.ok(Math.abs(ap.getX(k)-bp.getX(j))<1e-5);
+          assert.ok(Math.abs(ap.getY(k)-bp.getY(j))<1e-5);
+          assert.ok(Math.abs(ap.getZ(k)-bp.getZ(j))<1e-5);
+        }
+      }
+      const cranium=avatar.head.userData.headMesh.geometry;
+      assert.equal(cranium.parameters.widthSegments,14);
+      assert.equal(cranium.parameters.heightSegments,9);
+      assert.equal(avatar.head.userData.hairMounts.children.every(g=>g.children.length===0),true);
+    } finally {avatar.dispose();}
+  }
+});
+
+test('glute profile stays adjustable but is subdued for both body models',()=>{
+  for(const baseModel of ['softMale','softFemale']){
+    const low=new Avatar(new THREE.Scene(),{baseModel,gluteSize:.95});
+    const high=new Avatar(new THREE.Scene(),{baseModel,gluteSize:1.45});
+    try{
+      const depth=avatar=>{
+        const g=avatar.body.getObjectByName('left-glute').geometry;
+        const a=g.getAttribute('position');
+        return a.getZ(4*24+6);
+      };
+      assert.ok(depth(high)>depth(low),'posterior volume remains adjustable');
+      const thigh=high.leftLeg.getObjectByName('thigh').geometry;
+      assert.ok(high.body.getObjectByName('left-glute').parent===high.body);
+      assert.ok(thigh.userData.loft.stationCount>=10);
+    } finally {low.dispose();high.dispose()}
   }
 });
