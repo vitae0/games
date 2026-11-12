@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { Avatar } from '../src/avatar/Avatar.js';
-import { BodyIK, solveTwoBone, footStepOffset } from '../src/player/BodyIK.js';
+import { BodyIK, solveTwoBone, footStepOffset, advanceFootTarget, kickFootPose, KICK_DURATION } from '../src/player/BodyIK.js';
 
 test('IK solver preserves lengths for an unreachable target', () => {
   const start = new THREE.Vector3(0, 1, 0);
@@ -67,4 +67,57 @@ test('right leg control does not move the left leg, and local FPS hides only occ
     camera.layers.enable(1);
     assert.ok(avatar.firstPersonOccluders.every(mesh => camera.layers.test(mesh.layers)));
   } finally { avatar.dispose(); }
+});
+
+test('manual foot movement opens far wider while respecting side and height limits', () => {
+  const neutral = {sideways:0,forward:0,height:.025,bend:0};
+  const held = new Set(['KeyQ', 'KeyW', 'KeyR']);
+  let right = neutral;
+  let left = neutral;
+  for (let i = 0; i < 70; i++) {
+    right = advanceFootTarget(right,held,'right',.05);
+    left = advanceFootTarget(left,held,'left',.05);
+  }
+  assert.ok(right.sideways > .50);
+  assert.ok(left.sideways < -.50);
+  assert.equal(right.forward, -.82);
+  assert.equal(right.height, .77);
+  const inside = advanceFootTarget(right, new Set(['KeyE','KeyS','KeyF']), 'right', .05);
+  assert.ok(inside.sideways < right.sideways && inside.forward > right.forward);
+  assert.ok(inside.height < right.height);
+});
+
+test('holding Ctrl bends knee without disabling independent leg translation', () => {
+  let step = {sideways: .25,forward:-.45,height:.10,bend:0};
+  for (let i=0;i<20;i++) step=advanceFootTarget(step,new Set(['ControlLeft']),'right',.05);
+  assert.ok(step.bend > .9);
+  assert.equal(step.sideways,.25);
+  assert.equal(step.forward,-.45);
+  for(let i=0;i<20;i++)step=advanceFootTarget(step,new Set(),'right',.05);
+  assert.ok(step.bend < .01);
+});
+
+test('kick phases chamber, extend and smoothly return to rest',()=>{
+  const chamber=kickFootPose(.20,'right'), extended=kickFootPose(.40,'right');
+  assert.ok(chamber.height > .4 && chamber.forward > 0);
+  assert.ok(extended.forward < -.7 && extended.height > .5);
+  assert.ok(kickFootPose(.20,'left').sideways < 0);
+  assert.ok(kickFootPose(.20,'right').sideways > 0);
+  assert.equal(kickFootPose(KICK_DURATION,'right'),null);
+});
+
+test('leg kick continues after precision release and ends on its own',()=>{
+  const scene=new THREE.Scene(),avatar=new Avatar(scene,{baseModel:'softFemale'});
+  const ik=new BodyIK(avatar);
+  try{
+    ik.kick('right');
+    ik.clearSteps();
+    const input={hands:{left:{pressed:false},right:{pressed:false}},eye:new THREE.Vector3(0,1.6,0),
+      look:new THREE.Vector3(0,0,-1),right:new THREE.Vector3(1,0,0),posture:'stand',precision:false};
+    for(let i=0;i<6;i++){avatar.update(.05,0);ik.update(.05,input);}
+    assert.ok(ik.kicks.right);
+    assert.ok(avatar.rightLeg.rotation.x < 0 || Math.abs(avatar.rightLeg.rotation.z)>.05);
+    for(let i=0;i<20;i++){avatar.update(.05,0);ik.update(.05,input);}
+    assert.equal(ik.kicks.right,null);
+  } finally{avatar.dispose();}
 });
