@@ -180,17 +180,18 @@ export function buildSuite(hotel, floor, side, z) {
   const mini = q.minibar;
   round('wood',mini.x,y+.54,mini.z,mini.w,1.08,mini.d);
   hotel.climbable?.(floor,mini.x,mini.z,mini.w-.09,mini.d-.09,y+1.08,'Minibar');
-  box('black', mini.x, y + .55, mini.z - mini.d / 2 - .04, mini.w - .10, .92, .04);
+  // This minibar sits by the -Z wall, so its usable facade faces +Z.
+  box('black', mini.x, y + .55, mini.z + mini.d / 2 + .04, mini.w - .10, .92, .04);
   const fridgeDoor = furnitureDoor(hotel, {
-    x:mini.x, y:y+.55, z:mini.z-mini.d/2-.074,
-    width:mini.w-.10, height:.92, material:'wood', hinge:'left',
+    x:mini.x, y:y+.55, z:mini.z+mini.d/2+.074,
+    width:mini.w-.10, height:.92, material:'wood', hinge:'left', toward:1,
     angle:Math.PI*.49, name:'minibar-door',
   });
   const glow = new THREE.Mesh(hotel.suiteMinibarGlowGeometry, hotel.materials.warm);
-  glow.position.set(mini.x, y + .52, mini.z - mini.d / 2 - .075);
+  glow.position.set(mini.x, y + .52, mini.z + mini.d / 2 + .068);
   glow.visible = false; hotel.scene.add(glow); hotel.suiteMeshes.push(glow);
   const waterBottle = new THREE.Mesh(hotel.suiteBottleGeometry, hotel.materials.glass);
-  waterBottle.position.set(mini.x, y + .82, mini.z - mini.d / 2 - .13);
+  waterBottle.position.set(mini.x, y + .82, mini.z + mini.d / 2 + .13);
   waterBottle.visible = false; hotel.scene.add(waterBottle); hotel.suiteMeshes.push(waterBottle);
   let fridgeOpen = false, waterAvailable = true;
   interact({ x: mini.x, z: mini.z + .68 }, () => !fridgeOpen ? 'Minibar · Aç' :
