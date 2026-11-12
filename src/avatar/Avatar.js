@@ -420,9 +420,9 @@ export class Avatar {
   headWorldHeight() {
     return this.profile.height + this.body.position.y - this.profile.height * .08;
   }
-  update(dt, locomotion, posture = 'stand', furnitureStyle = null) {
+  update(dt, locomotion, posture = 'stand', furnitureStyle = null, poseVariant = null) {
     this.clock += dt;
-    const pose = poseFor(posture, locomotion, this.clock, this.profile.height, furnitureStyle);
+    const pose = poseFor(posture, locomotion, this.clock, this.profile.height, furnitureStyle, poseVariant);
     const damp = (v, target, rate = 10) => THREE.MathUtils.damp(v, target, rate, dt);
     // Translate the pelvis in metres. Crucially, don't shrink the entire person:
     // actual thigh and knee joints bend to create crouch/kneel/sitting poses.
@@ -432,7 +432,10 @@ export class Avatar {
     const legs = [this.leftLeg, this.rightLeg];
     for (let i = 0; i < legs.length; i++) {
       legs[i].rotation.x = damp(legs[i].rotation.x, pose.hip[i], 11);
+      legs[i].rotation.y = damp(legs[i].rotation.y, pose.hipYaw?.[i] ?? 0, 11);
+      legs[i].rotation.z = damp(legs[i].rotation.z, pose.hipRoll?.[i] ?? 0, 11);
       legs[i].userData.knee.rotation.x = damp(legs[i].userData.knee.rotation.x, pose.knee[i], 11);
+      legs[i].userData.knee.rotation.y = damp(legs[i].userData.knee.rotation.y, pose.kneeYaw?.[i] ?? 0, 11);
     }
     this.leftArm.rotation.x = damp(this.leftArm.rotation.x, pose.arms[0], 9);
     this.rightArm.rotation.x = damp(this.rightArm.rotation.x, pose.arms[1], 9);
