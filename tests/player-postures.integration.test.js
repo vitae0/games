@@ -64,10 +64,56 @@ test('real Player: Ctrl+Space kneels without pending jump', () => {
     assert.equal(p.posture, 'kneel');
     p.update(.08);
     assert.equal(p.avatar.root.visible, true);
-    assert.ok(p.avatar.rightLeg.rotation.x > p.avatar.leftLeg.rotation.x);
+    assert.ok(Math.abs(p.avatar.rightLeg.rotation.x-p.avatar.leftLeg.rotation.x)<.002,
+      'both knees bend into the same kneeling posture');
     assert.equal(p.verticalSpeed,0);
     up(p,'ControlLeft');up(p,'Space');
     key(p,'KeyN');
+    assert.equal(p.posture,'floorSit','kneeling exits through floor sitting');
+    p.standUp();
     assert.equal(p.posture,'stand');
   } finally { p.dispose(); }
+});
+
+test('real Player: three Ctrl taps lie on back, then each E exit rises one stage',()=>{
+  const p=createPlayer();
+  try{
+    key(p,'ControlLeft'); up(p,'ControlLeft');
+    key(p,'ControlLeft'); up(p,'ControlLeft');
+    assert.equal(p.posture,'floorSit');
+    key(p,'ControlLeft'); up(p,'ControlLeft');
+    assert.equal(p.posture,'floorLie');
+    for(let i=0;i<24;i++)p.update(.05);
+    assert.ok(p.floorLieLean>.98);
+    assert.ok(p.avatar.root.rotation.x>1.38, 'avatar rests on its back rather than reclining in a chair');
+    assert.ok(p.avatar.root.position.y>.15, 'reclining figure stays above the floor');
+    assert.equal(p.avatar.leftLeg.rotation.x,p.avatar.rightLeg.rotation.x);
+    p.standUp();
+    assert.equal(p.posture,'floorSit','first exit sits on ground instead of standing');
+    for(let i=0;i<18;i++)p.update(.05);
+    assert.ok(p.avatar.root.rotation.x<.12,'reclined root pose unwinds on sitting');
+    p.standUp();
+    assert.equal(p.posture,'stand','second exit restores walking');
+    p.update(.05);
+    assert.equal(p.verticalSpeed,0);
+  } finally {p.dispose()}
+});
+
+test('real Player: floor sit hips are near ground and kneeling uses both knees',()=>{
+  const p=createPlayer();
+  try{
+    p.touchActive=true;
+    p.setFloorPosture('floorSit');
+    for(let i=0;i<25;i++)p.update(.05);
+    assert.ok(p.avatar.body.position.y < -p.avatar.profile.height*.32);
+    assert.ok(p.avatar.leftLeg.userData.knee.rotation.x>-.3,
+      'floor sitting must not use chair-shaped knees');
+    p.setFloorPosture('kneel');
+    for(let i=0;i<25;i++)p.update(.05);
+    assert.ok(p.avatar.leftLeg.userData.knee.rotation.x<-1.45);
+    assert.ok(p.avatar.rightLeg.userData.knee.rotation.x<-1.45);
+    assert.ok(Math.abs(p.avatar.leftLeg.rotation.x-p.avatar.rightLeg.rotation.x)<.001);
+    p.standUp();
+    assert.equal(p.posture,'floorSit');
+  } finally {p.dispose()}
 });
