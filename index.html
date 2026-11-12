@@ -15,7 +15,82 @@
     <div class="bottom-left"><div id="movement-status">YÜRÜYÜŞ</div><div id="position-status">0.0, 0.0</div></div>
     <div class="controls-help">WASD hareket · Shift koş · Space zıpla · Ctrl çömel · Çift Ctrl yere otur · Ctrl+Space diz çök (alternatif N) · E kullan · Sol/Sağ tık: tut · Tekerlek: it/çek · F bırak · O kamera · K karakter</div>
     <section id="start-screen" class="overlay"><div class="hero"><div class="eyebrow">VITAEWORLD / 001</div><h1>VITAE<br><em>HOTEL</em></h1><p>Neon City üzerinde, gökdelenin yalnızca 47–50. katları erişilebilir. Gerçek merdivenlerle yüksel, şehir ışıklarını izle, ellerinle eşyaları ve NPC ellerini tut. İç mekânda modern tasarım, dışarıda gece şehri. Otel dışına çıkılamaz.</p><button id="start-button" class="primary">DÜNYAYA GİR <span>↗</span></button><p id="start-hint" class="hint">Masaüstü: WASD + fare. Telefon/tablet: joystick, dokunmatik kamera ve ekrandaki düğmeler. WebGL2 gerekir.</p></div></section>
-    <aside id="customizer" class="sidepanel hidden" aria-label="Karakter özelleştirme"><div class="panel-heading"><div><span class="eyebrow">CHARACTER STUDIO / SOFT V1</span><h2>Karakter</h2></div><button id="close-customizer" class="icon-button" aria-label="Kapat">×</button></div><p class="panel-intro">Yumuşak geometrili yeni Vitae karakterini özelleştir. Kafa, gövde, kol ve bacak oranlarını ayrı ayrı ayarla; istediğin rengi seç. Eski hazır modeller de korunuyor.</p><div id="avatar-fields"></div><p id="avatar-load-status" class="small" aria-live="polite"></p><div class="panel-actions"><button id="avatar-reset">SIFIRLA</button><button id="avatar-save" class="primary">KAYDET</button></div><p id="save-message" class="small"></p></aside>
+    <section id="customizer" class="studio-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="studio-main-title">
+      <header class="studio-top">
+        <div class="studio-brand">
+          <div class="studio-mark" aria-hidden="true"><span>V</span><i></i></div>
+          <div><div class="studio-brand-name">VITAE<span>WORLD</span></div><div class="studio-brand-sub">CHARACTER CREATION SYSTEM <b>04</b></div></div>
+        </div>
+        <div class="studio-top-middle"><span class="studio-step">01</span><span class="studio-step-rule"></span><span class="studio-step active">DESIGN</span><span class="studio-step-rule"></span><span class="studio-step">YOUR IDENTITY</span></div>
+        <div class="studio-top-actions">
+          <span class="studio-autosave-indicator"><i></i><span id="studio-unsaved-label">CANLI ÖNİZLEME</span></span>
+          <button id="studio-undo" type="button" class="studio-icon-btn" title="Geri al (Ctrl+Z)" aria-label="Geri al" disabled>↶</button>
+          <button id="studio-redo" type="button" class="studio-icon-btn" title="Yinele (Ctrl+Y)" aria-label="Yinele" disabled>↷</button>
+          <button id="close-customizer" type="button" class="studio-icon-btn studio-close" aria-label="Karakter stüdyosunu kapat">✕</button>
+        </div>
+      </header>
+      <div class="studio-layout">
+        <nav class="studio-rail" aria-label="Karakter düzenleme bölümleri">
+          <div class="studio-rail-caption">MODULES</div>
+          <button type="button" data-studio-tab="model" class="is-selected"><span class="studio-nav-icon">◈</span><span>MODEL</span></button>
+          <button type="button" data-studio-tab="face"><span class="studio-nav-icon">◎</span><span>YÜZ</span></button>
+          <button type="button" data-studio-tab="body"><span class="studio-nav-icon">◇</span><span>GÖVDE</span></button>
+          <button type="button" data-studio-tab="chest"><span class="studio-nav-icon">◐</span><span>GÖĞÜS</span></button>
+          <button type="button" data-studio-tab="arms"><span class="studio-nav-icon">⌁</span><span>KOLLAR</span></button>
+          <button type="button" data-studio-tab="legs"><span class="studio-nav-icon">⌑</span><span>BACAK</span></button>
+          <button type="button" data-studio-tab="style"><span class="studio-nav-icon">✳</span><span>STİL</span></button>
+          <span class="studio-rail-fill"></span>
+          <span class="studio-rail-version">STUDIO / V 1.0</span>
+        </nav>
+        <section class="studio-stage" aria-label="Canlı üç boyutlu karakter önizlemesi">
+          <div id="studio-viewport" class="studio-viewport" tabindex="0" role="region" aria-label="Karakteri sürükleyerek döndürün. Fare tekerleği ile yakınlaştırın."></div>
+          <div class="studio-stage-vignette" aria-hidden="true"></div>
+          <div class="studio-stage-info"><span class="studio-live-dot"></span><span id="studio-render-status">VITAE SOFT / REAL-TIME</span><span class="studio-stage-divider"></span><span>3D SCULPT VIEW</span></div>
+          <div class="studio-stage-side" aria-hidden="true"><span>FORM STUDY</span><span>01 / 07</span></div>
+          <div class="studio-stage-caption"><span class="studio-caption-index">01 / BODY SPECIMEN</span><h2 id="studio-model-name">VITAE SOFT</h2><p>YOUR FORM. YOUR WORLD.</p></div>
+          <div class="studio-camera-dock">
+            <div class="studio-camera-views" role="group" aria-label="Kamera açısı">
+              <button type="button" data-studio-view="front" class="is-selected">ÖN</button>
+              <button type="button" data-studio-view="side">YAN</button>
+              <button type="button" data-studio-view="back">ARKA</button>
+              <button type="button" data-studio-view="face">YAKIN</button>
+            </div>
+            <span class="studio-dock-separator"></span>
+            <button id="studio-zoom-out" type="button" aria-label="Uzaklaş">−</button>
+            <output id="studio-zoom-display">100%</output>
+            <button id="studio-zoom-in" type="button" aria-label="Yakınlaş">+</button>
+          </div>
+          <div class="studio-stage-help">SÜRÜKLE <span>↔</span> DÖNDÜR <i></i> KAYDIR <span>⇵</span> YAKINLAŞTIR</div>
+        </section>
+        <aside class="studio-panel" aria-label="Karakter ayarları">
+          <div class="studio-panel-title">
+            <div class="studio-panel-overline"><span id="studio-category-index">01</span> / CUSTOMIZATION</div>
+            <h1 id="studio-main-title">KENDİNİ <em>YARAT.</em></h1>
+            <h2 id="studio-section-title">Karakter modeli</h2>
+            <p id="studio-section-description">Kendi silüetini seç. Bütün detaylar senin kontrolünde.</p>
+            <div class="studio-panel-toolbar">
+              <label class="studio-search-wrap" for="studio-search"><span aria-hidden="true">⌕</span><input id="studio-search" type="search" placeholder="Bir ayar ara..." autocomplete="off"></label>
+              <span id="studio-field-count">00 PARAMETRE</span>
+            </div>
+          </div>
+          <div id="avatar-fields" class="studio-fieldlist"></div>
+          <div id="studio-empty" class="studio-empty hidden">Bu bölümde eşleşen bir ayar yok.</div>
+          <div class="studio-inspector-utilities">
+            <button id="studio-reset-group" type="button">↺ &nbsp; BU BÖLÜMÜ SIFIRLA</button>
+            <button id="studio-randomize" type="button">✳ &nbsp; VARYASYON OLUŞTUR</button>
+          </div>
+          <div class="studio-panel-bottom">
+            <div id="avatar-load-status" class="studio-load-status" aria-live="polite"></div>
+            <div class="studio-save-row">
+              <button id="avatar-reset" type="button" class="studio-reset" title="Tüm karakter ayarlarını sıfırla">SIFIRLA</button>
+              <button id="avatar-save" type="button" class="studio-save">KARAKTERİ KAYDET <span aria-hidden="true">↗</span></button>
+            </div>
+            <div id="save-message" class="studio-save-message" aria-live="polite"></div>
+          </div>
+        </aside>
+      </div>
+      <footer class="studio-footer"><span>VITAE / PERSONAL IDENTITY SYSTEM</span><span>BU KARAKTER SADECE SENİN TARAYICINDA KAYDEDİLİR.</span><span>VITAEWORLD © 2026</span></footer>
+    </section>
     <section id="elevator" class="modal-overlay hidden"><div class="modal"><div class="eyebrow">VITAE HOTEL / LIFT</div><h2>Kat seç</h2><div class="floor-grid"><button data-floor="0">47 <small>RESEPSİYON</small></button><button data-floor="1">48 <small>ODALAR</small></button><button data-floor="2">49 <small>ODALAR</small></button><button data-floor="3">50 <small>SUİTLER</small></button></div><button id="close-elevator" class="secondary">KAPAT [ESC]</button></div></section>
     <section id="settings" class="modal-overlay hidden" aria-label="Oyun ayarları"><div class="modal settings-modal"><div class="eyebrow">VITAEWORLD / SETTINGS</div><h2>Ayarlar</h2><label class="settings-field" for="touch-sensitivity">Dokunmatik kamera hassasiyeti <output id="sensitivity-value">1.00×</output></label><input id="touch-sensitivity" type="range" min="0.45" max="2" step="0.05" value="1"/><label class="settings-field" for="quality-mode">Grafik kalitesi</label><select id="quality-mode"><option value="auto">Otomatik (önerilen)</option><option value="low">Düşük / batarya dostu</option><option value="medium">Orta</option><option value="high">Yüksek</option></select><p class="settings-note">Mobil cihazlarda çözünürlük otomatik olarak FPS'e göre ayarlanır. Uzun süreli oyun telefonun ısınmasına neden olabilir.</p><button id="close-settings" class="secondary" type="button">KAPAT</button></div></section>
   <div id="mobile-ui" class="mobile-ui hidden" aria-label="Dokunmatik oyun kontrolleri" aria-hidden="true">
