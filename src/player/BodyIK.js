@@ -103,6 +103,8 @@ export class BodyIK {
     this.avatar = avatar;
     this.steps = { left: null, right: null };
     this.kicks = { left: null, right: null };
+    this.armTargets = { left: null, right: null };
+    this.wristTargets = { left: null, right: null };
   }
   clearSteps() {
     this.steps.left = null;
@@ -111,6 +113,12 @@ export class BodyIK {
   cancelKicks() {
     this.kicks.left = null;
     this.kicks.right = null;
+  }
+  clearPoseTargets() {
+    this.clearSteps();
+    this.cancelKicks();
+    this.armTargets.left = this.armTargets.right = null;
+    this.wristTargets.left = this.wristTargets.right = null;
   }
   placeFoot(side, viewYaw, bodyYaw) {
     if (side !== 'left' && side !== 'right') return;
@@ -137,13 +145,57 @@ export class BodyIK {
       };
     }
   }
+  /** Z+W+A/D: aim arms at the camera reticle, regardless of sitting,
+   * kneeling or lying. Targets persist in BODY-local space on key release.
+   */
+  controlArms(keys, eye, look, right) {
+    if (!keys || !look || !eye || !right) return;
+    this.avatar.root.updateWorldMatrix(true, true);
+    for (const [side, code, sign] of [['left','KeyA',-1],['right','KeyD',1]]) {
+      if (!keys.has(code)) continue;
+      const target = eye.clone().addScaledVector(look, .46)
+        .addScaledVector(right, sign * .17)
+        .add(new THREE.Vector3(0, -.15, 0));
+      // Held Ctrl folds the selected elbow without changing the hand aim.
+      if (keys.has('ControlLeft') || keys.has('ControlRight'))
+        target.lerp((side==='left'?this.avatar.leftArm:this.avatar.rightArm)
+          .getWorldPosition(new THREE.Vector3()), .42);
+      this.armTargets[side] = this.avatar.body.worldToLocal(target);
+    }
+  }
+  /** Z+S+A/D: wrist orientation and finger flexion are persistent edits. */
+  controlWrists(keys, look) {
+    if (!keys || !look) return;
+    for (const [side, code] of [['left','KeyA'],['right','KeyD']]) {
+      if (!keys.has(code)) continue;
+      this.wristTargets[side] = {
+        pitch: clamp(-look.y*.82, -.85,.85),
+        yaw: clamp(look.x*.62, -.63,.63),
+        curl: keys.has('ControlLeft') || keys.has('ControlRight') ? .64 : 0,
+      };
+    }
+  }
+  updateWrists(dt) {
+    for (const side of ['left','right']) {
+      const wrist = (side==='left'?this.avatar.leftArm:this.avatar.rightArm)?.userData.hand;
+      const target=this.wristTargets[side];
+      if (!wrist || !target) continue;
+      wrist.rotation.x=THREE.MathUtils.damp(wrist.rotation.x,target.pitch,14,dt);
+      wrist.rotation.y=THREE.MathUtils.damp(wrist.rotation.y,target.yaw,14,dt);
+      for (const finger of wrist.userData.fingers ?? [])
+        finger.rotation.x=THREE.MathUtils.damp(finger.rotation.x,target.curl,13,dt);
+    }
+  }
   update(dt, { hands, eye, look, right, posture, precision, keys, bodyYaw = 0 }) {
     // Arbitrary VRM/GLB bind axes require an explicit source-specific retargeter.
     if (this.avatar.external) return;
     if (posture !== 'stand') this.cancelKicks();
-    if (precision && posture === 'stand') this.controlLegs(dt, keys, look, bodyYaw);
+    if (precision && keys?.has('KeyW')) this.controlArms(keys, eye, look, right);
+    else if (precision && keys?.has('KeyS')) this.controlWrists(keys, look);
+    else if (precision) this.controlLegs(dt, keys, look, bodyYaw);
     this.updateArms(dt, hands, eye, look, right, posture === 'stand' && !precision);
     this.updateLegs(dt, posture === 'stand', precision);
+    this.updateWrists(dt);
   }
   updateArms(dt, hands, eye, look, right, enabled) {
     for (const [side, sign] of [['left', -1], ['right', 1]]) {
@@ -157,6 +209,12 @@ export class BodyIK {
           .addScaledVector(right, sign * .15).add(new THREE.Vector3(0, -.19, 0));
         const pole = right.clone().multiplyScalar(sign * .75)
           .add(new THREE.Vector3(0, -.28, .18)).normalize();
+        applyTwoBoneIK(upper, lower, -wrist.position.y, target, pole, dt);
+      } else if (this.armTargets[side]) {
+        this.avatar.root.updateWorldMatrix(true, true);
+        const target = this.avatar.body.localToWorld(this.armTargets[side].clone());
+        const pole = right.clone().multiplyScalar(sign * .75)
+          .add(new THREE.Vector3(0,-.25,.22)).normalize();
         applyTwoBoneIK(upper, lower, -wrist.position.y, target, pole, dt);
       } else {
         const spread = this.avatar.softAvatar ? sign * this.avatar.profile.armSpread : 0;
@@ -184,7 +242,7 @@ export class BodyIK {
       }
       // Retain the last user-directed target when Z is released. Locomotion
       // clears the targets explicitly in Player; idle frames never do.
-      const step = kickPose || (standing ? this.steps[side] : null);
+      const step = kickPose || this.steps[side];
       if (step) {
         // Ctrl pulls the foot closer to the thigh, causing a pronounced knee fold.
         const bend = step.bend ?? 0;
@@ -206,10 +264,14 @@ export class BodyIK {
           foot.quaternion.slerp(parent.multiply(upright), 1 - Math.exp(-15 * dt));
         }
       } else {
-        upper.rotation.y = THREE.MathUtils.damp(upper.rotation.y, 0, 12, dt);
-        upper.rotation.z = THREE.MathUtils.damp(upper.rotation.z, 0, 12, dt);
-        knee.rotation.y = THREE.MathUtils.damp(knee.rotation.y, 0, 12, dt);
-        knee.rotation.z = THREE.MathUtils.damp(knee.rotation.z, 0, 12, dt);
+        // Nonstanding variants set hip yaw/roll and knee yaw. Do not erase
+        // those angles just because no precision target is active.
+        if (standing) {
+          upper.rotation.y = THREE.MathUtils.damp(upper.rotation.y, 0, 12, dt);
+          upper.rotation.z = THREE.MathUtils.damp(upper.rotation.z, 0, 12, dt);
+          knee.rotation.y = THREE.MathUtils.damp(knee.rotation.y, 0, 12, dt);
+          knee.rotation.z = THREE.MathUtils.damp(knee.rotation.z, 0, 12, dt);
+        }
         if (foot) foot.quaternion.slerp(IDENTITY, 1 - Math.exp(-12 * dt));
       }
     }
