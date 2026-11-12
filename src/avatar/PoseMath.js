@@ -2,7 +2,44 @@
  * Every furniture style is a variation of a stable posture, not a new rig.
  * Small secondary movements avoid perfectly frozen, identical seated avatars.
  */
-export function poseFor(posture, locomotion, time, height = 1.73, furnitureStyle = null) {
+/** Hip yaw and roll let two legs truly cross or fold to the side; the
+ * original rig exposed only forward hip/knee pitch, producing chair poses.
+ * Drops are fractions of body height; x/y/z rotations are radians.
+ */
+export const FLOOR_VARIANT_POSES = Object.freeze({
+  floorSit: {
+    crossLegged: {drop:.375,hip:[1.35,1.35],knee:[-1.92,-1.92],
+      hipYaw:[-.55,.55],hipRoll:[-.22,.22],kneeYaw:[.30,-.30],arms:[.18,.18],spine:-.03},
+    butterfly: {drop:.365,hip:[1.40,1.40],knee:[-1.40,-1.40],
+      hipYaw:[-.78,.78],hipRoll:[-.36,.36],arms:[.29,.29],spine:.05},
+    sideLeft: {drop:.37,hip:[1.34,1.15],knee:[-1.78,-1.68],
+      hipYaw:[-.63,-.59],hipRoll:[-.13,-.22],arms:[.30,.10],spine:-.12},
+    sideRight: {drop:.37,hip:[1.15,1.34],knee:[-1.68,-1.78],
+      hipYaw:[.59,.63],hipRoll:[.22,.13],arms:[.10,.30],spine:.12},
+    oneKnee: {drop:.355,hip:[1.43,.61],knee:[-.12,-2.09],
+      hipYaw:[-.08,.21],arms:[.15,.58],spine:.05},
+    hugKnees: {drop:.345,hip:[.72,.72],knee:[-1.96,-1.96],
+      hipYaw:[-.10,.10],arms:[.86,.86],spine:.20},
+  },
+  kneel: {
+    seiza: {drop:.287,hip:[-.13,-.13],knee:[-1.84,-1.84],
+      hipRoll:[-.04,.04],arms:[.12,.12],spine:-.08},
+    forwardKneel: {drop:.236,hip:[.17,.17],knee:[-1.67,-1.67],
+      arms:[1.02,1.02],spine:.72},
+    reachKneel: {drop:.231,hip:[.10,.10],knee:[-1.61,-1.61],
+      arms:[-2.10,-2.10],spine:-.08},
+  },
+  floorLie: {
+    fetal: {drop:0,hip:[.85,.85],knee:[-1.82,-1.82],
+      arms:[.70,.70],spine:.12},
+    raisedKnee: {drop:0,hip:[.08,.71],knee:[-.07,-1.49],
+      arms:[-.20,.20],spine:0},
+    stretch: {drop:0,hip:[-.08,-.08],knee:[-.03,-.03],
+      arms:[-2.14,-2.14],spine:-.03},
+  },
+});
+
+export function poseFor(posture, locomotion, time, height = 1.73, furnitureStyle = null, variantId = null) {
   const moving = posture === 'stand' && locomotion > .08;
   const speed = Math.min(1.5, locomotion / 4.2);
   const phase = time * (7.2 + speed * 2);
@@ -37,16 +74,21 @@ export function poseFor(posture, locomotion, time, height = 1.73, furnitureStyle
     sleep: { drop: 0, hip: [.10, .12], knee: [-.18, -.15],
       arms: [-.12 + breath * .008, .14 - breath * .008], spine: 0 },
   };
-  const selected = posture === 'stand' ? bases.stand
-    : (furniture[furnitureStyle] ?? bases[posture] ?? bases.stand);
-  const drop = selected.drop * (selected === bases.stand || selected === bases.crouch ||
-    selected === bases.floorSit || selected === bases.kneel ||
-    selected === bases.floorLie ||
-    selected === bases.sit || selected === bases.rest ? 1 : height);
+  const variant = FLOOR_VARIANT_POSES[posture]?.[variantId];
+  const selected = variant ?? (posture === 'stand' ? bases.stand
+    : (furniture[furnitureStyle] ?? bases[posture] ?? bases.stand));
+  const drop = selected.drop * (variant ? height
+    : selected === bases.stand || selected === bases.crouch ||
+      selected === bases.floorSit || selected === bases.kneel ||
+      selected === bases.floorLie || selected === bases.sit || selected === bases.rest
+      ? 1 : height);
   return {
     drop,
     hip: [selected.hip[0] + swing, selected.hip[1] - swing],
     knee: [...selected.knee],
+    hipYaw: [...(selected.hipYaw ?? [0,0])],
+    hipRoll: [...(selected.hipRoll ?? [0,0])],
+    kneeYaw: [...(selected.kneeYaw ?? [0,0])],
     arms: [...selected.arms],
     spine: selected.spine ?? (posture === 'kneel' ? .10 : posture === 'crouch' ? .15 : 0),
     bob: moving ? Math.abs(Math.sin(phase)) * .026 : breath * .004,
