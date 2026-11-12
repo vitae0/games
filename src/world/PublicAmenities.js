@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HOTEL } from '../config.js';
-import { furnitureSeat, furniturePart } from './FurnitureMotion.js';
+import { furnitureSeat } from './FurnitureMotion.js';
+import { buildPublicRestroom } from './PublicRestroom.js';
 
 /** Public areas occupy reserved first-floor rooms, not hotel guest rooms. */
 export function buildBar(hotel) {
@@ -54,74 +55,7 @@ export function buildBar(hotel) {
     const on=lamp.toggle();hotel.events.toast(on?'Bar ışıkları açıldı':'Bar ışıkları kapandı');
   });
 }
+/** Public WC is kept in its own module for independent layout and state tests. */
 export function buildPublicRestrooms(hotel) {
-  const floor=0,y=0,box=(...args)=>hotel.box(...args);
-  const round=(...args)=>hotel.rounded?hotel.rounded(...args):box(...args);
-  const put=(x,z,label,activate,groupId=null)=>hotel.interactables.push({
-    floor,position:new THREE.Vector3(x,y+1,z),getLabel:label,activate,groupId,
-  });
-  // Separate public WC area behind bar; room door is open at x=1.7,z=-3.5.
-  box('slab',6.8,.037,-3.5,10.45,.045,6.95);
-  // The previous tiny dark block was not a wall. Opaque full-height
-  // privacy panels now separate the public WC from the adjacent space.
-  box('innerWall',10.02,1.48,-6.81,3.95,2.95,.14,0,true);
-  box('innerWall',7.70,1.48,-3.50,.12,2.95,.79,0,true);
-  // Sink bank is against the north wall; access lane remains clear.
-  const waterStreams=[];
-  for(const z of [-5.25,-3.55,-1.85]){
-    round('ceramic',5.38,.69,z,.88,.23,.52);
-    round('glass',5.38,.86,z,.66,.045,.35);
-    box('warm',5.37,2.49,z,.71,.04,.10);
-    hotel.addWalkSurface(0,5.38,z,.74,.44,.84);
-    // Individual wall-mounted mirrors use the same nearby Reflector as suites.
-    box('trim',6.04,1.73,z,.032,1.06,.80);
-    box('black',6.00,1.73,z,.017,.98,.73);
-    hotel.mirrors?.register(0,5.983,1.73,z,-Math.PI/2);
-    const stream=furniturePart(hotel,'glass',5.38,.885,z,.016,.17,.016,'public-sink-water');
-    stream.visible=false;
-    waterStreams.push(stream);
-  }
-  const stalls=[-5.20,-1.80];
-  for(const z of stalls){
-    // Two private cubicles to the east; central aisle x=2..7.7 stays clear.
-    for(const edgeZ of [z-1.02,z+1.02])
-      box('innerWall',9.83,1.48,edgeZ,3.30,2.95,.10,0,true);
-    box('innerWall',11.50,1.48,z,.10,2.95,1.98,0,true);
-    box('innerWall',8.16,1.48,z-.77,.10,2.95,.47,0,true);
-    box('innerWall',8.16,1.48,z+.77,.10,2.95,.47,0,true);
-    round('ceramic',10.53,.35,z,.57,.46,.56,0,true);
-    const door=new THREE.Mesh(hotel.suiteBathroomDoorGeometry,hotel.materials.black);
-    door.position.set(8.16,1.19,z);
-    hotel.scene.add(door);hotel.suiteMeshes.push(door);
-    const collider=hotel.collisions.add(0,8.16,z,.12,1.06);
-    let open=false;
-    const groupId = 'public-wc:' + z;
-    put(7.15,z,()=>`Ortak tuvalet · Kapıyı ${open?'kapat':'aç'}`,()=>{
-      open=!open;hotel.collisions.setActive(collider,!open);
-      hotel.events.toast(open?'Tuvalet kabini açıldı':'Tuvalet kabini kapandı');
-    },groupId);
-    put(7.15,z,()=> 'Ortak tuvalet · Kullan', player => {
-      if (!open) { hotel.events.toast('Önce kabin kapısını aç'); return; }
-      player?.useFurniture?.('sit',10.53,z,Math.PI/2,.42,{style:'stool'});
-    },groupId);
-    hotel.animations.push(dt=>{door.position.z=THREE.MathUtils.damp(door.position.z,z-(open ? 1.03 : 0),8,dt)});
-  }
-  let taps=false;
-  const tapMotion=hotel.furnitureMotion?.create(level=>{
-    for(const mesh of waterStreams){
-      mesh.visible=level>.004;
-      mesh.scale.y=.17*level;
-      mesh.position.y=.97-.085*level;
-    }
-  },11);
-  put(9.3,-3.40,()=>`Lavabolar · Suyu ${taps?'kapat':'aç'}`,()=>{
-    taps=!taps;
-    if(tapMotion)tapMotion.set(taps?1:0);
-    else for(const mesh of waterStreams)mesh.visible=taps;
-    hotel.events.toast(taps?'Musluklar açıldı':'Musluklar kapatıldı');
-  });
-  const lamp=hotel.roomLighting?.register(0,6.8,3.05,-3.5,'Ortak tuvalet');
-  if(lamp)put(4.25,-3.85,lamp.getLabel,()=>{
-    const on=lamp.toggle();hotel.events.toast(on?'Tuvalet ışığı açıldı':'Tuvalet ışığı kapandı');
-  });
+  return buildPublicRestroom(hotel);
 }
