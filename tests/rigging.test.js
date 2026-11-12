@@ -32,3 +32,18 @@ test('floor poses bend joints rather than scaling the entire avatar', () => {
   assert.notEqual(kneeling.hip[0], kneeling.hip[1]);
   assert.ok(crouched.knee[0] < -.5);
 });
+
+
+test('furniture poses are distinct from generic sitting and still animate naturally',()=>{
+  const common=poseFor('sit',0,1,1.73);
+  const desk=poseFor('sit',0,1,1.73,'desk');
+  const lounge=poseFor('sit',0,1,1.73,'lounge');
+  const stool=poseFor('sit',0,1,1.73,'stool');
+  const bathe=poseFor('sit',0,1,1.73,'bathe');
+  const sleep=poseFor('rest',0,1,1.73,'sleep');
+  assert.ok(desk.arms[0]>common.arms[0]+.2);
+  assert.notDeepEqual(lounge.hip,stool.hip);
+  assert.notDeepEqual(bathe.knee,stool.knee);
+  assert.equal(sleep.drop,0);
+  assert.notDeepEqual(sleep.hip,poseFor('rest',0,1,1.73).hip);
+});
