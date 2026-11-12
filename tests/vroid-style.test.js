@@ -23,7 +23,7 @@ test('only licensed ready-made hair and the existing VRoid body texture are sele
   assert.equal(invalid.hair,'sample');
   assert.equal(invalid.underwear,'none');
   assert.equal(invalid.hairColor,'original');
-  assert.equal(invalid.baseModel,'soft');
+  assert.equal(invalid.baseModel,'softMale');
   assert.deepEqual(Object.keys(HAIR_SAMPLE_FILES).sort(),['vroidFemale','vroidMale']);
 });
 

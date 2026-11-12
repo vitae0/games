@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * Vitaeworld's lightweight character family. Nothing here fetches an asset:
- * a spherical head, a single soft polygonal torso, articulated upper/lower
+ * a spherical head, separate chest/abdomen lofts, articulated upper/lower
  * limbs, spherical hands and flat-bottomed hemispherical feet.
  *
  * All dimensions are in metres, and the face points down local -Z.
@@ -113,19 +113,48 @@ export function buildSoftAvatar(avatar, p) {
   const torsoHeight = shouldersY - legs;
   const depth = p.torsoDepth * .155;
 
-  // Tapered waist, broad rounded shoulders, a gentle belly and integrated neck.
-  const torso = [
-    station(legs + .012, p.hips * .36, depth * .70),
-    station(legs + torsoHeight * .10, p.hips * .49, depth * .97, .003),
-    station(legs + torsoHeight * .30, p.waist * .50, depth * .91, .012),
-    station(legs + torsoHeight * .55, (p.waist * .28 + p.shoulders * .20), depth * 1.03, -.008),
-    station(legs + torsoHeight * .78, p.shoulders * .47, depth * 1.09, -.004),
-    station(legs + torsoHeight * .92, p.shoulders * .49, depth * .91),
-    station(shouldersY + .004, p.shoulders * .38, depth * .55),
-    station(shouldersY + .048, .062, .065),
-    station(shouldersY + .072, .047, .049),
+  // The two soft body types have different contour curves as well as distinct
+  // saved proportions. The styles are freely adjustable, never locked to gender.
+  const female = p.baseModel === 'softFemale';
+  const splitY = legs + torsoHeight * (1 - p.chestRatio);
+  const abdomenHeight = splitY - legs;
+  const chestHeight = shouldersY - splitY;
+  const joinRx = p.waist * .49 * p.abdomenWidth;
+  const joinRz = depth * .90 * p.abdomenDepth;
+  const join = (y) => station(y, joinRx, joinRz, .002);
+
+  // Abdomen remains a separate selectable mesh, not a hidden continuous torso.
+  // Fullness affects the belly independently from upper-chest dimensions.
+  const abdomen = [
+    station(legs + .008, p.hips * .36, depth * p.abdomenDepth * .74),
+    station(legs + abdomenHeight * .15, p.hips * .49 * p.abdomenWidth,
+      depth * p.abdomenDepth * .98, .004),
+    station(legs + abdomenHeight * .43,
+      (p.hips * (female ? .44 : .41) + p.waist * .08) * p.abdomenWidth * p.abdomenFullness,
+      depth * p.abdomenDepth * p.abdomenFullness * (female ? 1.04 : 1.0), .014),
+    station(legs + abdomenHeight * .76, p.waist * .52 * p.abdomenWidth,
+      depth * p.abdomenDepth * .93, .007),
+    join(splitY + .008),
   ];
-  add(root, softLoftGeometry(torso, 20, 3.05), material, 'soft-torso');
+  add(root, softLoftGeometry(abdomen, 20, female ? 2.75 : 3.04), material, 'soft-abdomen');
+
+  // Chest geometry is independent, sharing a gently overlapping join ring
+  // with the abdomen to prevent a visible hole in animated close-ups.
+  const chestWidth = p.shoulders * .49 * p.chestWidth;
+  const chestDepth = depth * p.chestDepth;
+  const chest = [
+    join(splitY - .008),
+    station(splitY + chestHeight * .19, (joinRx * .50 + chestWidth * .50),
+      chestDepth * .95 * p.chestFullness, female ? -.016 : -.003),
+    station(splitY + chestHeight * .46, chestWidth * (female ? .86 : .94) * p.chestFullness,
+      chestDepth * p.chestFullness * (female ? 1.08 : 1.0), female ? -.018 : -.007),
+    station(splitY + chestHeight * .79, chestWidth,
+      chestDepth * (female ? .98 : 1.05), -.004),
+    station(shouldersY + .004, chestWidth * .78, chestDepth * .57),
+    station(shouldersY + .048, .062 * p.neckSize, .065 * p.neckSize),
+    station(shouldersY + .072, .047 * p.neckSize, .049 * p.neckSize),
+  ];
+  add(root, softLoftGeometry(chest, 20, female ? 2.8 : 3.05), material, 'soft-chest');
 
   // Exactly one true sphere for the head: no jaw, nose, cheek, ear or hair geometry.
   const head = avatar.head = new THREE.Group();
@@ -137,9 +166,9 @@ export function buildSoftAvatar(avatar, p) {
   const eyeGeometry = new THREE.BoxGeometry(1, 1, 1);
   avatar.geometry.push(eyeGeometry);
   for (const sign of [-1, 1]) {
-    const x = sign * headRadius * .37;
+    const x = sign * headRadius * .37 * p.eyeSpacing;
     const y = headRadius * .055;
-    const halfHeight = headRadius * .235;
+    const halfHeight = headRadius * .235 * p.eyeLength;
     const z = -Math.sqrt(headRadius ** 2 - x ** 2 - (y + halfHeight) ** 2) - .006;
     const mark = new THREE.Mesh(eyeGeometry, eye);
     mark.name = sign < 0 ? 'left-eye-line' : 'right-eye-line';
@@ -152,21 +181,20 @@ export function buildSoftAvatar(avatar, p) {
   function arm(sign) {
     const upper = new THREE.Bone();
     upper.name = sign < 0 ? 'leftUpperArm' : 'rightUpperArm';
-    upper.position.set(sign * p.shoulders * .515, shouldersY - .025, 0);
+    upper.position.set(sign * p.shoulders * .465 * p.chestWidth, shouldersY - .025, 0);
     root.add(upper);
     const length = height * p.armRatio;
-    const upperLength = length * .49;
+    const upperLength = length * p.upperArmRatio;
     const lowerLength = length * .51;
     const upperRadius = .072 * p.upperArmSize;
     const foreRadius = .061 * p.forearmSize;
-    const shoulderRadius = .083 * p.shoulderSize;
-    ball(upper, sphere, 0, -.020, 0, shoulderRadius, shoulderRadius, shoulderRadius, 'shoulder');
+    // No separate spherical shoulder cap. Upper-arm mesh starts inside chest.
     add(upper, taperedSegment(upperLength, upperRadius * 1.13, upperRadius * .82), material, 'upper-arm');
     const elbow = new THREE.Bone();
     elbow.name = sign < 0 ? 'leftLowerArm' : 'rightLowerArm';
     elbow.position.y = -upperLength;
     upper.add(elbow);
-    ball(elbow, sphere, 0, 0, 0, Math.min(upperRadius, foreRadius) * .89, undefined, undefined, 'elbow');
+    // Elbow remains an articulated joint, without a visible ball mesh.
     add(elbow, taperedSegment(lowerLength, foreRadius * 1.02, foreRadius * .77, .95), material, 'forearm');
     const hand = new THREE.Group();
     hand.name = 'spherical-hand';
@@ -183,9 +211,9 @@ export function buildSoftAvatar(avatar, p) {
   function leg(sign) {
     const upper = new THREE.Bone();
     upper.name = sign < 0 ? 'leftUpperLeg' : 'rightUpperLeg';
-    upper.position.set(sign * p.hips * .285, legs, 0);
+    upper.position.set(sign * p.hips * .285 * p.legSpacing, legs, 0);
     root.add(upper);
-    const thighLength = legs * .53;
+    const thighLength = legs * p.thighRatio;
     const calfLength = legs - thighLength;
     const thighRadius = .111 * p.thighSize;
     const calfRadius = .090 * p.calfSize;
@@ -199,20 +227,22 @@ export function buildSoftAvatar(avatar, p) {
     add(knee, taperedSegment(calfLength, calfRadius * 1.11, calfRadius * .70), material, 'calf');
     const foot = new THREE.Group();
     foot.name = 'hemisphere-foot';
-    foot.position.set(0, -calfLength, -.047);
+    foot.position.set(0, -calfLength, -.036);
     knee.add(foot);
     const footGeometry = new THREE.SphereGeometry(1, 18, 9, 0, 2 * Math.PI, 0, Math.PI / 2);
     const footDisc = new THREE.CircleGeometry(1, 18);
-    const radiusX = .113 * p.footSize;
-    const radiusZ = .155 * p.footSize;
-    const radiusY = .095 * p.footSize;
+    // The original hemispheres were oversized. Their default footprint is
+    // roughly 25-30% smaller; footLength only stretches the forward axis.
+    const radiusX = .083 * p.footSize;
+    const radiusZ = .112 * p.footSize * p.footLength;
+    const radiusY = .074 * p.footSize;
     const dome = add(foot, footGeometry, material, 'hemisphere-dome');
     dome.scale.set(radiusX, radiusY, radiusZ);
-    dome.position.z = -.025;
+    dome.position.z = -.018;
     const sole = add(foot, footDisc, material, 'flat-sole');
     sole.rotation.x = Math.PI / 2;
     sole.scale.set(radiusX, radiusZ, 1);
-    sole.position.z = -.025;
+    sole.position.z = -.018;
     upper.userData.knee = knee;
     return upper;
   }

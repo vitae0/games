@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Avatar } from '../avatar/Avatar.js';
+import { isSoftModel } from '../avatar/AvatarConfig.js';
 import { NPC_CAST, npcProfile, validateNpcCast } from './NpcCast.js';
 import { loadNpcModel, tintNpcClothing } from './NpcModelPool.js';
 
@@ -26,7 +27,7 @@ export class Actors {
     avatar.root.rotation.y = spec.yaw;
     // Soft characters are ready instantly. Only the optional legacy VRoid
     // variants require distance-triggered network loading.
-    const procedural = profile.baseModel === 'soft';
+    const procedural = isSoftModel(profile.baseModel);
     avatar.body.visible = procedural;
     return {
       id: spec.id, name: spec.name, spec,
@@ -71,7 +72,7 @@ export class Actors {
   handPoint(person, side) {
     // Procedural actors expose actual animated hand anchors, so grabbing them
     // remains aligned even after changing arm length or shoulder width.
-    if (person.avatar.profile.baseModel === 'soft') {
+    if (isSoftModel(person.avatar.profile.baseModel)) {
       const arm = side === 'left' ? person.avatar.leftArm : person.avatar.rightArm;
       const hand = arm?.userData.hand;
       if (hand) return hand.getWorldPosition(new THREE.Vector3());
