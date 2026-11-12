@@ -8,6 +8,7 @@ import { alignAvatarToFurniture } from './FurnitureFit.js';
 import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw, yawFromDisplacement, approachYaw } from './Orientation.js';
 import { isFloorPosture, nextFloorPosture, nextRisePosture } from './Postures.js';
 import { PostureControls } from './PostureControls.js';
+import { cycleFloorVariant, floorVariant, lyingDirection } from './PoseVariants.js';
 import { resolveGround, groundFloor } from '../world/Stairwell.js';
 
 const clamp = THREE.MathUtils.clamp;
@@ -36,13 +37,42 @@ export class Player {
     this.furnitureSurfaceHeight = null;
     this.sleepLean = 0;
     this.floorLieLean = 0;
+    this.floorVariantIndex = 0;
+    this.lyingQuarterTurns = 0;
+    this.lyingRoll = 0;
     this.avatar.root.rotation.order = 'YXZ';
     this.postureControls = new PostureControls();
     this.bindEvents();
   }
   get active() { return (document.pointerLockElement === this.canvas || this.touchActive) && !this.events.isModalOpen(); }
   get direction() { const v = forwardFromYaw(this.yaw); return new THREE.Vector3(v.x, 0, v.z); }
-  get viewDirection() { const v = viewFromYawPitch(this.yaw, this.pitch); return new THREE.Vector3(v.x, v.y, v.z); }
+  get viewDirection() {
+    if (this.posture === 'stand') {
+      const v = viewFromYawPitch(this.yaw,this.pitch);
+      return new THREE.Vector3(v.x,v.y,v.z);
+    }
+    return new THREE.Vector3(0,0,-1).applyQuaternion(this.poseCameraQuaternion());
+  }
+  /** Full pose-relative camera orientation, preserving independent mouse yaw. */
+  poseCameraQuaternion() {
+    if (this.posture === 'stand') return new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(this.pitch,this.yaw,0,'YXZ'));
+    const local=new THREE.Quaternion().setFromEuler(new THREE.Euler(
+      this.pitch,this.yaw-this.bodyYaw,0,'YXZ'));
+    return this.avatar.root.quaternion.clone().multiply(local);
+  }
+  get currentFloorVariant() { return floorVariant(this.posture,this.floorVariantIndex); }
+  changeFloorVariant(direction, vertical = false) {
+    if (!isFloorPosture(this.posture) || !Number.isFinite(direction)) return;
+    if (this.posture === 'floorLie' && !vertical) {
+      this.lyingQuarterTurns += Math.sign(direction);
+      this.events.toast('Yatış · '+lyingDirection(this.lyingQuarterTurns));
+      return;
+    }
+    this.floorVariantIndex=cycleFloorVariant(this.posture,this.floorVariantIndex,
+      Math.sign(direction));
+    this.events.toast(this.currentFloorVariant.label);
+  }
   /** CSS pixel deltas, shared by mouse and mobile swipe gestures. */
   lookBy(dx, dy, multiplier = 1) {
     this.yaw -= dx * .00245 * multiplier;
@@ -97,14 +127,23 @@ export class Player {
   }
   releaseHands() { this.releaseHand('left'); this.releaseHand('right'); }
   eyePosition() {
-    const eye = this.posture === 'sit' ? .99 : this.posture === 'rest' ? .55 :
-      this.posture === 'floorSit' ? this.avatar.profile.height * .61 :
-      this.posture === 'kneel' ? this.avatar.profile.height * .72 :
-      this.posture === 'floorLie' ? .29 :
-      (this.postureControls.crouching || this.touchCrouch) ? this.avatar.profile.height * .69 : this.avatar.profile.height - .12;
-    return new THREE.Vector3(this.position.x, this.position.y + eye, this.position.z);
+    if (this.posture !== 'stand') {
+      this.avatar.root.updateWorldMatrix(true,true);
+      const eye=this.avatar.head.localToWorld(new THREE.Vector3(0,0,-.095));
+      eye.y=clamp(eye.y,this.floor*HOTEL.floorHeight+.16,
+        (this.floor+1)*HOTEL.floorHeight-.20);
+      return eye;
+    }
+    const eye=(this.postureControls.crouching || this.touchCrouch)
+      ? this.avatar.profile.height*.69 : this.avatar.profile.height-.12;
+    return new THREE.Vector3(this.position.x,this.position.y+eye,this.position.z);
   }
-  rightVector() { const v = rightFromYaw(this.yaw); return new THREE.Vector3(v.x, 0, v.z); }
+  rightVector() {
+    if (this.posture !== 'stand')
+      return new THREE.Vector3(1,0,0).applyQuaternion(this.poseCameraQuaternion());
+    const v=rightFromYaw(this.yaw);
+    return new THREE.Vector3(v.x,0,v.z);
+  }
   anchor(side, distance) {
     const sign = side === 'left' ? -1 : 1;
     return this.eyePosition().addScaledVector(this.viewDirection, distance)
