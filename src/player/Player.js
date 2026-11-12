@@ -19,7 +19,7 @@ export class Player {
     this.posture = 'stand'; this.thirdPerson = false; this.walkSpeed = 0;
     this.touchActive = false; this.touchMove = { x: 0, forward: 0 };
     this.touchRun = false; this.touchCrouch = false; this.touchGripAdjustment = 0;
-    this.avatar = new Avatar(scene, profile);
+    this.avatar = new Avatar(scene, profile, { localPlayer: true });
     this.handRig = new HandRig(camera, profile);
     this.bodyIK = new BodyIK(this.avatar);
     this.cameraDistance = 3.8;
@@ -369,9 +369,11 @@ export class Player {
       hands: this.hands, eye: this.eyePosition(), look: this.viewDirection,
       right: this.rightVector(), posture: this.posture, precision,
     });
-    // FPS renders the genuine avatar, hiding only the face/collar in the local camera.
+    // FPS exposes only this avatar's actual limb bones. Other characters
+    // remain complete: their layer masks are never modified.
     const orbitCamera = this.thirdPerson || this.events.isCustomizerOpen() ||
       isFloorPosture(this.posture) || this.savedStanding !== null;
+    this.avatar.setFirstPersonMode(!orbitCamera);
     this.avatar.root.visible = true;
     this.handRig.update(dt, this.hands.left, this.hands.right, false);
     this.camera.layers.set(0);
