@@ -24,6 +24,8 @@ export class HandRig {
       const sleeve = this.add(group, 1, this.sleeveMaterial, 0, -.19, .018, .089, .38, .09);
       const wrist = this.add(group, 0, this.skinMaterial, 0, .04, -.006, .074, .11, .073);
       const palm = this.add(group, 0, this.skinMaterial, 0, .14, -.018, .101, .13, .053);
+      const relaxedDigits = this.add(group, 0, this.skinMaterial,
+        0, .272, -.014, .087, .073, .035);
       const digits = [];
       for (let f = 0; f < 4; f++) {
         const digit = this.add(group, 0, this.skinMaterial,
@@ -37,7 +39,7 @@ export class HandRig {
       group.add(sleeve, wrist); // re-parent no-op, preserves explicit assembly
       this.root.add(group);
       group.traverse(child => { if (child.isMesh) child.renderOrder = 100; });
-      this.arms[side] = { group, sleeve, wrist, palm, digits, thumb, sign };
+      this.arms[side] = { group, sleeve, wrist, palm, relaxedDigits, digits, thumb, sign };
     }
     this.setProfile(profile);
   }
@@ -48,11 +50,13 @@ export class HandRig {
   setProfile(profile) {
     const p = normalizeAvatar(profile);
     const soft = isSoftModel(p.baseModel);
+    this.softProfile = soft;
     this.skinMaterial.color.set(soft ? p.bodyColor : SKIN_TONES[p.skinTone]);
     this.sleeveMaterial.color.set(soft ? p.bodyColor : { neon:0xcac5bc, stealth:0x343d47, chrome:0x977c81 }[p.outfit]);
     for (const arm of Object.values(this.arms)) {
       arm.wrist.visible = !soft;
-      arm.thumb.visible = !soft;
+      arm.thumb.visible = true;
+      arm.relaxedDigits.visible = soft;
       for (const digit of arm.digits) digit.visible = !soft;
       arm.palm.scale.setScalar(soft ? .092 * p.handSize : 1);
       if (!soft) arm.palm.scale.set(.101, .13, .053);
@@ -64,6 +68,10 @@ export class HandRig {
     for (const [side, data] of Object.entries(this.arms)) {
       const input = side === 'left' ? left : right;
       const reached = input.pressed ? 1 : 0;
+      if (this.softProfile) {
+        data.relaxedDigits.visible = !input.pressed && !input.grip;
+        for(const finger of data.digits) finger.visible = !data.relaxedDigits.visible;
+      }
       data.group.position.z = THREE.MathUtils.damp(data.group.position.z, reached ? -1.14 : -.74, 12, dt);
       data.group.position.y = THREE.MathUtils.damp(data.group.position.y, reached ? -.28 : -.49, 12, dt);
       data.palm.rotation.x = THREE.MathUtils.damp(data.palm.rotation.x, input.grip ? -.27 : 0, 13, dt);
