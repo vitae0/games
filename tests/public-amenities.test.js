@@ -54,8 +54,13 @@ test('public toilet cabins independently open and washbasins respond',()=>{
   const f=fakeHotel();
   try{
     buildPublicRestrooms(f.hotel);
-    const doors=f.hotel.interactables.filter(x=>x.getLabel().startsWith('Ortak tuvalet'));
+    const doors=f.hotel.interactables.filter(x=>x.getLabel().startsWith('Ortak tuvalet')&&x.getLabel().includes('Kapıyı'));
     assert.equal(doors.length,2);
+    const useActions=f.hotel.interactables.filter(x=>x.getLabel()==='Ortak tuvalet · Kullan');
+    assert.equal(useActions.length,2);
+    assert.equal(useActions[0].groupId,doors[0].groupId);
+    assert.ok(f.geometry.some(b=>b.mat==='innerWall'&&b.w>3.5&&b.d<.2),
+      'opaque full-height restroom privacy wall is visible');
     doors[0].activate();
     assert.ok([...f.states.values()].some(v=>v===false));
     doors[1].activate();
