@@ -18,8 +18,6 @@ export const PUBLIC_WC = Object.freeze({
   stallBackX: 11.68,
 });
 
-const UNIT = new THREE.BoxGeometry(1, 1, 1);
-
 /** One coherent, navigable, gender-neutral restroom. The opaque cubicles,
  * three independent sinks and operational accessories use the hotel's
  * existing batched materials and event-driven furniture animation system.
@@ -28,8 +26,10 @@ export function buildPublicRestroom(hotel) {
   const floor = PUBLIC_WC.floor;
   const box = (...args) => hotel.box(...args);
   const round = (...args) => hotel.rounded ? hotel.rounded(...args) : box(...args);
+  const sharedCube = hotel.propGeometry ??
+    (hotel._furnitureUnitCube ||= new THREE.BoxGeometry(1, 1, 1));
   const meshBox = (name, mat, parent, px, py, pz, w, h, d) => {
-    const mesh = new THREE.Mesh(hotel.propGeometry ?? UNIT, hotel.materials[mat]);
+    const mesh = new THREE.Mesh(sharedCube, hotel.materials[mat]);
     mesh.name = name;
     mesh.position.set(px, py, pz);
     mesh.scale.set(w, h, d);
@@ -52,7 +52,9 @@ export function buildPublicRestroom(hotel) {
   // Solid privacy wall against the exterior window, uninterrupted partition
   // above all three doors, an actual ceiling, and hygienic stone floor.
   box('slab', 6.76, .029, -3.50, 10.06, .045, 6.83);
-  box('ceiling', 6.76, 3.125, -3.50, 10.06, .035, 6.83);
+  // Drop the new ceiling beneath the existing structural soffit, avoiding
+  // z-fighting with the upper floor's underside.
+  box('ceiling', 6.76, 3.075, -3.50, 10.06, .034, 6.83);
   box('innerWall', 11.70, 1.55, -3.50, .16, 3.08, 6.66, floor, true);
   box('darkWall', 11.59, .24, -3.50, .032, .46, 6.52);
   box('trim', 11.59, 2.97, -3.50, .04, .035, 6.52);
@@ -69,6 +71,7 @@ export function buildPublicRestroom(hotel) {
   box('innerWall', 5.13, 1.54, -6.73, 5.13, 3.04, .10);
   round('darkWall', 5.18, .67, -6.15, 5.00, .36, .88);
   round('wood', 5.18, .895, -6.15, 5.07, .072, .96);
+  hotel.addWalkSurface?.(floor, 5.18, -6.15, 5.05, .94, .94);
   box('trim', 5.18, .50, -5.71, 4.96, .055, .065);
   box('warm', 5.18, 2.65, -6.66, 4.73, .065, .075);
   box('black', 5.18, 2.58, -6.63, 4.91, .035, .065);
@@ -172,6 +175,7 @@ export function buildPublicRestroom(hotel) {
     };
     // Toilet bowl/tank, seat and hinged lid. Facing toward the corridor (-X).
     round('ceramic', 10.66, .355, z, .72, .53, .63);
+    hotel.addWalkSurface?.(floor, 10.66, z, .76, .66, .62);
     round('ceramic', 10.64, .56, z, .77, .12, .68);
     round('black', 10.64, .617, z, .48, .018, .43);
     round('ceramic', 11.29, .66, z, .35, .54, .69);
@@ -302,6 +306,7 @@ export function buildPublicRestroom(hotel) {
   }, { anchorZ: -.57, anchorY: 1.42 });
 
   round('black', 5.64, .35, -.81, .46, .68, .45);
+  hotel.addWalkSurface?.(floor, 5.64, -.81, .48, .49, .80);
   box('trim', 5.64, .73, -.81, .50, .055, .49);
   const binLid = furniturePart(hotel, 'black', 5.64, .775, -.81,
     .43, .038, .40, 'public-restroom-bin-lid');
@@ -322,8 +327,8 @@ export function buildPublicRestroom(hotel) {
   box('warm', 2.24, 1.23, -5.04, .06, .075, .24);
 
   for (const x of [4.02, 7.20, 9.75]) {
-    box('warm', x, 3.065, -3.47, 1.26, .055, .11);
-    box('trim', x, 3.095, -3.47, 1.35, .042, .14);
+    box('warm', x, 3.010, -3.47, 1.26, .05, .11);
+    box('trim', x, 3.039, -3.47, 1.35, .022, .14);
   }
   box('trim', 2.01, 1.38, -2.61, .15, .29, .22);
   box('warm', 1.918, 1.38, -2.61, .027, .13, .09);
