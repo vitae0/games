@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { normalizeAvatar } from '../src/avatar/AvatarConfig.js';
 import { visibleGarmentLayers } from '../src/avatar/ClothingLayers.js';
 
-test('VRoid male/female are the only current character bases', () => {
-  assert.equal(normalizeAvatar({}).baseModel, 'vroidMale');
-  assert.equal(normalizeAvatar({ baseModel: 'invalid' }).baseModel, 'vroidMale');
+test('soft is default while both original VRoid bases remain selectable', () => {
+  assert.equal(normalizeAvatar({}).baseModel, 'soft');
+  assert.equal(normalizeAvatar({ baseModel: 'invalid' }).baseModel, 'soft');
   assert.equal(normalizeAvatar({ baseModel: 'vroidFemale' }).baseModel, 'vroidFemale');
-  assert.equal(normalizeAvatar({ baseModel: 'procedural' }).baseModel, 'vroidMale');
+  assert.equal(normalizeAvatar({ baseModel: 'procedural' }).baseModel, 'soft');
 });
 test('none removes all visual garment layers, not anatomy', () => {
   assert.deepEqual(visibleGarmentLayers(normalizeAvatar({ outfit: 'none' })), {
