@@ -614,6 +614,16 @@ export class Hud {
         : player.keys.has('KeyA') ? 'SOL' : player.keys.has('KeyD') ? 'SAĞ' : 'A / D';
       const label = legHint.querySelector('[data-leg-selection]');
       if (label) label.textContent = mode+' · '+selected;
+      const description=legHint.querySelector('[data-precision-help]');
+      const detail=legHint.querySelector('[data-precision-detail]');
+      if (description) description.textContent = mode==='KOL'
+        ? 'FARE · Seçili kolun/elinin hedefini değiştir'
+        : mode==='EL / PARMAK' ? 'FARE · Bileği döndür; Ctrl ile parmakları kapat'
+          : 'FARE · Bacağı yükselt, aç veya yana uzat';
+      if (detail) detail.textContent = mode==='BACAK'
+        ? 'Z+W+A/D bacak · Ctrl diz bük · Ayaktayken Space tekme'
+        : mode==='KOL' ? 'Z+S+A/D kol · Ctrl dirsek bük'
+          : 'Z+Q+A/D el · Ctrl parmakları bük';
     }
     const poseLabel = player.currentFloorVariant?.label;
     const status = precision ? 'UZUV KONTROLÜ'
