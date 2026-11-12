@@ -93,7 +93,8 @@ test('sleep is centered on its real back and laid flat on the mattress',()=>{
     const point=p.avatar.body.localToWorld(new THREE.Vector3(0,a.localY,a.localZ));
     assert.ok(point.distanceTo(new THREE.Vector3(8,.60+a.clearance,3))<.003);
     assert.ok(p.avatar.root.rotation.x < -1.35);
-    assert.ok(p.camera.position.y>.10);
+    assert.ok(p.camera.position.y>=.099,
+      'low-angle orbit may rest exactly on the interior floor bound');
   }finally{p.dispose();}
 });
 
