@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createHairMounts } from './HairMounts.js';
+import { SOFT_STRUCTURAL_PROFILES } from './AvatarConfig.js';
 
 /**
  * Vitaeworld's lightweight character family. Nothing here fetches an asset:
@@ -40,13 +41,33 @@ export function softLoftGeometry(stations, sides = 16, exponent = 2.4, caps = { 
       // successive loft stations. No disconnected spheres or sharp apexes.
       // Concentrate the two lobes toward the sternum. Their deformation
       // changes local Z only; the entire lateral X silhouette is unchanged.
-      const pairedLobes = Math.exp(-Math.pow((u - .30) / .18, 2)) +
-        Math.exp(-Math.pow((u + .30) / .18, 2));
+      const pairedLobes = Math.exp(-Math.pow((u - .30) / .215, 2)) +
+        Math.exp(-Math.pow((u + .30) / .215, 2));
       const bust = (ring.bustBulge ?? 0) * front * pairedLobes;
+      // Structural cues reshape the surface, not the scale of a separate
+      // primitive. All offsets fade before joints and adjacent loft seams.
+      const pectoralPad = (ring.pectoralPad ?? 0) * front *
+        Math.exp(-Math.pow((Math.abs(u) - .40) / .35, 2));
+      const sternumInset = (ring.sternumInset ?? 0) * front *
+        Math.exp(-Math.pow(u / .16, 2));
+      const scapulaPad = (ring.scapulaPad ?? 0) * rear *
+        Math.exp(-Math.pow((Math.abs(u) - .46) / .29, 2));
+      const lumbarHollow = (ring.lumbarHollow ?? 0) * rear *
+        Math.max(0, 1 - Math.abs(u) * .9);
+      const lowerAbdomen = (ring.lowerAbdomenPad ?? 0) * front *
+        Math.max(0, 1 - Math.abs(u) * .65);
+      const legSign = ring.outerSign ?? 0;
+      const outside = Math.max(0, u * legSign);
+      const inside = Math.max(0, -u * legSign);
+      const x = (ring.x || 0) + ring.rx * u +
+        (ring.lateralFlare ?? 0) * u * Math.abs(u) +
+        legSign * ((ring.outerFlare ?? 0) * outside ** 2 -
+          (ring.innerFlare ?? 0) * inside ** 2);
       const z = (ring.z || 0)
         + ring.rz * v * (v >= 0 ? (ring.backScale ?? 1) : (ring.frontScale ?? 1))
-        - ridge * .32 - bust;
-      vertices.push((ring.x || 0) + ring.rx * u, y, z);
+        - ridge * .32 - bust - pectoralPad + sternumInset +
+        scapulaPad - lumbarHollow - lowerAbdomen + (ring.rearPad ?? 0) * rear;
+      vertices.push(x, y, z);
     }
   }
   for (let j = 0; j < stations.length - 1; j++) {
@@ -109,7 +130,7 @@ const station = (y, rx, rz, z = 0, backScale = 1, frontScale = 1) =>
   ({ y, rx, rz, z, backScale, frontScale });
 
 /** Build one continuous-looking segment with rounded, asymmetric contours. */
-function taperedSegment(length, rootRadius, tipRadius, depthScale = .94) {
+function taperedSegment(length, rootRadius, tipRadius, depthScale = .94, shapeBias = 0) {
   const points = [
     station(-length, tipRadius * .77, tipRadius * depthScale * .72),
     station(-length * .94, tipRadius, tipRadius * depthScale),
@@ -119,6 +140,9 @@ function taperedSegment(length, rootRadius, tipRadius, depthScale = .94) {
     station(-length * .035, rootRadius * .93, rootRadius * depthScale * .94),
     station(.012, rootRadius * .50, rootRadius * depthScale * .52),
   ];
+  // Changes mid-limb contour while keeping elbow and wrist ends identical.
+  points[3].rx *= 1 + shapeBias;
+  points[4].rz *= 1 + shapeBias * .7;
   return softLoftGeometry(points, 16, 2.22);
 }
 
@@ -167,6 +191,9 @@ export function buildSoftAvatar(avatar, p) {
   // Different starting silhouettes, fully editable on both model types.
   // Independent controls drive hip/glute, abdomen, chest and clavicular collar.
   const female = p.baseModel === 'softFemale';
+  const anatomy = SOFT_STRUCTURAL_PROFILES[p.baseModel] || SOFT_STRUCTURAL_PROFILES.softMale;
+  const anatomicalUnit = height / 1.75;
+  root.userData.structuralProfile = anatomy.chestType;
   const splitY = legs + torsoHeight * (1 - p.chestRatio);
   const abdomenHeight = splitY - legs;
   const chestHeight = shouldersY - splitY;
@@ -204,6 +231,13 @@ export function buildSoftAvatar(avatar, p) {
     station(splitY - bridge, joinRx * 1.025, joinRz * 1.015, .003),
     join,
   ];
+  // Distinct pelvis/waist curvature at identical hip, waist and belly sizes.
+  // The shared bottom and upper join rings remain unchanged.
+  abdomen[1].lateralFlare = anatomy.iliacFlare * .65 * anatomicalUnit;
+  abdomen[2].lateralFlare = anatomy.iliacFlare * anatomicalUnit;
+  abdomen[2].lumbarHollow = anatomy.lumbarHollow * anatomicalUnit;
+  abdomen[2].lowerAbdomenPad = anatomy.lowerAbdomenPad * anatomicalUnit;
+  abdomen[3].lumbarHollow = anatomy.lumbarHollow * .65 * anatomicalUnit;
   const abdomenMesh = add(root,
     softLoftGeometry(abdomen, S, torsoExponent, { bottom: true, top: false }),
     material, 'soft-abdomen');
@@ -232,7 +266,9 @@ export function buildSoftAvatar(avatar, p) {
   // rounded Z protrusions, never the X radii or the rear half of the torso.
   // chestWidth and chestDepth remain separate independent body measurements.
   const bustStation = (y, rx, rz, z, bulge = 0) =>
-    Object.assign(station(y, rx, rz, z), { bustBulge: bulge * p.chestFullness });
+    Object.assign(station(y, rx, rz, z), {
+      bustBulge: bulge * p.chestFullness * anatomy.bustEmphasis,
+    });
   const chest = female ? [
     join,
     station(splitY + bridge, joinRx * 1.025, joinRz * 1.027, -.001),
@@ -284,6 +320,16 @@ export function buildSoftAvatar(avatar, p) {
       upperJoinRz * .98 + chestDepth * .02, -.003),
     upperJoin,
   ];
+  // Back and anterior chest use independent masks. A back edit never
+  // inflates paired breast tissue or widens the shoulders.
+  for (const ring of chest.slice(1, -1)) {
+    const t = Math.max(0, Math.min(1, (ring.y - splitY) / chestBodyHeight));
+    const fade = Math.sin(Math.PI * t);
+    ring.backScale = 1 + (p.backFullness - 1) * .44 * fade;
+    ring.scapulaPad = anatomy.scapulaPad * anatomicalUnit * fade;
+    ring.pectoralPad = anatomy.pectoralPad * anatomicalUnit * fade;
+    ring.sternumInset = anatomy.sternumInset * anatomicalUnit * fade;
+  }
   const chestMesh = add(root,
     softLoftGeometry(chest, S, torsoExponent, { bottom: false, top: false }),
     material, 'soft-chest');
@@ -422,20 +468,22 @@ export function buildSoftAvatar(avatar, p) {
     const upperRadius = .072 * p.upperArmSize;
     const foreRadius = .061 * p.forearmSize;
     // No separate spherical shoulder cap. Upper-arm mesh starts inside chest.
-    add(upper, taperedSegment(upperLength, upperRadius * 1.13, upperRadius * .82), material, 'upper-arm');
+    add(upper, taperedSegment(upperLength, upperRadius * 1.13, upperRadius * .82,
+      .94, anatomy.armContour), material, 'upper-arm');
     const elbow = new THREE.Bone();
     elbow.name = sign < 0 ? 'leftLowerArm' : 'rightLowerArm';
     elbow.position.y = -upperLength;
     upper.add(elbow);
     // Elbow remains an articulated joint, without a visible ball mesh.
-    add(elbow, taperedSegment(lowerLength, foreRadius * 1.02, foreRadius * .77, .95), material, 'forearm');
+    add(elbow, taperedSegment(lowerLength, foreRadius * 1.02, foreRadius * .77,
+      .95, anatomy.armContour * .5), material, 'forearm');
     const hand = new THREE.Group();
     hand.name = 'spherical-hand';
     hand.position.y = -lowerLength;
     elbow.add(hand);
     const handRadius = .064 * p.handSize;
     ball(hand, sphere, 0, -.027, 0,
-      handRadius * .89, handRadius * .76, handRadius * .48, 'palm');
+      handRadius * .89, handRadius * .76, handRadius * .48 * anatomy.palmDepth, 'palm');
     // Five recognisable digits. Two stylised phalanges per finger, attached
     // under named groups to support later grasp/finger animations.
     const digits = ['index', 'middle', 'ring', 'little'];
@@ -503,6 +551,14 @@ export function buildSoftAvatar(avatar, p) {
         .008, upperRear),
       station(.012, thighRadius * .70, thighRadius * .69, .006),
     ];
+    // Upper-thigh lateral sweep is an actual contour change rather than
+    // a global scale. Joint rings stay untouched for IK compatibility.
+    for (const [i, weight] of [[4,.35],[5,.70],[6,1],[7,1],[8,.55]]) {
+      thigh[i].outerSign = sign;
+      thigh[i].outerFlare = anatomy.thighOuterFlare * anatomicalUnit * weight;
+      thigh[i].innerFlare = anatomy.thighInnerFlare * anatomicalUnit * weight;
+      thigh[i].rearPad = anatomy.thighRearPad * anatomicalUnit * weight;
+    }
     add(upper, softLoftGeometry(thigh, 20, 2.3), material, 'thigh');
 
     const knee = new THREE.Bone();
@@ -522,6 +578,9 @@ export function buildSoftAvatar(avatar, p) {
       station(-calfLength * .032, jointRadius * 1.025, jointRadius * .985),
       station(.012, jointRadius * .98, jointRadius * .94),
     ];
+    for (const [i, weight] of [[2,.30],[3,.85],[4,1],[5,.50]]) {
+      calf[i].rearPad = anatomy.calfRearPad * anatomicalUnit * weight;
+    }
     add(knee, softLoftGeometry(calf, 20, 2.25), material, 'calf');
     const foot = new THREE.Group();
     foot.name = 'hemisphere-foot';

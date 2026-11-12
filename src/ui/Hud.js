@@ -331,7 +331,8 @@ export class Hud {
     rangeGroup('face', 'BAŞ & BOYUN', ['headScale','eyeSpacing','eyeLength','neckSize']);
     rangeGroup('body', 'VÜCUT ORANLARI', ['height','shoulders','waist','hips','torsoDepth']);
     rangeGroup('body', 'KARIN & KALÇA', ['abdomenWidth','abdomenDepth','abdomenFullness','hipSize','gluteSize']);
-    rangeGroup('chest', 'GÖĞÜS YAPISI', ['chestWidth','chestDepth','chestFullness','chestRatio']);
+    rangeGroup('chest', 'ÖN GÖĞÜS YAPISI', ['chestWidth','chestDepth','chestFullness','chestRatio']);
+    rangeGroup('chest', 'SIRT YAPISI', ['backFullness']);
     rangeGroup('chest', 'KLAVİKULA & BOYUN BAĞLANTISI', ['upperChestWidth','upperChestDepth','upperChestFullness','clavicleDefinition','trapeziusVolume','neckBaseWidth']);
     rangeGroup('arms', 'KOLLAR & ELLER', ['armSpread','armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
     rangeGroup('legs', 'BACAK ORANLARI', ['legRatio','legSpacing','thighRatio','thighSize','calfSize','footSize','footLength']);
