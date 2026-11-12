@@ -5,7 +5,7 @@
 ## Alpha 0.11: fiziksel mobilyalar ve 90° merdivenler
 
 - **Tırmanma düzeltmesi:** E ile mobilyanın üstüne aniden taşınma kaldırıldı. Yükseklik destekleri zıplama sırasında ayağın üst yüzeye ulaşıp ulaşmadığına göre hesaplanır. Alçak nesneler artık zeminde görünmez 2D engel olarak yer almaz.
-- **Nesne üzeri etkileşim:** Yakındaki nesnelerin üzerindeki küçük `E · Aksiyon` kartları 3D konumdan projekte edilir; mobilde dokunulabilir. Paneller fare ve dokunmatik kamera kontrolüyle çalışır.
+- **Nesne üzeri etkileşim:** Yakındaki nesnelere bağlı `KULLAN · Aksiyon` düğmeleri doğrudan ilgili eylemi çalıştırır. Mobilde alttaki genel KULLAN düğmesi ve ekran ortasındaki ikinci uyarı kaldırıldı. Hedefler bakış doğrultusuna göre sıralanır, düğmeler üst üste binmeyecek biçimde yerleştirilir ve dokunma sırasında başka nesneye dönüşmez. NPC konuşmaları ve mobilyadan kalkma da aynı düğmeyle yapılır.
 - **90° döndürülmüş merdiven:** Daraltılmış, kapı girişinin sağındaki doğu-batı yönünde gerçek basamaklar, yeni sahanlık, yenilenmiş döşeme açıklığı.
 - **İlk kat ve duvarlar:** Süit, resepsiyon, bar ve ortak tuvalette kaplamalar dış ve iç duvar sınırlarına kadar uzatıldı. Koridor halısı da uç duvarlara kadar devam eder. Koridor ve banyo kapılarının üstleri duvar ile kapatıldı.
 - **Minibar:** Odanın iç ön duvarına yaslandı.
@@ -126,8 +126,8 @@ Bu sürümde üçüncü taraf avatar/texture/model dosyası kullanılmadı. VRoi
 - **Başlangıç:** Dokunmatik ekran algılandığında **DOKUN VE OYNA** düğmesiyle açılır. `Pointer Lock` veya fare gerekmez. Masaüstünde mobil kontrolleri denemek için `?touch` parametresi kullanılabilir. Masaüstü klavye/fare kontrolleri korunur.
 - **Sol joystick:** Analog yürüme ve yön değiştirme (joystick hızın şiddetini de belirler).
 - **Sağ ekran:** Parmağı sürükleyerek kamera açısını değiştir. Kamera hassasiyeti **⚙ Ayarlar** içinden 0.45–2.00× olarak değiştirilebilir.
-- **Temel düğmeler:** Koş (basılı tut), Kullan, Zıpla, Sol El/Sağ El (basılı tut), Çömel (basılı tut), Çek/İt (basılı tut veya kısa dokun), Daha.
-- **Daha menüsü:** Yere otur/kalk, diz çök/kalk, FPS/TPS kamera, tutuşu bırak, karakter düzenleyicisi. Asansör ve diğer mobilyalar için **Kullan** düğmesi.
+- **Temel düğmeler:** Koş (basılı tut), Zıpla, Sol El/Sağ El (basılı tut), Çömel (basılı tut), Çek/İt (basılı tut veya kısa dokun), Daha. Etkileşim için nesnenin üzerinde beliren `KULLAN` düğmesine dokun.
+- **Daha menüsü:** Yere otur/kalk, diz çök/kalk, FPS/TPS kamera, tutuşu bırak, karakter düzenleyicisi. Asansör, mobilya ve NPC etkileşimleri nesne üstündeki **KULLAN** düğmeleriyle çalışır.
 - **Menüler:** Karakter düzenleyicisi, GLB/VRM dosya seçme, asansör ve grafik ayarları mobil kaydırmaya uygundur. Ekran dönerse veya uygulama arka plana alınırsa basılı düğmeler serbest bırakılır.
 - **Performans:** Mobil cihazlarda başlangıç piksel oranı (DPR) 1.15 ile sınırlıdır. Otomatik modda düşük kare hızında dinamik çözünürlük azaltılır; minimum 0.55 DPR. Grafik ayarı: Otomatik / Düşük / Orta / Yüksek. Tercihler yalnızca cihazdaki `localStorage` alanına kaydedilir.
 - **Yerleşim:** Dikey/yatay ekran, iOS/Android çentik/safe-area ve dinamik görünür yükseklik (`100dvh`) desteklenir. Yatay kullanım daha geniş görüş sağlar.
