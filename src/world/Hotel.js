@@ -125,7 +125,8 @@ export class Hotel {
     let top=null;
     for(const s of this.walkSurfaces){
       if(s.floor!==currentFloor||x<s.minX||x>s.maxX||z<s.minZ||z>s.maxZ)continue;
-      if(s.topY>feetY+.025)continue;
+      // Let players step onto low lips while retaining jump-only furniture.
+      if(s.topY>feetY+.17)continue;
       if(top===null||s.topY>top)top=s.topY;
     }
     if(top!==null)return top;
@@ -140,7 +141,7 @@ export class Hotel {
       return walkStairs(this.collisions,x,z,ground,dx,dz,radius);
     const belowFurniture=(px,pz)=>{
       for(const s of this.walkSurfaces){
-        if(s.floor!==floor||feetY>=s.topY-.025)continue;
+        if(s.floor!==floor||feetY>=s.topY-.17)continue;
         const qx=Math.max(s.minX,Math.min(px,s.maxX));
         const qz=Math.max(s.minZ,Math.min(pz,s.maxZ));
         if((px-qx)**2+(pz-qz)**2<radius*radius)return true;
@@ -373,8 +374,8 @@ export class Hotel {
         const x=flight.forward
           ? STAIR.xNear-(i+.5)*STAIR_RUN
           : STAIR.xFar+(i+.5)*STAIR_RUN;
-        this.box('slab',x,base+rise/2,flight.z,STAIR_RUN,rise,STAIR.width);
-        this.box('wood',x,base+rise+.011,flight.z,STAIR_RUN-.025,.022,STAIR.width-.11);
+        this.box('slab',x,base+(rise+.006)/2,flight.z,STAIR_RUN,rise-.006,STAIR.width);
+        this.box('wood',x,base+rise+.017,flight.z,STAIR_RUN-.025,.020,STAIR.width-.11);
         for(const sign of [-1,1]){
           const railZ=flight.z+sign*(STAIR.width/2+.055);
           this.box('trim',x,base+rise+.91,railZ,STAIR_RUN-.025,.08,.095);
@@ -387,7 +388,7 @@ export class Hotel {
         landing.width,.172,landing.depth);
     }
     // No extra coplanar slab is drawn on the ground-floor entrance deck.
-    this.box('trim',-3.95,.014,10.5,.25,.028,1.8);
+    this.box('trim',-3.95,.047,10.5,.25,.018,1.8);
   }
   nearestStaticSurface(origin, direction) {
     this.gripRaycaster.set(origin, direction);
