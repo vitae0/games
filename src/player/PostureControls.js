@@ -1,4 +1,4 @@
-import { controlTap } from './Postures.js';
+import { DOUBLE_CONTROL_INTERVAL_MS } from './Postures.js';
 
 /** Deterministic input state machine. No DOM or Three.js dependencies. */
 export const JUMP_COMBO_GRACE_MS = 95;
@@ -8,6 +8,7 @@ export class PostureControls {
   reset() {
     this.held = new Set();
     this.lastCtrl = null;
+    this.ctrlCount = 0;
     this.jumpArmed = null;
   }
   get crouching() { return this.held.has('ControlLeft') || this.held.has('ControlRight'); }
@@ -17,16 +18,26 @@ export class PostureControls {
     if (code === 'ControlLeft' || code === 'ControlRight') {
       if (this.held.has('Space') || this.jumpArmed !== null) {
         this.lastCtrl = null;
+        this.ctrlCount = 0;
         this.jumpArmed = null;
         return 'kneel';
       }
-      const result = controlTap(this.lastCtrl, now);
-      this.lastCtrl = result.nextTapAt;
-      return result.double ? 'floorSit' : null;
+      const withinSequence = Number.isFinite(this.lastCtrl) &&
+        now >= this.lastCtrl && now - this.lastCtrl <= DOUBLE_CONTROL_INTERVAL_MS;
+      this.ctrlCount = withinSequence ? this.ctrlCount + 1 : 1;
+      this.lastCtrl = now;
+      if (this.ctrlCount >= 3) {
+        // Double Ctrl already seated the player; the next tap reclines.
+        this.lastCtrl = null;
+        this.ctrlCount = 0;
+        return 'floorLie';
+      }
+      return this.ctrlCount === 2 ? 'floorSit' : null;
     }
     if (code === 'Space') {
       if (this.crouching) {
         this.lastCtrl = null;
+        this.ctrlCount = 0;
         this.jumpArmed = null;
         return 'kneel';
       }
