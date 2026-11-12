@@ -20,7 +20,7 @@ test('four named hotel NPCs use soft shapes with distinct colours and retain VRo
     const profile=npcProfile(spec);
     assert.equal(profile.outfit,'neon');
     assert.equal(profile.hair,'sample');
-    assert.equal(profile.baseModel,'soft');
+    assert.equal(profile.baseModel,spec.baseModel === 'vroidFemale' ? 'softFemale' : 'softMale');
     assert.equal(profile.bodyColor,spec.bodyColor);
     assert.equal(profile.shirtVisible,true);
     assert.equal(profile.pantsVisible,true);
