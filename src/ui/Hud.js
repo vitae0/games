@@ -604,17 +604,28 @@ export class Hud {
     $('#floor-status').textContent = `${player.floor + 47}. KAT`;
     const held = ['left', 'right'].filter(side => player.hands[side].grip);
     $('#hand-status').textContent = held.length ? `TUTUŞ: ${held.join(' + ').toUpperCase()}` : 'LMB / RMB · ELLER';
-    const precision = player.active && player.keys.has('KeyZ') && player.posture === 'stand';
+    const precision = player.active && player.keys.has('KeyZ');
     const legHint = $('#leg-control-hint');
     if (legHint) {
       legHint.classList.toggle('hidden', !precision);
-      const selected = player.keys.has('KeyA') && player.keys.has('KeyD') ? 'İKİ BACAK'
-        : player.keys.has('KeyA') ? 'SOL BACAK'
-          : player.keys.has('KeyD') ? 'SAĞ BACAK' : 'BACAK SEÇ: A / D';
+      const mode = player.keys.has('KeyW') ? 'KOL'
+        : player.keys.has('KeyS') ? 'EL / PARMAK' : 'BACAK';
+      const selected = player.keys.has('KeyA') && player.keys.has('KeyD') ? 'İKİ'
+        : player.keys.has('KeyA') ? 'SOL' : player.keys.has('KeyD') ? 'SAĞ' : 'A / D';
       const label = legHint.querySelector('[data-leg-selection]');
-      if (label) label.textContent = selected;
+      if (label) label.textContent = mode+' · '+selected;
     }
-    $('#movement-status').textContent = precision ? 'BACAK KONTROLÜ' : player.posture === 'stand' && (player.postureControls.crouching || player.touchCrouch) ? 'ÇÖMELİYOR' : player.posture === 'sit' || player.posture === 'floorSit' ? 'OTURUYOR' : player.posture === 'kneel' ? 'İKİ DİZ ÜSTÜNDE' : player.posture === 'floorLie' ? 'YERDE UZANIYOR' : player.posture === 'rest' ? 'DİNLENİYOR' : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
+    const poseLabel = player.currentFloorVariant?.label;
+    const status = precision ? 'UZUV KONTROLÜ'
+      : player.posture === 'stand' && (player.postureControls.crouching || player.touchCrouch)
+        ? 'ÇÖMELİYOR'
+      : player.posture === 'floorSit' ? 'OTURUYOR · '+poseLabel
+      : player.posture === 'kneel' ? 'DİZ ÜSTÜNDE · '+poseLabel
+      : player.posture === 'floorLie' ? 'YATIYOR · '+poseLabel
+      : player.posture === 'sit' ? 'OTURUYOR'
+      : player.posture === 'rest' ? 'DİNLENİYOR'
+      : speed > 5 ? 'KOŞUYOR' : speed > .1 ? 'YÜRÜYOR' : 'BEKLİYOR';
+    $('#movement-status').textContent=status;
     $('#position-status').textContent = `${player.position.x.toFixed(1)} / ${player.position.z.toFixed(1)} m`;
     $('#fps').textContent = `${fps} FPS`;
   }
