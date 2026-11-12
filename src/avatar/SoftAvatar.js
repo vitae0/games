@@ -25,8 +25,19 @@ export function softLoftGeometry(stations, sides = 16, exponent = 2.4, caps = { 
   for (const ring of stations) {
     for (let i = 0; i < sides; i++) {
       const [u, v] = contour(i * Math.PI * 2 / sides);
-      vertices.push((ring.x || 0) + ring.rx * u, ring.y,
-        (ring.z || 0) + ring.rz * v * (v >= 0 ? (ring.backScale ?? 1) : (ring.frontScale ?? 1)));
+      // A subtly raised pair of collarbone ridges on the anterior surface,
+      // a tapered trapezius at the rear, and a downward slope at the sides.
+      // Other lofts have no offsets, so their established geometry is unchanged.
+      const front = Math.max(0, -v);
+      const rear = Math.max(0, v);
+      const collarBand = Math.exp(-Math.pow((Math.abs(u) - .55) / .22, 2));
+      const ridge = (ring.clavicleRidge ?? 0) * front * collarBand;
+      const y = ring.y - (ring.shoulderDrop ?? 0) * u * u
+        + ridge * .55 + (ring.trapeziusRise ?? 0) * rear * (1 - Math.abs(u));
+      const z = (ring.z || 0)
+        + ring.rz * v * (v >= 0 ? (ring.backScale ?? 1) : (ring.frontScale ?? 1))
+        - ridge * .32;
+      vertices.push((ring.x || 0) + ring.rx * u, y, z);
     }
   }
   for (let j = 0; j < stations.length - 1; j++) {
@@ -145,14 +156,17 @@ export function buildSoftAvatar(avatar, p) {
   const depth = p.torsoDepth * .155;
 
   // Different starting silhouettes, fully editable on both model types.
-  // Independent controls drive the hip/glute, abdomen, chest and upper chest.
+  // Independent controls drive hip/glute, abdomen, chest and clavicular collar.
   const female = p.baseModel === 'softFemale';
   const splitY = legs + torsoHeight * (1 - p.chestRatio);
   const abdomenHeight = splitY - legs;
   const chestHeight = shouldersY - splitY;
-  const upperZoneHeight = Math.min(chestHeight * .43, torsoHeight * .25);
-  const upperChestY = shouldersY - upperZoneHeight;
-  const chestBodyHeight = upperChestY - splitY;
+  // The clavicular collar starts just below the collarbones and extends
+  // through the shoulder-to-neck transition. It is NOT an upper pectoral
+  // or bust segment: most of the vertical chest belongs to soft-chest.
+  const clavicleHeight = Math.min(.108, Math.max(.064, chestHeight * .27));
+  const clavicleY = shouldersY - clavicleHeight;
+  const chestBodyHeight = clavicleY - splitY;
   const bridge = Math.min(.029, abdomenHeight * .14, chestBodyHeight * .22);
   const joinRx = p.waist * .49 * p.abdomenWidth;
   const joinRz = depth * .90 * p.abdomenDepth;
@@ -182,13 +196,13 @@ export function buildSoftAvatar(avatar, p) {
 
   const chestWidth = p.shoulders * .49 * p.chestWidth;
   const chestDepth = depth * p.chestDepth;
-  // The junction between chest and upper chest is weighted by both sections
-  // so either control group changes its own region without a visible gap.
+  // The chest-collar seam is shared exactly, preserving the smooth join
+  // when users customize pectoral dimensions or shoulder/neck dimensions.
   const upperJoinRx = p.shoulders *
     (.33 * p.upperChestWidth + .15 * p.chestWidth);
   const upperJoinRz = depth *
     (.62 * p.upperChestDepth + .30 * p.chestDepth);
-  const upperJoin = station(upperChestY, upperJoinRx, upperJoinRz, -.003);
+  const upperJoin = station(clavicleY, upperJoinRx, upperJoinRz, -.003);
   const shoulderWidth = p.shoulders * .49 * p.upperChestWidth;
 
   // Breast/pectoral fullness spans both horizontal and vertical space.
@@ -220,27 +234,52 @@ export function buildSoftAvatar(avatar, p) {
     softLoftGeometry(chest, S, torsoExponent, { bottom: false, top: false }),
     material, 'soft-chest');
 
-  const upperChest = [
+  // The clavicular segment is a distinct collar between chest and head:
+  // faint paired collarbone ridges at the FRONT, trapezius volume at the BACK,
+  // raised neck root in the middle and softly descending lateral shoulders.
+  // No shoulder balls, no independent clavicle props or hollow neck collar.
+  const collarVolume = p.upperChestFullness;
+  const ridge = .013 * p.clavicleDefinition;
+  const trap = .013 * p.trapeziusVolume;
+  const neckWidth = p.neckSize * p.neckBaseWidth;
+  const clavicleStation = (y, rx, rz, z, opts = {}) =>
+    Object.assign(station(y, rx, rz, z), opts);
+  const clavicular = [
     upperJoin,
-    station(upperChestY + upperZoneHeight * .17,
-      upperJoinRx * 1.02, upperJoinRz * 1.02, -.003),
-    station(upperChestY + upperZoneHeight * .45,
-      shoulderWidth * .95 * p.upperChestFullness,
-      depth * p.upperChestDepth * .97 * p.upperChestFullness, -.002),
-    station(upperChestY + upperZoneHeight * .73, shoulderWidth,
-      depth * p.upperChestDepth * .87, -.001),
-    station(shouldersY + .004, shoulderWidth * .79,
-      depth * p.upperChestDepth * .55),
+    clavicleStation(clavicleY + clavicleHeight * .18,
+      upperJoinRx * 1.014, upperJoinRz * 1.012, -.003, {
+        clavicleRidge: ridge * .18, trapeziusRise: trap * .17,
+      }),
+    clavicleStation(clavicleY + clavicleHeight * .44,
+      shoulderWidth * .99 * collarVolume,
+      depth * p.upperChestDepth * .96 * collarVolume, -.002, {
+        clavicleRidge: ridge, trapeziusRise: trap * .8,
+        shoulderDrop: .008 * p.trapeziusVolume,
+        backScale: 1 + (p.trapeziusVolume - 1) * .28,
+      }),
+    clavicleStation(clavicleY + clavicleHeight * .73,
+      shoulderWidth * .95, depth * p.upperChestDepth * .82, -.001, {
+        clavicleRidge: ridge * .55,
+        trapeziusRise: trap,
+        shoulderDrop: .013 * p.trapeziusVolume,
+        backScale: 1 + (p.trapeziusVolume - 1) * .24,
+      }),
+    clavicleStation(shouldersY + .004, shoulderWidth * .79,
+      depth * p.upperChestDepth * .55, 0, {
+        shoulderDrop: .008 * p.trapeziusVolume,
+        trapeziusRise: trap * .22,
+      }),
+    station(shouldersY + .029, .086 * neckWidth, .082 * p.neckSize),
     station(shouldersY + .048, .062 * p.neckSize, .065 * p.neckSize),
     station(shouldersY + .072, .047 * p.neckSize, .049 * p.neckSize),
   ];
-  const upperMesh = add(root,
-    softLoftGeometry(upperChest, S, torsoExponent, { bottom: false, top: true }),
-    material, 'soft-upper-chest');
+  const clavicularMesh = add(root,
+    softLoftGeometry(clavicular, S, torsoExponent, { bottom: false, top: true }),
+    material, 'soft-clavicular');
 
   // Shared perimeter vertices + averaged normals eliminate the hard seam.
   stitchLoftSeam(abdomenMesh.geometry, chestMesh.geometry);
-  stitchLoftSeam(chestMesh.geometry, upperMesh.geometry);
+  stitchLoftSeam(chestMesh.geometry, clavicularMesh.geometry);
 
   // Exactly one true sphere for the head: no jaw, nose, cheek, ear or hair geometry.
   const head = avatar.head = new THREE.Group();
