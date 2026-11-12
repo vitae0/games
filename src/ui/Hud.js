@@ -6,6 +6,8 @@ import { CharacterStage } from './CharacterStage.js';
 const $ = (selector) => document.querySelector(selector);
 const FIELDS = {
   baseModel: [['softMale', 'Vitae Soft • erkek'], ['softFemale', 'Vitae Soft • kadın'], ['vroidMale', 'VRoid erkek • eski asset'], ['vroidFemale', 'VRoid kadın • eski asset']],
+  headShape: [['soft','Organik küre (varsayılan)'],['sphere','Tam küre'],['classic','Yumuşak köşeli klasik']],
+  faceExpression: [['neutral','Sade / nötr'],['happy','Gülümseme'],['sad','Üzgün'],['surprised','Şaşkın']],
   hair: [['sample', 'Hazır VRoid HairSample (CC0)'], ['none', 'Yok']],
   hairColor: Object.entries({
     original:'Orijinal saç dokusu', black:'Siyah', chestnut:'Kestane', brown:'Koyu kahve', blonde:'Sarı',
@@ -268,13 +270,23 @@ export class Hud {
       wrap.append(select);
       return wrap;
     };
+    const prominent = new Set(['height','headScale','headAspect','eyeSpacing','cheekFullness',
+      'waist','hips','torsoDepth','chestFullness','backFullness',
+      'abdomenFullness','abdomenDefinition','gluteSize','gluteProjection',
+      'upperArmSize','armRatio','handSize','legRatio','thighSize',
+      'calfSize','legContour','footSize']);
     const rangeGroup = (tab, title, keys) => {
       const section = group(tab, title, 'soft-avatar-field');
       this.studioFieldsByTab[tab] ||= [];
       this.studioFieldsByTab[tab].push(...keys);
+      const advanced = document.createElement('details');
+      advanced.className = 'studio-advanced-morphs';
+      const summary = document.createElement('summary');
+      summary.textContent = 'İnce ayarlar';
+      advanced.append(summary);
       for (const key of keys) {
         const [, label, unit, step] = SOFT_AVATAR_FIELDS.find(field => field[0] === key);
-        const wrap = wrapField(section, key, label);
+        const wrap = wrapField(prominent.has(key) ? section : advanced, key, label);
         const [min, max] = AVATAR_RANGES[key];
         const out = document.createElement('output');
         out.id = 'avatar-' + key + '-value';
@@ -294,6 +306,7 @@ export class Hud {
         });
         wrap.append(out, range);
       }
+      if (advanced.querySelector('.field')) section.append(advanced);
     };
 
     // Model selection is card-first, but retains its accessible select for
@@ -328,14 +341,18 @@ export class Hud {
     base.append(description);
     selectField(base, 'baseModel', 'Modeli listeden seç');
 
-    rangeGroup('face', 'BAŞ & BOYUN', ['headScale','eyeSpacing','eyeLength','neckSize']);
+    const faceType = group('face','KAFA & İFADE');
+    selectField(faceType,'headShape','Kafa geometrisi');
+    selectField(faceType,'faceExpression','Yüz ifadesi');
+    rangeGroup('face', 'BAŞ & BOYUN', ['headScale','headAspect','cheekFullness','eyeSpacing','eyeLength','neckSize']);
     rangeGroup('body', 'VÜCUT ORANLARI', ['height','shoulders','waist','hips','torsoDepth']);
-    rangeGroup('body', 'KARIN & KALÇA', ['abdomenWidth','abdomenDepth','abdomenFullness','hipSize','gluteSize']);
+    rangeGroup('body', 'DÖRT BÖLGELİ ABDOMEN', ['abdomenWidth','abdomenDepth','abdomenFullness','abdomenDefinition']);
+    rangeGroup('body', 'PELVİS & GLUTE', ['hipSize','gluteSize','gluteProjection']);
     rangeGroup('chest', 'ÖN GÖĞÜS YAPISI', ['chestWidth','chestDepth','chestFullness','chestRatio']);
     rangeGroup('chest', 'SIRT YAPISI', ['backFullness']);
     rangeGroup('chest', 'KLAVİKULA & BOYUN BAĞLANTISI', ['upperChestWidth','upperChestDepth','upperChestFullness','clavicleDefinition','trapeziusVolume','neckBaseWidth']);
     rangeGroup('arms', 'KOLLAR & ELLER', ['armSpread','armRatio','upperArmRatio','upperArmSize','forearmSize','handSize']);
-    rangeGroup('legs', 'BACAK ORANLARI', ['legRatio','legSpacing','thighRatio','thighSize','calfSize','footSize','footLength']);
+    rangeGroup('legs', 'BACAK ORANLARI', ['legRatio','legSpacing','thighRatio','thighSize','calfSize','legContour','footSize','footLength']);
 
     const colorGroup = group('style', 'VITAE SOFT / MATERIAL', 'soft-avatar-field');
     const swatches = document.createElement('div');
@@ -536,6 +553,7 @@ export class Hud {
       ? ['hair','hairColor','eyeColor','skinTone','underwear','outfit',
         'shirtVisible','jacketVisible','pantsVisible','shoesVisible']
       : this.studioFieldsByTab[this.studioTab] || [];
+    if (this.studioTab === 'face') keys.push('headShape','faceExpression');
     if (!keys.length) return;
     const preset = SOFT_MODEL_PRESETS[this.profile.baseModel] || AVATAR_DEFAULTS;
     const updates = {};
