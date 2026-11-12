@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {stairFlight,stairHeight,resolveGround,groundFloor,STAIR,STAIR_RISE,STAIR_RUN} from '../src/world/Stairwell.js';
+import {stairFlight,stairHeight,resolveGround,groundFloor,STAIR,STAIR_RISE,STAIR_RUN,stairRampHeight} from '../src/world/Stairwell.js';
 import {HOTEL} from '../src/config.js';
 import {Hotel} from '../src/world/Hotel.js';
 import * as THREE from 'three';
@@ -28,12 +28,12 @@ test('ground support is reversible for each riser in both directions',()=>{
     for(let i=0;i<=240;i++){
       const x=q.xStart+(q.xEnd-q.xStart)*i/240;
       y=resolveGround(x,q.z,y);
-      near(y,stairHeight(f,x,q.z));
+      near(y,stairRampHeight(f,x,q.z));
     }
     for(let i=240;i>=0;i--){
       const x=q.xStart+(q.xEnd-q.xStart)*i/240;
       y=resolveGround(x,q.z,y);
-      near(y,stairHeight(f,x,q.z));
+      near(y,stairRampHeight(f,x,q.z));
     }
     near(y,f*HOTEL.floorHeight);
   }
@@ -49,7 +49,7 @@ test('no extra overlapping first floor and render height matches rotated treads'
     const q=stairFlight(f);
     for(let i=0;i<STAIR.steps;i++){
       const x=q.forward?STAIR.xNear-(i+.5)*STAIR_RUN:STAIR.xFar+(i+.5)*STAIR_RUN;
-      const slab=boxes.find(b=>b.mat==='slab'&&Math.abs(b.x-x)<1e-8&&Math.abs(b.z-q.z)<1e-8&&Math.abs((b.y-b.h/2)-f*HOTEL.floorHeight)<1e-8);
+      const slab=boxes.find(b=>b.mat==='slab'&&Math.abs(b.x-x)<1e-8&&Math.abs(b.z-q.z)<1e-8&&Math.abs((b.y-b.h/2)-(f*HOTEL.floorHeight+.006))<1e-8);
       assert.ok(slab);
       near(slab.y+slab.h/2,stairHeight(f,x,q.z));
     }
