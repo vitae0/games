@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { Avatar } from '../src/avatar/Avatar.js';
-import { BodyIK, solveTwoBone, footStepOffset, advanceFootTarget, kickFootPose, KICK_DURATION } from '../src/player/BodyIK.js';
+import { BodyIK, solveTwoBone, footStepOffset, aimFootTarget, kickFootPose, KICK_DURATION } from '../src/player/BodyIK.js';
 
 test('IK solver preserves lengths for an unreachable target', () => {
   const start = new THREE.Vector3(0, 1, 0);
@@ -69,32 +69,38 @@ test('right leg control does not move the left leg, and local FPS hides only occ
   } finally { avatar.dispose(); }
 });
 
-test('manual foot movement opens far wider while respecting side and height limits', () => {
-  const neutral = {sideways:0,forward:0,height:.025,bend:0};
-  const held = new Set(['KeyQ', 'KeyW', 'KeyR']);
-  let right = neutral;
-  let left = neutral;
-  for (let i = 0; i < 70; i++) {
-    right = advanceFootTarget(right,held,'right',.05);
-    left = advanceFootTarget(left,held,'left',.05);
-  }
-  assert.ok(right.sideways > .50);
-  assert.ok(left.sideways < -.50);
-  assert.equal(right.forward, -.82);
-  assert.equal(right.height, .77);
-  const inside = advanceFootTarget(right, new Set(['KeyE','KeyS','KeyF']), 'right', .05);
-  assert.ok(inside.sideways < right.sideways && inside.forward > right.forward);
-  assert.ok(inside.height < right.height);
+test('mouse yaw moves foot target sideways, and pitch raises and lowers it',()=>{
+  const forward=new THREE.Vector3(0,0,-1);
+  const right=new THREE.Vector3(.8,0,-.6);
+  const up=new THREE.Vector3(0,.65,-.76);
+  const down=new THREE.Vector3(0,-.65,-.76);
+  const baseline=aimFootTarget(forward,0,'right');
+  assert.ok(baseline.forward < -.8);
+  const outward=aimFootTarget(right,0,'right');
+  assert.ok(outward.sideways > .50);
+  assert.ok(aimFootTarget(right,0,'left').sideways <= .19);
+  assert.ok(aimFootTarget(up,0,'right').height > baseline.height);
+  assert.ok(aimFootTarget(down,0,'right').height < baseline.height);
+  const relative=aimFootTarget(forward,Math.PI/2,'right');
+  assert.ok(relative.sideways > .5);
 });
 
-test('holding Ctrl bends knee without disabling independent leg translation', () => {
-  let step = {sideways: .25,forward:-.45,height:.10,bend:0};
-  for (let i=0;i<20;i++) step=advanceFootTarget(step,new Set(['ControlLeft']),'right',.05);
-  assert.ok(step.bend > .9);
-  assert.equal(step.sideways,.25);
-  assert.equal(step.forward,-.45);
-  for(let i=0;i<20;i++)step=advanceFootTarget(step,new Set(),'right',.05);
-  assert.ok(step.bend < .01);
+test('held Ctrl bends selected knee while mouse continues steering foot',()=>{
+  const scene=new THREE.Scene(), avatar=new Avatar(scene,{baseModel:'softMale'});
+  const ik=new BodyIK(avatar);
+  try {
+    const keys=new Set(['KeyA','ControlLeft']);
+    ik.controlLegs(.05, keys, new THREE.Vector3(0,0,-1), 0);
+    for(let i=0;i<20;i++)ik.controlLegs(.05,keys,new THREE.Vector3(0,0,-1),0);
+    assert.ok(ik.steps.left.bend>.9);
+    const forward=ik.steps.left.forward;
+    ik.controlLegs(.1,keys,new THREE.Vector3(-.85,0,-.527),0);
+    assert.ok(ik.steps.left.sideways < -.5);
+    assert.ok(ik.steps.left.forward > forward);
+    keys.delete('ControlLeft');
+    for(let i=0;i<20;i++)ik.controlLegs(.05,keys,new THREE.Vector3(-.85,0,-.527),0);
+    assert.ok(ik.steps.left.bend < .01);
+  } finally {avatar.dispose();}
 });
 
 test('kick phases chamber, extend and smoothly return to rest',()=>{
@@ -103,6 +109,10 @@ test('kick phases chamber, extend and smoothly return to rest',()=>{
   assert.ok(extended.forward < -.7 && extended.height > .5);
   assert.ok(kickFootPose(.20,'left').sideways < 0);
   assert.ok(kickFootPose(.20,'right').sideways > 0);
+  const target = { sideways: .5, forward: -.24, height: .77, bend: 0 };
+  const aimed = kickFootPose(.40,'right',target);
+  assert.ok(Math.abs(aimed.sideways - .5) < .001);
+  assert.ok(Math.abs(aimed.height - .77) < .001);
   assert.equal(kickFootPose(KICK_DURATION,'right'),null);
 });
 

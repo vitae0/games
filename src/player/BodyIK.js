@@ -35,24 +35,22 @@ export function footStepOffset(viewYaw, bodyYaw) {
     forward: -.29 * Math.cos(turn), height: .095 };
 }
 
-/** Frame-rate-independent manual foot target in avatar-local metres.
- * outward=Q, inward=E; W/S shift forward/back; R/F lift/lower the toe.
- * Knee bend is requested as an endpoint pose, not a direct bone override.
+/** Mouse-directed foot destination in avatar-local metres. The head/camera
+ * can swivel while the torso remains planted during the precision hold.
+ * The inside limit avoids a leg crossing through the opposite thigh.
  */
-export function advanceFootTarget(previous, keys, side, dt) {
-  const pressed = code => keys?.has(code) ? 1 : 0;
-  const sign = side === 'left' ? -1 : 1;
-  const target = { ...previous };
-  const forward = pressed('KeyW') - pressed('KeyS');
-  const outward = pressed('KeyQ') - pressed('KeyE');
-  const vertical = pressed('KeyR') - pressed('KeyF');
-  target.forward = clamp(target.forward - forward * .90 * dt, -.82, .55);
-  target.sideways = sign * clamp(sign * target.sideways + outward * .74 * dt, -.22, .57);
-  target.height = clamp(target.height + vertical * .76 * dt, .015, .77);
-  const bendHeld = pressed('ControlLeft') || pressed('ControlRight');
-  target.bend = THREE.MathUtils.damp(target.bend ?? 0, bendHeld ? 1 : 0,
-    bendHeld ? 12 : 9, dt);
-  return target;
+export function aimFootTarget(look, bodyYaw, side) {
+  const c = Math.cos(bodyYaw), s = Math.sin(bodyYaw);
+  const lateral = c * look.x - s * look.z;
+  const forward = s * look.x + c * look.z;
+  const sideMin = side === 'left' ? -.62 : -.19;
+  const sideMax = side === 'left' ? .19 : .62;
+  return {
+    sideways: clamp(lateral * .83, sideMin, sideMax) || 0,
+    forward: clamp(forward * .85, -.82, .45),
+    height: clamp(.37 + look.y * .53, .025, .78),
+    bend: 0,
+  };
 }
 
 export const KICK_DURATION = .72;
@@ -65,12 +63,14 @@ const between = (start, end, t) => ({
 });
 
 /** Wind-up -> forward extension -> recovery. No collision/damage is implied. */
-export function kickFootPose(seconds, side) {
+export function kickFootPose(seconds, side, aimed = null) {
   if (seconds >= KICK_DURATION) return null;
   const sign = side === 'left' ? -1 : 1;
   const rest = { sideways: 0, forward: 0, height: .025, bend: 0 };
   const chamber = { sideways: sign * .075, forward: .14, height: .45, bend: .85 };
-  const extended = { sideways: sign * .12, forward: -.78, height: .55, bend: 0 };
+  const extended = aimed ? { sideways: aimed.sideways, forward: aimed.forward,
+    height: aimed.height, bend: 0 }
+    : { sideways: sign * .12, forward: -.78, height: .55, bend: 0 };
   if (seconds < .20) return between(rest, chamber, seconds / .20);
   if (seconds < .40) return between(chamber, extended, (seconds - .20) / .20);
   return between(extended, rest, (seconds - .40) / .32);
@@ -116,26 +116,32 @@ export class BodyIK {
     if (side !== 'left' && side !== 'right') return;
     this.steps[side] = { ...footStepOffset(viewYaw, bodyYaw), bend: 0 };
   }
-  kick(side) {
+  kick(side, look = null, bodyYaw = 0) {
     if (side !== 'left' && side !== 'right') return;
-    this.kicks[side] = { elapsed: 0 };
+    this.kicks[side] = { elapsed: 0,
+      aimed: look ? aimFootTarget(look, bodyYaw, side) : null };
   }
-  controlLegs(dt, keys) {
-    if (!keys) return;
+  controlLegs(dt, keys, look, bodyYaw) {
+    if (!keys || !look) return;
+    const bendHeld = keys.has('ControlLeft') || keys.has('ControlRight');
     for (const [side, selection] of [['left', 'KeyA'], ['right', 'KeyD']]) {
       if (!keys.has(selection)) continue;
-      const anyInput = ['KeyW', 'KeyS', 'KeyQ', 'KeyE', 'KeyR', 'KeyF',
-        'ControlLeft', 'ControlRight'].some(code => keys.has(code));
-      if (!this.steps[side] && !anyInput) continue;
-      this.steps[side] ||= { sideways: 0, forward: 0, height: .025, bend: 0 };
-      this.steps[side] = advanceFootTarget(this.steps[side], keys, side, dt);
+      const aimed = aimFootTarget(look, bodyYaw, side);
+      const previous = this.steps[side] || aimed;
+      this.steps[side] = {
+        sideways: THREE.MathUtils.damp(previous.sideways, aimed.sideways, 18, dt),
+        forward: THREE.MathUtils.damp(previous.forward, aimed.forward, 18, dt),
+        height: THREE.MathUtils.damp(previous.height, aimed.height, 18, dt),
+        bend: THREE.MathUtils.damp(previous.bend ?? 0, bendHeld ? 1 : 0,
+          bendHeld ? 12 : 9, dt),
+      };
     }
   }
-  update(dt, { hands, eye, look, right, posture, precision, keys }) {
+  update(dt, { hands, eye, look, right, posture, precision, keys, bodyYaw = 0 }) {
     // Arbitrary VRM/GLB bind axes require an explicit source-specific retargeter.
     if (this.avatar.external) return;
     if (posture !== 'stand') this.cancelKicks();
-    if (precision && posture === 'stand') this.controlLegs(dt, keys);
+    if (precision && posture === 'stand') this.controlLegs(dt, keys, look, bodyYaw);
     this.updateArms(dt, hands, eye, look, right, posture === 'stand' && !precision);
     this.updateLegs(dt, posture === 'stand', precision);
   }
@@ -171,7 +177,7 @@ export class BodyIK {
       if (!upper || !knee) continue;
       const foot = knee.children.find(obj => obj.name === 'hemisphere-foot');
       const kick = this.kicks[side];
-      const kickPose = standing && kick ? kickFootPose(kick.elapsed, side) : null;
+      const kickPose = standing && kick ? kickFootPose(kick.elapsed, side, kick.aimed) : null;
       if (kick) {
         kick.elapsed += dt;
         if (!standing || kick.elapsed >= KICK_DURATION) this.kicks[side] = null;
