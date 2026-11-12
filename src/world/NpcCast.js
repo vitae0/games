@@ -50,8 +50,9 @@ export const NPC_CAST = Object.freeze([
 
 export function npcProfile(spec) {
   return normalizeAvatar({
-    // Legacy asset identity stays in the cast; the active visual is soft.
-    baseModel: 'soft',
+    // Legacy CC0 asset identity stays in the cast; each NPC now uses the
+    // corresponding soft rig with its own silhouette and proportions.
+    baseModel: spec.baseModel === 'vroidFemale' ? 'softFemale' : 'softMale',
     bodyColor: spec.bodyColor,
     height: spec.height,
     headScale: spec.headScale,
