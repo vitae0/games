@@ -41,7 +41,7 @@ test('real Player: Ctrl crouches with leg bones and returns to standing', () => 
   } finally { p.dispose(); }
 });
 
-test('real Player: double Ctrl makes floor sitting visible in FPS and second double stands', () => {
+test('real Player: double Ctrl seats on floor and the rise action restores standing', () => {
   const p = createPlayer();
   try {
     key(p,'ControlLeft'); up(p,'ControlLeft');
@@ -51,9 +51,9 @@ test('real Player: double Ctrl makes floor sitting visible in FPS and second dou
     assert.equal(p.avatar.root.visible, true);
     assert.ok(p.avatar.leftLeg.userData.knee.rotation.x < -.05);
     up(p,'ControlLeft');
-    key(p,'ControlLeft'); up(p,'ControlLeft');
-    key(p,'ControlLeft');
+    p.standUp();
     assert.equal(p.posture, 'stand');
+    assert.equal(p.verticalSpeed, 0);
   } finally { p.dispose(); }
 });
 
