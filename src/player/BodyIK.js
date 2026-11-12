@@ -145,7 +145,7 @@ export class BodyIK {
       };
     }
   }
-  /** Z+W+A/D: aim arms at the camera reticle, regardless of sitting,
+  /** Z+S+A/D: aim arms at the camera reticle, regardless of sitting,
    * kneeling or lying. Targets persist in BODY-local space on key release.
    */
   controlArms(keys, eye, look, right) {
@@ -163,7 +163,7 @@ export class BodyIK {
       this.armTargets[side] = this.avatar.body.worldToLocal(target);
     }
   }
-  /** Z+S+A/D: wrist orientation and finger flexion are persistent edits. */
+  /** Z+Q+A/D: wrist orientation and finger flexion are persistent edits. */
   controlWrists(keys, look) {
     if (!keys || !look) return;
     for (const [side, code] of [['left','KeyA'],['right','KeyD']]) {
@@ -190,8 +190,8 @@ export class BodyIK {
     // Arbitrary VRM/GLB bind axes require an explicit source-specific retargeter.
     if (this.avatar.external) return;
     if (posture !== 'stand') this.cancelKicks();
-    if (precision && keys?.has('KeyW')) this.controlArms(keys, eye, look, right);
-    else if (precision && keys?.has('KeyS')) this.controlWrists(keys, look);
+    if (precision && keys?.has('KeyS')) this.controlArms(keys, eye, look, right);
+    else if (precision && keys?.has('KeyQ')) this.controlWrists(keys, look);
     else if (precision) this.controlLegs(dt, keys, look, bodyYaw);
     this.updateArms(dt, hands, eye, look, right, posture === 'stand' && !precision);
     this.updateLegs(dt, posture === 'stand', precision);
