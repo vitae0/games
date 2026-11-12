@@ -79,6 +79,9 @@ export class WorldActionLabels {
         this.pressed.delete(event.pointerId);
         event.stopPropagation();
       });
+      button.addEventListener('lostpointercapture', event => {
+        this.pressed.delete(event.pointerId);
+      });
       // Keyboard focus/Enter/Space remains usable. Pointer activation is handled above.
       button.addEventListener('click', event => {
         event.preventDefault();
