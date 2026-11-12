@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { normalizeAvatar, SKIN_TONES } from '../avatar/AvatarConfig.js';
+import { softLoftGeometry } from '../avatar/SoftAvatar.js';
 
 /** Low-cost first-person hands with fingers. Cosmetic only: the physics grip stays in Player. */
 export class HandRig {
@@ -7,7 +8,11 @@ export class HandRig {
     this.camera = camera;
     this.root = new THREE.Group();
     camera.add(this.root);
-    this.geometries = [new THREE.SphereGeometry(1, 12, 10), new THREE.CylinderGeometry(.83, 1, 1, 12)];
+    this.geometries = [new THREE.SphereGeometry(1, 12, 10), softLoftGeometry([
+      { y: -.50, rx: .73, rz: .77 }, { y: -.42, rx: .92, rz: .93 },
+      { y: -.08, rx: 1.02, rz: 1.0 }, { y: .34, rx: .87, rz: .92 },
+      { y: .50, rx: .65, rz: .73 },
+    ], 12, 2.25)];
     this.sleeveMaterial = new THREE.MeshBasicMaterial({ color: 0x9b968e, depthTest: false, depthWrite: false });
     this.skinMaterial = new THREE.MeshBasicMaterial({ color: SKIN_TONES[normalizeAvatar(profile).skinTone], depthTest: false, depthWrite: false });
     this.materials = [this.sleeveMaterial, this.skinMaterial];
@@ -32,8 +37,9 @@ export class HandRig {
       group.add(sleeve, wrist); // re-parent no-op, preserves explicit assembly
       this.root.add(group);
       group.traverse(child => { if (child.isMesh) child.renderOrder = 100; });
-      this.arms[side] = { group, palm, digits, thumb, sign };
+      this.arms[side] = { group, sleeve, wrist, palm, digits, thumb, sign };
     }
+    this.setProfile(profile);
   }
   add(group, geometryIndex, mat, x,y,z,sx,sy,sz) {
     const mesh = new THREE.Mesh(this.geometries[geometryIndex], mat);
@@ -41,8 +47,17 @@ export class HandRig {
   }
   setProfile(profile) {
     const p = normalizeAvatar(profile);
-    this.skinMaterial.color.setHex(SKIN_TONES[p.skinTone]);
-    this.sleeveMaterial.color.setHex({ neon:0xcac5bc, stealth:0x343d47, chrome:0x977c81 }[p.outfit]);
+    const soft = p.baseModel === 'soft';
+    this.skinMaterial.color.set(soft ? p.bodyColor : SKIN_TONES[p.skinTone]);
+    this.sleeveMaterial.color.set(soft ? p.bodyColor : { neon:0xcac5bc, stealth:0x343d47, chrome:0x977c81 }[p.outfit]);
+    for (const arm of Object.values(this.arms)) {
+      arm.wrist.visible = !soft;
+      arm.thumb.visible = !soft;
+      for (const digit of arm.digits) digit.visible = !soft;
+      arm.palm.scale.setScalar(soft ? .092 * p.handSize : 1);
+      if (!soft) arm.palm.scale.set(.101, .13, .053);
+      arm.sleeve.scale.set(.089 * (soft ? p.forearmSize : 1), .38, .09 * (soft ? p.forearmSize : 1));
+    }
   }
   update(dt, left, right, visible) {
     this.root.visible = visible;
