@@ -197,23 +197,35 @@ export class Player {
       if (event.code === 'KeyZ') {
         this.releaseHands();
         this.postureControls.reset();
-        this.events.toast('Bacak kontrolü · A/D seç, fareyle yönlendir · Space tekme · Ctrl diz');
+        this.events.toast('Z+A/D bacak · Z+W+A/D kol · Z+S+A/D el · Ctrl bük');
         return;
       }
-      if (this.keys.has('KeyZ') && this.posture === 'stand') {
+      if (this.keys.has('KeyZ')) {
         const precisionKeys = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ',
           'KeyE', 'KeyR', 'KeyF', 'Space', 'ControlLeft', 'ControlRight'];
         if (precisionKeys.includes(event.code)) {
-          if (event.code === 'Space') {
+          const legSelection = !this.keys.has('KeyW') && !this.keys.has('KeyS');
+          if (event.code === 'Space' && legSelection && this.posture === 'stand') {
             if (this.keys.has('KeyA')) this.bodyIK.kick('left', this.viewDirection, this.bodyYaw);
             if (this.keys.has('KeyD')) this.bodyIK.kick('right', this.viewDirection, this.bodyYaw);
           }
-          if (['KeyA', 'KeyD'].includes(event.code) && this.keys.has('Space')) {
+          if (['KeyA', 'KeyD'].includes(event.code) && this.keys.has('Space') &&
+              legSelection && this.posture === 'stand') {
             this.bodyIK.kick(event.code === 'KeyA' ? 'left' : 'right',
               this.viewDirection, this.bodyYaw);
           }
           return;
         }
+      }
+      // Pose A/D is contextual. The precision hold intercepts the same keys
+      // before this branch, so no additional global key bindings are needed.
+      if (isFloorPosture(this.posture) && ['KeyA','KeyD'].includes(event.code)) {
+        this.changeFloorVariant(event.code==='KeyD'?1:-1);
+        return;
+      }
+      if (this.posture === 'floorLie' && ['KeyW','KeyS'].includes(event.code)) {
+        this.changeFloorVariant(event.code==='KeyW'?1:-1,true);
+        return;
       }
       const action = this.postureControls.press(event.code, performance.now());
       if (action === 'floorSit' || action === 'kneel' || action === 'floorLie') {
@@ -257,8 +269,13 @@ export class Player {
     const next = nextFloorPosture(this.posture, requested);
     if (next === 'stand') { this.standUp(); return; }
     this.releaseHands();
-    this.bodyIK.clearSteps();
+    this.bodyIK.clearPoseTargets();
     this.postureControls.cancelJump();
+    if (this.posture !== next) this.floorVariantIndex=0;
+    if (next === 'floorLie' && this.posture !== 'floorLie') {
+      this.lyingQuarterTurns=0;
+      this.lyingRoll=0;
+    }
     this.posture = next;
     this.walkSpeed = 0;
     this.verticalSpeed = 0;
@@ -282,6 +299,7 @@ export class Player {
     this.position.set(0, floor * HOTEL.floorHeight, 12.1);
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
     this.floorLieLean = 0; this.sleepLean = 0;
+    this.lyingQuarterTurns=0;this.lyingRoll=0;this.floorVariantIndex=0;
     this.furnitureHeight = 0; this.savedStanding = null;
     this.postureControls.reset();
     this.bodyIK.clearSteps();
@@ -314,8 +332,10 @@ export class Player {
     if (this.posture === 'stand') return;
     if (isFloorPosture(this.posture)) {
       this.posture = nextRisePosture(this.posture);
+      this.floorVariantIndex=0;
+      if (this.posture !== 'floorLie') this.lyingQuarterTurns=0;
       this.walkSpeed = 0;
-      this.bodyIK.clearSteps();
+      this.bodyIK.clearPoseTargets();
       this.postureControls.cancelJump();
       this.events.toast(this.posture === 'floorSit'
         ? 'Önce yere oturdun · Bir kez daha E ile kalk'
@@ -345,7 +365,7 @@ export class Player {
     let movedX = 0, movedZ = 0;
     let surfaceGround = null;
     const crouching = this.postureControls.crouching || this.touchCrouch;
-    const precision = active && this.keys.has('KeyZ') && this.posture === 'stand';
+    const precision = active && this.keys.has('KeyZ');
     if (this.postureControls.consumeJump(performance.now()) &&
       this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching && !precision) {
       this.verticalSpeed = PLAYER.jumpSpeed;
