@@ -15,8 +15,12 @@ import { buildSoftAvatar } from './SoftAvatar.js';
  * This is an anime-influenced procedural mesh, NOT a rigged photorealistic human.
  */
 export class Avatar {
-  constructor(scene, profile) {
+  constructor(scene, profile, { localPlayer = false } = {}) {
     this.scene = scene;
+    // Only the camera owner's avatar needs a first-person visibility mask.
+    // NPCs, previews and other characters must retain every body part.
+    this.localPlayer = !!localPlayer;
+    this.firstPersonActive = false;
     this.root = new THREE.Group();
     this.root.name = 'avatar';
     scene.add(this.root);
@@ -116,13 +120,13 @@ export class Avatar {
     this.leftLeg = this.buildLeg(-1, legLength, p.hips);
     this.rightLeg = this.buildLeg(1, legLength, p.hips);
     this.updateGarmentVisibility();
-    this.setupFirstPersonVisibility();
     if (this.external) {
       this.root.add(this.external.wrapper);
       this.body.visible = false;
       this.refreshExternalScale();
       if (this.external.vrm) this.updateVRoidStyle();
     }
+    this.setupFirstPersonVisibility();
     this.root.userData.height = p.height;
   }
   buildAnatomy(p, legs, torsoH, shoulderY) {
@@ -368,15 +372,43 @@ export class Avatar {
     });
   }
   setupFirstPersonVisibility() {
-    // Layer 1: local camera occluders. The rest of the body remains on layer 0.
     this.firstPersonOccluders = [];
-    const add = object => object?.traverse(child => {
-      if (!child.isMesh) return;
-      child.layers.set(1);
-      this.firstPersonOccluders.push(child);
+    // Never change an NPC's, remote avatar's or studio preview's layers.
+    // All of their geometry remains visible to ordinary layer-0 cameras.
+    if (!this.localPlayer) return;
+    const limbs = [this.leftArm, this.rightArm, this.leftLeg, this.rightLeg];
+    const isLimb = object => {
+      for (let parent = object.parent; parent; parent = parent.parent) {
+        if (limbs.includes(parent)) return true;
+        if (parent === this.body) break;
+      }
+      return false;
+    };
+    this.body?.traverse(mesh => {
+      if (!mesh.isMesh) return;
+      // Upper/lower arms, hands, fingers, thighs, calves and feet keep layer 0.
+      // Only this avatar's head, pelvis, chest and abdomen use layer 1.
+      if (isLimb(mesh)) mesh.layers.set(0);
+      else {
+        mesh.layers.set(1);
+        this.firstPersonOccluders.push(mesh);
+      }
     });
-    add(this.head);
-    if (this.softAvatar) add(this.body.getObjectByName('clavicular-transition'));
+    // Imported models can contain a single skinned full-body mesh. Hide it
+    // only from the owner's FPS camera; the procedural limbs remain as a
+    // lightweight local fallback. Third-person and mirrors show the model.
+    this.external?.wrapper?.traverse(mesh => {
+      if (!mesh.isMesh) return;
+      mesh.layers.set(1);
+      this.firstPersonOccluders.push(mesh);
+    });
+  }
+  setFirstPersonMode(enabled) {
+    if (!this.localPlayer) return;
+    this.firstPersonActive = !!enabled;
+    // An imported model replaces the procedural body in third-person. In FPS,
+    // show the procedural limb rig only, not the overlapping imported torso.
+    if (this.external && this.body) this.body.visible = this.firstPersonActive;
   }
   headWorldHeight() {
     return this.profile.height + this.body.position.y - this.profile.height * .08;
@@ -450,6 +482,8 @@ export class Avatar {
       boneMap: model.boneMap || {}, baseRotations: new Map() };
     this.refreshExternalScale();
     if (model.vrm) this.updateVRoidStyle();
+    this.setupFirstPersonVisibility();
+    this.setFirstPersonMode(this.firstPersonActive);
   }
   listExternalParts() {
     return (this.external?.parts || []).map(({ mesh, name }, index) => ({
