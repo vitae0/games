@@ -140,3 +140,22 @@ test('physical jump lands on raised furniture without E-to-climb',()=>{
     assert.equal(typeof p.climbFurniture,'undefined');
   }finally{p.dispose()}
 });
+
+
+test('short vertical changes auto-step up and down, tall furniture still requires a jump',()=>{
+  const p=playerFixture();
+  try {
+    let support=.12;
+    p.hotel.groundHeight=()=>support;
+    p.update(.05);
+    assert.ok(Math.abs(p.position.y-.12)<1e-8);
+    assert.equal(p.jumpOffset,0);
+    support=.055;
+    p.update(.05);
+    assert.ok(Math.abs(p.position.y-.055)<1e-8);
+    assert.equal(p.jumpOffset,0);
+    support=.67;
+    p.update(.05);
+    assert.ok(p.position.y<.20,'high furniture cannot be climbed automatically');
+  } finally {p.dispose()}
+});
