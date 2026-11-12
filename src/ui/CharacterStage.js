@@ -14,6 +14,12 @@ export const STUDIO_VIEWS = Object.freeze({
   face: { yaw: 0, pitch: -.035, distance: 1.35, focus: .84 },
 });
 
+// The editor opens at a flattering three-quarter angle. The Front bookmark
+// deliberately remains a true orthographic-facing yaw of zero.
+export const STUDIO_INITIAL_VIEW = Object.freeze({
+  ...STUDIO_VIEWS.front, yaw: -.55, pitch: -.16,
+});
+
 export function studioFrameBounds(stageRect, canvasRect, pixelWidth, pixelHeight) {
   const sx = pixelWidth / Math.max(1, canvasRect.width);
   const sy = pixelHeight / Math.max(1, canvasRect.height);
@@ -79,12 +85,12 @@ export class CharacterStage {
     this.requestId = 0;
     this.currentModel = null;
     this.pendingModel = null;
-    this.targetYaw = 0;
-    this.yaw = 0;
-    this.pitch = 0;
-    this.distance = STUDIO_VIEWS.front.distance;
+    this.targetYaw = STUDIO_INITIAL_VIEW.yaw;
+    this.yaw = this.targetYaw;
+    this.pitch = STUDIO_INITIAL_VIEW.pitch;
+    this.distance = STUDIO_INITIAL_VIEW.distance;
     this.targetDistance = this.distance;
-    this.focusRatio = STUDIO_VIEWS.front.focus;
+    this.focusRatio = STUDIO_INITIAL_VIEW.focus;
     this.pointer = null;
 
     this.onPointerDown = event => {
@@ -170,9 +176,14 @@ export class CharacterStage {
 
   open(profile) {
     this.active = true;
-    this.setView('front');
+    // Reset the orbit on each opening, including after prior manual rotation.
+    this.targetYaw = STUDIO_INITIAL_VIEW.yaw;
+    this.pitch = STUDIO_INITIAL_VIEW.pitch;
+    this.focusRatio = STUDIO_INITIAL_VIEW.focus;
+    this.targetDistance = STUDIO_INITIAL_VIEW.distance;
     this.yaw = this.targetYaw;
     this.distance = this.targetDistance;
+    this.onZoom(this.targetDistance);
     this.setProfile(profile);
   }
 
