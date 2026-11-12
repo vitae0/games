@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
+import './ui/character-studio.css';
 import { Hotel } from './world/Hotel.js';
 import { Player } from './player/Player.js';
 import { Hud } from './ui/Hud.js';
@@ -157,7 +158,11 @@ function frame(now) {
     worldActions.update();
     lastHudUpdate=now;
   }
-  renderer.render(scene, camera);
+  // The full-screen character editor borrows this same renderer for its
+  // dedicated cinematic viewport, without creating another WebGL context.
+  if (!hud.isCustomizerOpen() || !hud.studioStage.render(renderer, dt)) {
+    renderer.render(scene, camera);
+  }
   frameCounter++;
   if (now - sampleStart >= 1000) {
     displayedFps = Math.round(frameCounter * 1000 / (now - sampleStart));
