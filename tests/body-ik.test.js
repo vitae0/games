@@ -44,9 +44,9 @@ test('left hand IK leaves the right shoulder in its idle pose', () => {
   } finally { avatar.dispose(); }
 });
 
-test('right leg control does not move the left leg, and FPS hides only occluders', () => {
+test('right leg control does not move the left leg, and local FPS hides only occluders', () => {
   const scene = new THREE.Scene();
-  const avatar = new Avatar(scene, { baseModel: 'softMale' });
+  const avatar = new Avatar(scene, { baseModel: 'softMale' }, { localPlayer: true });
   const ik = new BodyIK(avatar);
   try {
     avatar.update(.02, 0);
