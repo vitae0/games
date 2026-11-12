@@ -61,17 +61,29 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 | Tuş | İşlev |
 | --- | --- |
 | WASD, Fare | Yürü, bakış açısını değiştir |
+| Z basılı | Hassas vücut modu; normal WASD yürüyüşü durur |
+| Z + W + D | Sağ ayağı bakış yönünde ileri uzat (iki kemikli IK) |
+| Z + W + A | Sol ayağı bakış yönünde ileri uzat (iki kemikli IK) |
+| Üçüncü şahıs + fare tekerleği | Kamerayı yakınlaştır / uzaklaştır |
 | Shift / Space / Ctrl | Koş / zıpla / basılıyken çömel |
 | Çift Ctrl | Bulunduğu yerde yere otur / kalk |
 | Ctrl + Space (veya N) | Bulunduğu yerde diz çök / kalk. Bazı işletim sistemlerinde Ctrl+Space IME kısayoludur. |
 | E | Kapı, mobilya, asansör veya NPC ile etkileşim |
-| Sol fare basılı | Sol eli uzat / hedefi kavra |
-| Sağ fare basılı | Sağ eli uzat / hedefi kavra |
+| Sol fare basılı | Gerçek sol kolu iki kemikli IK ile uzat / hedefi kavra |
+| Sağ fare basılı | Gerçek sağ kolu iki kemikli IK ile uzat / hedefi kavra |
 | Fare tekerleği (tutarken) | Kavrama mesafesini artır / azalt |
 | Fare tuşunu bırak veya F | Kavramayı serbest bırak |
 | O | FPS / TPS kamera geçişi |
 | K | Karakter özelleştirici |
 | Esc | Fare kilidinden çık |
+
+## Yeni bağımsız uzuv kontrolleri
+
+- Birinci şahısta ayrı kamera-elleri gösterilmez; gerçek kollar, gövde ve bacaklar görünür. Yerel kameradan baş ve yaka gizlenir, üçüncü şahıs ve aynalar tüm karakteri gösterir.
+- LMB/RMB gerçek kol kemiklerinde iki kemikli IK kullanır. Nesne üstündeki KULLAN hedefleme sistemi önce çalışır.
+- Z basılıyken W+D sağ, W+A sol ayağı bakış yönünde uzatır. Yanal açıklık sınırlandırılır. Z bırakılınca yürüyüş ve otomatik pozlar geri gelir.
+- Üçüncü şahısta tekerlek zoom, birinci şahısta ise mevcut kavrama mesafesi kontrolüdür.
+- Gelişmiş IK ilk sürümde yalnızca prosedürel karakter iskeletine uygulanır. Harici VRM/GLB için eksen/kemik uyarlayıcısı gerekir.
 
 ## Yeni postür ve iskelet sistemi
 
