@@ -99,9 +99,13 @@ export class Hud {
     $('#avatar-toggle').addEventListener('click', () => this.toggleCustomizer());
     $('#close-customizer').addEventListener('click', () => this.closeCustomizer());
     $('#avatar-reset').addEventListener('click', () => {
-      this.profile = switchSoftModel(this.profile, this.profile.baseModel);
+      // A full reset clears colours and wardrobe too, while preserving the
+      // currently selected base model rather than unexpectedly changing sex.
+      const model = this.profile.baseModel;
       this.profile = normalizeAvatar({
-        ...this.profile, ...(SOFT_MODEL_PRESETS[this.profile.baseModel] || {}),
+        ...AVATAR_DEFAULTS,
+        ...(SOFT_MODEL_PRESETS[model] || {}),
+        baseModel: model,
       });
       this.commitStudioEdit('reset-all');
       this.syncAvatarControls();
@@ -527,7 +531,10 @@ export class Hud {
   }
 
   resetStudioGroup() {
-    const keys = this.studioFieldsByTab[this.studioTab] || [];
+    const keys = this.studioTab === 'style' && !isSoftModel(this.profile.baseModel)
+      ? ['hair','hairColor','eyeColor','skinTone','underwear','outfit',
+        'shirtVisible','jacketVisible','pantsVisible','shoesVisible']
+      : this.studioFieldsByTab[this.studioTab] || [];
     if (!keys.length) return;
     const preset = SOFT_MODEL_PRESETS[this.profile.baseModel] || AVATAR_DEFAULTS;
     const updates = {};
