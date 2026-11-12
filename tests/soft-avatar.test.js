@@ -550,7 +550,7 @@ test('anatomical chest and abdominal regions form real open-ended visible meshes
       }
       const cranium=avatar.head.userData.headMesh.geometry;
       assert.equal(cranium.parameters.widthSegments,20);
-      assert.equal(cranium.parameters.heightSegments,9);
+      assert.equal(cranium.parameters.heightSegments,14);
       assert.equal(avatar.head.userData.hairMounts.children.every(g=>g.children.length===0),true);
     } finally {avatar.dispose();}
   }
