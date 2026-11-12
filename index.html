@@ -12,7 +12,6 @@
     <canvas id="world" aria-label="VitaeWorld 3D dünyası"></canvas>
     <div class="topbar"><div class="brand"><span class="signal"></span> VITAE<span>WORLD</span><small> / VITAE HOTEL · ALPHA 0.6</small></div><div class="top-controls"><span id="floor-status">47. KAT</span><span id="hand-status">LMB / RMB · ELLER</span><span id="fps">-- FPS</span><button id="settings-toggle" type="button" aria-label="Ayarlar">⚙ <span>AYARLAR</span></button><button id="avatar-toggle" type="button">KARAKTER [K]</button></div></div>
     <div id="crosshair" aria-hidden="true"></div>
-    <div id="interact-prompt" class="prompt hidden"></div>
     <div class="bottom-left"><div id="movement-status">YÜRÜYÜŞ</div><div id="position-status">0.0, 0.0</div></div>
     <div class="controls-help">WASD hareket · Shift koş · Space zıpla · Ctrl çömel · Çift Ctrl yere otur · Ctrl+Space diz çök (alternatif N) · E kullan · Sol/Sağ tık: tut · Tekerlek: it/çek · F bırak · O kamera · K karakter</div>
     <section id="start-screen" class="overlay"><div class="hero"><div class="eyebrow">VITAEWORLD / 001</div><h1>VITAE<br><em>HOTEL</em></h1><p>Neon City üzerinde, gökdelenin yalnızca 47–50. katları erişilebilir. Gerçek merdivenlerle yüksel, şehir ışıklarını izle, ellerinle eşyaları ve NPC ellerini tut. İç mekânda modern tasarım, dışarıda gece şehri. Otel dışına çıkılamaz.</p><button id="start-button" class="primary">DÜNYAYA GİR <span>↗</span></button><p id="start-hint" class="hint">Masaüstü: WASD + fare. Telefon/tablet: joystick, dokunmatik kamera ve ekrandaki düğmeler. WebGL2 gerekir.</p></div></section>
@@ -32,7 +31,6 @@
       </div>
       <div class="touch-grid">
         <button type="button" data-touch-action="run" aria-label="Basılı tutarak koş">KOŞ</button>
-        <button type="button" data-touch-action="interact" aria-label="Eşyayla veya karakterle etkileş">KULLAN</button>
         <button type="button" data-touch-action="jump" aria-label="Zıpla">ZIPLA</button>
         <button type="button" data-touch-action="left-hand" aria-label="Sol elle tut, basılı tut">SOL EL</button>
         <button type="button" data-touch-action="right-hand" aria-label="Sağ elle tut, basılı tut">SAĞ EL</button>
