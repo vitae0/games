@@ -442,10 +442,11 @@ export class Player {
       const distance = this.events.isCustomizerOpen() ? 3.1
         : this.thirdPerson ? this.cameraDistance : this.lastThirdPersonDistance;
       const head = this.avatar.headWorldHeight?.() ?? this.avatar.profile.height * .82;
-      const targetHeight = this.furnitureStyle === 'sleep' ? .49
-        : isFloorPosture(this.posture) ? Math.max(.57, head - .20)
-          : orbitFocusHeight(this.avatar.profile.height,
-            this.avatar.profile.height - .12, distance);
+      const targetHeight = this.posture === 'floorLie' ? .24
+        : this.furnitureStyle === 'sleep' ? .49
+          : isFloorPosture(this.posture) ? Math.max(.57, head - .20)
+            : orbitFocusHeight(this.avatar.profile.height,
+              this.avatar.profile.height - .12, distance);
       const target = new THREE.Vector3(this.position.x, this.position.y + targetHeight, this.position.z);
       const behind = this.events.isCustomizerOpen() ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
       const camPos = target.clone();
