@@ -42,26 +42,31 @@ test('Z+W+D positions only right foot and prevents WASD walking', () => {
     p.update(.05);
     assert.ok(p.bodyIK.steps.left);
     up(p, 'KeyZ');
-    assert.equal(p.bodyIK.steps.left, null);
-    assert.equal(p.bodyIK.steps.right, null);
+    assert.ok(p.bodyIK.steps.left);
+    assert.ok(p.bodyIK.steps.right);
   } finally { p.dispose(); }
 });
 
-test('FPS uses the real avatar; TPS wheel changes zoom only in TPS', () => {
+test('FPS shows actual avatar; wheel can cross FPS/TPS and extend far out', () => {
   const p = makePlayer();
   try {
     p.update(.016);
     assert.equal(p.avatar.root.visible, true);
     assert.equal(p.handRig.root.visible, false);
     assert.equal(p.camera.layers.mask, 1);
-    const originalDistance = p.cameraDistance;
+    assert.equal(p.thirdPerson, false);
     p.wheel({ deltaY: 100, preventDefault() {} });
-    assert.equal(p.cameraDistance, originalDistance);
-    p.toggleCamera();
+    assert.ok(p.thirdPerson);
+    assert.ok(p.cameraDistance > .74);
     p.update(.016);
     assert.ok(p.camera.layers.test(p.avatar.head.userData.headMesh.layers));
-    p.wheel({ deltaY: -100, preventDefault() {} });
-    assert.ok(p.cameraDistance < originalDistance);
+    for (let i = 0; i < 40; i++) p.wheel({ deltaY: 100, preventDefault() {} });
+    assert.ok(p.cameraDistance > 15);
+    for (let i = 0; i < 40; i++) p.wheel({ deltaY: -100, preventDefault() {} });
+    assert.equal(p.thirdPerson, false);
+    assert.equal(p.cameraDistance, 0);
+    p.update(.016);
+    assert.equal(p.camera.layers.mask, 1);
   } finally { p.dispose(); }
 });
 
@@ -100,8 +105,10 @@ test('precision side controls do not trigger interaction, jump, crouch or hand r
     down(p,'Space');
     assert.ok(p.bodyIK.kicks.right);
     assert.equal(p.verticalSpeed,0);
-    up(p,'KeyZ');
-    assert.equal(p.bodyIK.steps.right,null);
+    // Releasing Z while still holding D would start walking and correctly
+    // cancel the kick; release movement keys to test stationary continuity.
+    up(p,'KeyD'); up(p,'KeyE'); up(p,'KeyZ');
+    assert.ok(p.bodyIK.steps.right);
     p.update(.05);
     assert.ok(p.bodyIK.kicks.right);
   } finally{p.dispose();}
@@ -123,8 +130,76 @@ test('mouse freely aims one foot without rotating the FPS torso while Z is held'
     for(let i=0;i<6;i++)p.update(.05);
     assert.ok(p.bodyIK.steps.right.sideways < first-.2);
     assert.ok(p.bodyIK.steps.right.height<.4);
-    up(p,'KeyZ');
+    up(p,'KeyD'); up(p,'KeyZ');
     p.update(.05);
-    assert.equal(p.bodyYaw,p.yaw);
+    assert.equal(p.bodyYaw,lockedBodyYaw);
+    assert.notEqual(p.bodyYaw,p.yaw);
   } finally{p.dispose();}
+});
+
+test('foot IK pose persists after Z, camera look and idle time; walking clears it', () => {
+  const p = makePlayer();
+  try {
+    p.update(.05);
+    down(p,'KeyZ'); down(p,'KeyD');
+    p.lookBy(270,-130);
+    for(let i=0;i<8;i++)p.update(.05);
+    up(p,'KeyD'); up(p,'KeyZ');
+    const original = {...p.bodyIK.steps.right};
+    const beforeAngle = p.bodyYaw;
+    p.lookBy(-450,140);
+    for(let i=0;i<12;i++)p.update(.05);
+    assert.equal(p.bodyYaw,beforeAngle);
+    assert.deepEqual(p.bodyIK.steps.right,original);
+    assert.ok(Math.abs(p.avatar.rightLeg.rotation.z) > .05);
+    // A blocked movement is not walking and must not erase the manually placed foot.
+    p.hotel.collisions.move = (_floor,x,z)=>({x,z});
+    down(p,'KeyW'); p.update(.05);
+    assert.ok(p.bodyIK.steps.right);
+    up(p,'KeyW');
+    p.hotel.collisions.move = (_floor,x,z,dx,dz)=>({x:x+dx,z:z+dz});
+    down(p,'KeyW'); p.update(.05);
+    assert.equal(p.bodyIK.steps.right,null);
+  } finally {p.dispose();}
+});
+
+test('furniture prevents idle body rotation in FPS and forced orbit', () => {
+  const p=makePlayer();
+  try {
+    p.update(.05);
+    p.useFurniture('sit', 2, 3, .6, .4, {style:'desk'});
+    p.update(.05);
+    const facing=p.bodyYaw;
+    p.lookBy(320,90);
+    for(let i=0;i<8;i++)p.update(.05);
+    assert.equal(p.bodyYaw,facing);
+    assert.equal(p.avatar.root.rotation.y,facing);
+    assert.ok(p.camera.position.distanceTo(p.position)>.8);
+    p.standUp();p.update(.05);
+    const facingAfter=p.bodyYaw;
+    p.lookBy(100,0);p.update(.05);
+    assert.equal(p.bodyYaw,facingAfter);
+  } finally {p.dispose();}
+});
+
+test('O switches camera without snapping facing, wheel zoom survives grip modifier', () => {
+  const p=makePlayer();
+  try {
+    p.update(.05);
+    p.lookBy(340,0);
+    const facing=p.bodyYaw;
+    p.toggleCamera(); p.update(.05);
+    assert.equal(p.bodyYaw,facing);
+    assert.ok(p.cameraDistance>=3);
+    p.toggleCamera(); p.update(.05);
+    assert.equal(p.bodyYaw,facing);
+    assert.equal(p.cameraDistance,0);
+    p.hands.left.grip={kind:'held'};
+    p.hands.left.distance=1.55;
+    p.wheel({deltaY:100,shiftKey:true,preventDefault(){}});
+    assert.ok(p.hands.left.distance>1.55);
+    assert.equal(p.thirdPerson,false);
+    p.wheel({deltaY:100,preventDefault(){}});
+    assert.equal(p.thirdPerson,true);
+  } finally {p.dispose();}
 });

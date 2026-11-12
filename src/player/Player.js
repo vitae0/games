@@ -3,6 +3,7 @@ import { PLAYER, HOTEL } from '../config.js';
 import { Avatar } from '../avatar/Avatar.js';
 import { HandRig } from './HandRig.js';
 import { BodyIK } from './BodyIK.js';
+import { scrollZoomDistance, orbitFocusHeight, orbitVerticalOffset } from './CameraOrbit.js';
 import { forwardFromYaw, rightFromYaw, viewFromYawPitch, movementFromYaw, yawFromDisplacement, approachYaw } from './Orientation.js';
 import { isFloorPosture, nextFloorPosture } from './Postures.js';
 import { PostureControls } from './PostureControls.js';
@@ -22,7 +23,8 @@ export class Player {
     this.avatar = new Avatar(scene, profile, { localPlayer: true });
     this.handRig = new HandRig(camera, profile);
     this.bodyIK = new BodyIK(this.avatar);
-    this.cameraDistance = 3.8;
+    this.cameraDistance = 0; // zero is FPS; positive values orbit the avatar
+    this.lastThirdPersonDistance = 3.8;
     this.hands = {
       left: { pressed: false, grip: null, distance: 1.55 },
       right: { pressed: false, grip: null, distance: 1.55 },
@@ -50,12 +52,21 @@ export class Player {
   jump() {
     if (!this.active || this.posture !== 'stand' || this.postureControls.crouching || this.touchCrouch || this.jumpOffset > .0001) return;
     this.postureControls.cancelJump();
+    this.bodyIK.clearSteps();
+    this.bodyIK.cancelKicks();
     this.verticalSpeed = PLAYER.jumpSpeed;
   }
   toggleCamera() {
     if (!this.active) return;
-    this.thirdPerson = !this.thirdPerson;
-    if (this.thirdPerson) this.bodyYaw = this.yaw;
+    if (this.thirdPerson) {
+      if (this.cameraDistance >= 1.5) this.lastThirdPersonDistance = this.cameraDistance;
+      this.thirdPerson = false;
+      this.cameraDistance = 0;
+    } else {
+      this.thirdPerson = true;
+      this.cameraDistance = Math.max(1.5, this.lastThirdPersonDistance);
+    }
+    // Camera transitions never change the body's facing direction.
     this.events.toast(this.thirdPerson ? 'Üçüncü şahıs kamerası' : 'Birinci şahıs kamerası');
   }
   adjustGripDistance(delta) {
@@ -113,15 +124,19 @@ export class Player {
     };
     this.contextMenu = (event) => event.preventDefault();
     this.wheel = (event) => {
-      if (!this.active) return;
-      if (this.thirdPerson) {
-        event.preventDefault();
-        this.cameraDistance = clamp(this.cameraDistance + Math.sign(event.deltaY) * .38, 1.35, 7.5);
+      if (!this.active || !Number.isFinite(event.deltaY) || !event.deltaY) return;
+      event.preventDefault();
+      // Shift+wheel retains the precise grab-distance adjustment; bare wheel
+      // always controls the orbit, including the FPS/TPS handoff.
+      if (event.shiftKey && Object.values(this.hands).some(h => h.grip)) {
+        this.adjustGripDistance(Math.sign(event.deltaY) * .19);
         return;
       }
-      if (!Object.values(this.hands).some(h => h.grip)) return;
-      event.preventDefault();
-      this.adjustGripDistance(Math.sign(event.deltaY) * .19);
+      const oldDistance = this.thirdPerson ? this.cameraDistance : 0;
+      const next = scrollZoomDistance(oldDistance, event.deltaY);
+      this.thirdPerson = next > 0;
+      this.cameraDistance = next;
+      if (next >= 1.5) this.lastThirdPersonDistance = next;
     };
     this.keyDown = (event) => {
       if (!this.active) {
@@ -136,7 +151,6 @@ export class Player {
       this.keys.add(event.code);
       if (event.code === 'KeyZ') {
         this.releaseHands();
-        this.bodyIK.clearSteps();
         this.postureControls.reset();
         this.events.toast('Bacak kontrolü · A/D seç, fareyle yönlendir · Space tekme · Ctrl diz');
         return;
@@ -174,12 +188,12 @@ export class Player {
     };
     this.keyUp = (event) => {
       this.keys.delete(event.code);
-      if (event.code === 'KeyZ') this.bodyIK.clearSteps();
+      // Releasing the precision key freezes the foot targets in place.
       this.postureControls.release(event.code);
     };
     this.blur = () => {
       this.keys.clear(); this.postureControls.reset(); this.setTouchMove(0, 0); this.releaseHands();
-      this.bodyIK.clearSteps();
+      // A loss of pointer lock is not walking: preserve planted limb targets.
     };
     this.onUnlock = () => { if (!this.active) this.blur(); };
     document.addEventListener('mousemove', this.mouseMove);
@@ -211,6 +225,8 @@ export class Player {
     this.furnitureExit = null;
     this.furnitureStyle = null;
     this.releaseHands();
+    this.bodyIK.clearSteps();
+    this.bodyIK.cancelKicks();
     this.floor = floor;
     this.position.set(0, floor * HOTEL.floorHeight, 12.1);
     this.jumpOffset = 0; this.verticalSpeed = 0; this.posture = 'stand';
@@ -223,6 +239,8 @@ export class Player {
   useFurniture(mode, x, z, yaw, surfaceHeight = 0, options = {}) {
     if (this.posture !== 'stand' || !['sit', 'rest'].includes(mode)) return;
     this.releaseHands();
+    this.bodyIK.clearSteps();
+    this.bodyIK.cancelKicks();
     this.savedStanding = {
       x: this.position.x, y: this.position.y, z: this.position.z,
       yaw: this.yaw, bodyYaw: this.bodyYaw, pitch: this.pitch,
@@ -256,6 +274,7 @@ export class Player {
     dt = Math.min(dt, .05);
     const active = this.active;
     const forward = this.direction;
+    const startingX = this.position.x, startingZ = this.position.z;
     let mx = 0, mz = 0;
     let movedX = 0, movedZ = 0;
     let surfaceGround = null;
@@ -264,6 +283,8 @@ export class Player {
     if (this.postureControls.consumeJump(performance.now()) &&
       this.jumpOffset <= .0001 && this.posture === 'stand' && !crouching && !precision) {
       this.verticalSpeed = PLAYER.jumpSpeed;
+      this.bodyIK.clearSteps();
+      this.bodyIK.cancelKicks();
     }
     if (active && this.posture === 'stand' && !precision) {
       const f = clamp(Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown')) + this.touchMove.forward, -1, 1);
@@ -348,14 +369,18 @@ export class Player {
         this.floor = groundFloor(shift.ground);
       }
     }
-    // Camera yaw is independent from avatar facing in third-person mode.
-    // Rotate only after genuine horizontal locomotion; camera orbit while idle is free.
-    if (!this.thirdPerson) {
-      // In body control mode the mouse aims the foot, not the entire torso.
-      if (!precision) this.bodyYaw = this.yaw;
-    } else if (this.posture === 'stand' && !precision) {
-      const desiredFacing = yawFromDisplacement(movedX, movedZ);
-      if (desiredFacing !== null) this.bodyYaw = approachYaw(this.bodyYaw, desiredFacing, dt, 14);
+    // FPS and TPS obey the same facing rule. Looking around never rotates the
+    // model, including while sitting, bathing, reclining, or holding a foot pose.
+    // Only actual horizontal displacement (not an attempted blocked step) moves it.
+    if (this.posture === 'stand' && !precision) {
+      const actualDx = this.position.x - startingX;
+      const actualDz = this.position.z - startingZ;
+      const desiredFacing = yawFromDisplacement(actualDx, actualDz);
+      if (desiredFacing !== null) {
+        this.bodyIK.clearSteps();
+        this.bodyIK.cancelKicks();
+        this.bodyYaw = approachYaw(this.bodyYaw, desiredFacing, dt, 14);
+      }
     }
     this.avatar.root.position.copy(this.position);
     this.avatar.root.rotation.y = this.bodyYaw;
@@ -388,11 +413,14 @@ export class Player {
     this.camera.layers.set(0);
     if (orbitCamera) this.camera.layers.enable(1);
     if (orbitCamera) {
-      const distance = this.events.isCustomizerOpen() ? 3.1 : this.cameraDistance;
+      // Forced furniture/floor orbit works even when normal camera mode is FPS.
+      const distance = this.events.isCustomizerOpen() ? 3.1
+        : this.thirdPerson ? this.cameraDistance : this.lastThirdPersonDistance;
       const head = this.avatar.headWorldHeight?.() ?? this.avatar.profile.height * .82;
       const targetHeight = this.furnitureStyle === 'sleep' ? .49
         : isFloorPosture(this.posture) ? Math.max(.57, head - .20)
-          : this.avatar.profile.height * .6;
+          : orbitFocusHeight(this.avatar.profile.height,
+            this.avatar.profile.height - .12, distance);
       const target = new THREE.Vector3(this.position.x, this.position.y + targetHeight, this.position.z);
       const behind = this.events.isCustomizerOpen() ? this.direction.clone().multiplyScalar(-1) : forward.clone().multiplyScalar(-1);
       const camPos = target.clone();
@@ -401,7 +429,7 @@ export class Player {
         if (this.hotel.collisions.blocked(this.floor, test.x, test.z, .19)) break;
         camPos.copy(test);
       }
-      camPos.y += (isFloorPosture(this.posture) ? .54 : 1.0) - this.pitch * 1.3;
+      camPos.y += orbitVerticalOffset(distance, this.pitch, isFloorPosture(this.posture));
       const ceiling = (this.floor + 1) * HOTEL.floorHeight - .32;
       camPos.y = Math.min(camPos.y, ceiling);
       this.camera.position.copy(camPos);

@@ -58,7 +58,7 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 - **47–50. katlar:** Kule dışına/şehir zeminine erişim yok. Dört iç kat birbirine fiziksel, zıt yönlü merdivenlerle bağlı. Asansör alternatif hızlı geçiştir.
 - **Gece Neon City (yalnızca dışarıda):** Şehir zemini 118 metre aşağıda; statik placeholder binalar, aydınlık pencereler, yollar, trafik ışıkları, yıldızlı gece göğü ve neon cephe. Şehir tamamen prosedüreldir, dışarıdan model/doku indirilmez.
 - **FPS/TPS:** Pointer-lock birinci şahıs, `O` ile üçüncü şahıs, WASD hareket, Shift koşma, Space zıplama, Ctrl ile kemik tabanlı çömelme, çift Ctrl ile yerde oturma, Ctrl+Space veya N ile diz çökme, oda kapıları/yatak/sandalye.
-- **Ayrı el kontrolü:** Sol fare sol eli, sağ fare sağ eli uzatır. Yakındaki küçük nesneyi NPC elini veya duvar/korkuluk gibi sabit yüzeyi hedefleyip tutmaya çalışır. Sabit yüzeye tutununca çekme oyuncuyu hareket ettirir. Basılı tutarken fare tekerleği itme/çekme mesafesini değiştirir. Bırakma: fare tuşunu bırakma veya `F`.
+- **Ayrı el kontrolü:** Sol fare sol eli, sağ fare sağ eli uzatır. Yakındaki küçük nesneyi NPC elini veya duvar/korkuluk gibi sabit yüzeyi hedefleyip tutmaya çalışır. Sabit yüzeye tutununca çekme oyuncuyu hareket ettirir. Tutarken **Shift + tekerlek** kavrama mesafesini değiştirir; normal tekerlek her zaman kamera zoom'udur. Bırakma: fare tuşunu bırakma veya `F`.
 - **Yerel fizik:** Sabit zaman adımlı, kütleli, sönümlü yay tabanlı taşınabilir nesneler, yerçekimi ve basit statik çarpışmalar. Çok oyunculu, dönme/tam hacim temasları, kinematik ağ tahmini veya genel amaçlı Rapier motoru yoktur.
 - **İki simüle karakter:** Mira (resepsiyon) ve Nova (misafir). `E` ile konuşulur, uygun açıdan elleri tutulabilir ve kısıtlı biçimde çekilebilir. **Diğer gerçek oyuncularla ağ bağlantısı henüz yoktur.**
 - **Avatar özelleştirme:** `K` ile bedensel ölçüler (metre), kıyafet, saç, ten tonu, göz rengi ve gözlük; JSON profil localStorage'da saklanır. Prosedürel modellerde yüz ve ayrık kıyafet katmanları bulunur ve kol/bacak skinned mesh iskeleti kullanılır. Harici VRM/GLB yüklenebilir, ancak bu dosyaların beden ölçüleri varsayılan karakter kadar özelleştirilemez.
@@ -73,14 +73,14 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 | Z + A/D + fare | Sol/sağ ayağı fareyle baktığın yöne taşı; ileri, yana ve yukarı hareket ettir (IK) |
 | Z + A/D + Ctrl | Seçilen dizin bükülmesini artır (basılı tut) |
 | Z + A/D + Space | Seçilen bacakla fare yönüne tekme at |
-| Üçüncü şahıs + fare tekerleği | Kamerayı yakınlaştır / uzaklaştır |
+| Fare tekerleği | FPS ↔ TPS arası kesintisiz yakınlaştırma (30 m'ye kadar) |
 | Shift / Space / Ctrl | Koş / zıpla / basılıyken çömel |
 | Çift Ctrl | Bulunduğu yerde yere otur / kalk |
 | Ctrl + Space (veya N) | Bulunduğu yerde diz çök / kalk. Bazı işletim sistemlerinde Ctrl+Space IME kısayoludur. |
 | E | Kapı, mobilya, asansör veya NPC ile etkileşim |
 | Sol fare basılı | Gerçek sol kolu iki kemikli IK ile uzat / hedefi kavra |
 | Sağ fare basılı | Gerçek sağ kolu iki kemikli IK ile uzat / hedefi kavra |
-| Fare tekerleği (tutarken) | Kavrama mesafesini artır / azalt |
+| Shift + fare tekerleği (tutarken) | Kavrama mesafesini artır / azalt |
 | Fare tuşunu bırak veya F | Kavramayı serbest bırak |
 | O | FPS / TPS kamera geçişi |
 | K | Karakter özelleştirici |
@@ -90,8 +90,8 @@ Vite geliştirme sunucusunun adresini tarayıcıda açın (normalde `http://loca
 
 - Birinci şahısta ayrı kamera-elleri gösterilmez; gerçek kollar, gövde ve bacaklar görünür. Yerel kameradan baş ve yaka gizlenir, üçüncü şahıs ve aynalar tüm karakteri gösterir.
 - LMB/RMB gerçek kol kemiklerinde iki kemikli IK kullanır. Nesne üstündeki KULLAN hedefleme sistemi önce çalışır.
-- Z basılıyken A/D sol/sağ bacağı seçer, fareyle bakış yönü ayak IK hedefini sürekli belirler: sağa-sola bakmak bacağı açar, yukarı-aşağı bakmak ayağı yükseltir/indirir. Ctrl dizi büker, Space bakılan yöne doğru hazırlık-uzatma-toparlanma tekmesini başlatır. FPS'de Z basılıyken torso sabit kalır ve mouse bağımsız yönlendirilir. İki bacak aynı anda seçilebilir. Yanal açıklık 62 cm'ye kadar uzanır ancak IK bacak uzunluğunu aşmaz. Z bırakılınca yürüyüş ve otomatik pozlar geri gelir; başlamış tekme kısa animasyonunu tamamlar.
-- Üçüncü şahısta tekerlek zoom, birinci şahısta ise mevcut kavrama mesafesi kontrolüdür.
+- Z basılıyken A/D sol/sağ bacağı seçer, fareyle bakış yönü ayak IK hedefini sürekli belirler: sağa-sola bakmak bacağı açar, yukarı-aşağı bakmak ayağı yükseltir/indirir. Ctrl dizi büker, Space bakılan yöne doğru hazırlık-uzatma-toparlanma tekmesini başlatır. İki bacak aynı anda seçilebilir. **Z bırakıldığında ayak hedefleri sabit kalır**, yalnızca gerçek yürüyüş, zıplama veya mobilyaya oturma gibi poz değişimi onları sıfırlar. Yanal açıklık IK bacak uzunluğunu aşmaz.
+- Fare tekerleği FPS/TPS arasında birinci şahıstan başlayarak 30 metreye kadar yakınlaşıp uzaklaşır. TPS kadrajı uzakken gövdenin merkezini, kamera göze yaklaştıkça yüz hizasını hedefler; nesne tutulurken Shift+tekerlek kavrama mesafesini değiştirir. Gövde hem FPS hem TPS'de, ayrıca mobilyaya oturulduğunda, yalnızca bakış yönü değişti diye dönmez; gerçek yürüyüş hareketine göre yönelir.
 - Gelişmiş IK ilk sürümde yalnızca prosedürel karakter iskeletine uygulanır. Harici VRM/GLB için eksen/kemik uyarlayıcısı gerekir.
 
 ## Yeni postür ve iskelet sistemi

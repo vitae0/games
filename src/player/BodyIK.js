@@ -182,7 +182,9 @@ export class BodyIK {
         kick.elapsed += dt;
         if (!standing || kick.elapsed >= KICK_DURATION) this.kicks[side] = null;
       }
-      const step = kickPose || (standing && precision ? this.steps[side] : null);
+      // Retain the last user-directed target when Z is released. Locomotion
+      // clears the targets explicitly in Player; idle frames never do.
+      const step = kickPose || (standing ? this.steps[side] : null);
       if (step) {
         // Ctrl pulls the foot closer to the thigh, causing a pronounced knee fold.
         const bend = step.bend ?? 0;
