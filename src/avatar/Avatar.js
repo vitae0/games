@@ -75,6 +75,7 @@ export class Avatar {
     this.firstPersonOccluders = [];
     if (isSoftModel(this.profile.baseModel)) {
       buildSoftAvatar(this, this.profile);
+      this.updateGarmentVisibility();
       this.setupFirstPersonVisibility();
       return;
     }
@@ -419,6 +420,20 @@ export class Avatar {
     // show the procedural limb rig only, not the overlapping imported torso.
     if (this.external && this.body) this.body.visible = this.firstPersonActive;
   }
+  setHandDetail(active, side = null) {
+    if (!this.softAvatar) return;
+    const arms = side === 'left' ? [this.leftArm] :
+      side === 'right' ? [this.rightArm] : [this.leftArm,this.rightArm];
+    for(const arm of arms) arm?.userData?.hand?.userData?.setGripDetail?.(!!active);
+  }
+  setExpression(expression) {
+    const allowed = ['neutral','happy','sad','surprised'];
+    if(!allowed.includes(expression)) return;
+    this.profile.faceExpression = expression;
+    for(const [name,mesh] of Object.entries(this.head?.userData?.mouths || {}))
+      mesh.visible = name === expression;
+    if(this.head?.userData) this.head.userData.faceExpression = expression;
+  }
   headWorldHeight() {
     return this.profile.height + this.body.position.y - this.profile.height * .08;
   }
@@ -444,7 +459,10 @@ export class Avatar {
     this.head.rotation.y = Math.sin(this.clock * .42) * .028;
     this.head.rotation.x = pose.spine * .25 + Math.sin(this.clock * .66) * .012;
     for (const eye of this.eyeParts) for (const part of eye) {
-      part.mesh.scale.y = part.y * (1 - pose.blink * .92);
+      const expression = this.profile.faceExpression;
+      const expressionScale = expression === 'surprised' ? 1.12 :
+        expression === 'happy' ? .86 : 1;
+      part.mesh.scale.y = part.y * expressionScale * (1 - pose.blink * .92);
     }
     this.updateExternal?.(dt, locomotion, posture, pose);
   }
